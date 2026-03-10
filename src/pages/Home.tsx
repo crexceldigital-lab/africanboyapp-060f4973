@@ -17,7 +17,7 @@ import spotlight8 from '@/assets/spotlight-8.png';
 import spotlight9 from '@/assets/spotlight-9.png';
 import spotlight10 from '@/assets/spotlight-10.png';
 
-const updatesImages = [spotlight1, spotlight2, spotlight3, spotlight5, spotlight12];
+const updatesImages = [spotlight1, spotlight2, spotlight3, spotlight4, spotlight5];
 const lifestyleImages = [spotlight7, spotlight8, spotlight9, spotlight10, spotlight6];
 
 interface HomeProps {
