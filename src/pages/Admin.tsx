@@ -75,7 +75,7 @@ export default function Admin() {
     if (editingProduct) {
       const { error } = await supabase
         .from('products')
-        .update({ ...productData, updated_at: new Date().toISOString() })
+        .update({ ...productData, colors: productData.colors as any, updated_at: new Date().toISOString() })
         .eq('id', editingProduct.id);
 
       if (error) {
