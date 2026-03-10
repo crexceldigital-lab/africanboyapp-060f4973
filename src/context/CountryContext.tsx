@@ -88,6 +88,7 @@ export function CountryProvider({ children }: { children: ReactNode }) {
       full_name: data.full_name || 'New User',
       email: data.email || '',
       phone_number: data.phone_number || '',
+      role: 'user',
       country_id: country.id,
       country_name: country.name,
       country_code: country.code,
