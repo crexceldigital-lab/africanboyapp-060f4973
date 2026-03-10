@@ -61,14 +61,23 @@ export function CountryProvider({ children }: { children: ReactNode }) {
     // No-op in mock mode
   };
 
+  const ADMIN_EMAIL = 'africanboy.admin@gmail.com';
+  const ADMIN_PASSWORD = 'Africanboyadminrevoltek';
+
   const login = async (identifier: string, password: string) => {
-    // Simple mock login
     await new Promise(resolve => setTimeout(resolve, 500));
-    if (identifier && password) {
-      setUser({ ...MOCK_USER, email: identifier.includes('@') ? identifier : MOCK_USER.email, phone_number: !identifier.includes('@') ? identifier : MOCK_USER.phone_number });
-      return true;
-    }
-    return false;
+    if (!identifier || !password) return false;
+
+    const isAdmin = identifier.toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD;
+    const role = isAdmin ? 'admin' : 'user';
+
+    setUser({
+      ...MOCK_USER,
+      email: identifier.includes('@') ? identifier : MOCK_USER.email,
+      phone_number: !identifier.includes('@') ? identifier : MOCK_USER.phone_number,
+      role,
+    });
+    return true;
   };
 
   const signup = async (data: any) => {
@@ -79,6 +88,7 @@ export function CountryProvider({ children }: { children: ReactNode }) {
       full_name: data.full_name || 'New User',
       email: data.email || '',
       phone_number: data.phone_number || '',
+      role: 'user',
       country_id: country.id,
       country_name: country.name,
       country_code: country.code,
