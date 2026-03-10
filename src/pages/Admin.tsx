@@ -20,7 +20,7 @@ export default function Admin() {
     sizes: [] as string[], colors: [] as ProductColor[]
   });
 
-  const categories = ['T-Shirt', 'Hoods', 'Jeans', 'Accessories'];
+  const categories = ['T-Shirt', 'Hoods', 'Jeans', 'Accessories', 'Footwear', 'Tracksuit', 'Caps'];
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
