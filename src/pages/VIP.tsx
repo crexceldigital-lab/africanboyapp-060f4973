@@ -31,7 +31,9 @@ export default function VIP() {
         category: 'Combo',
         image_url: selectedTop.image_url,
         description: `Exclusive Combo Kit including ${selectedTop.name} and ${selectedBottom.name}.`,
-        stock_quantity: 1
+        stock_quantity: 1,
+        sizes: [],
+        colors: [],
       };
       addToCart(comboItem);
       setIsAdded(true);
