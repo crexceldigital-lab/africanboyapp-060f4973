@@ -60,11 +60,11 @@ export default function Home({ onNavigate }: HomeProps) {
               </span>
             </div>
 
-            <div className="relative w-72 h-72 md:w-96 md:h-96 rounded-full shadow-[0_0_60px_hsl(43,96%,49%,0.4),0_0_120px_hsl(43,96%,49%,0.15)] overflow-hidden flex items-center justify-center">
+            <div className="relative w-72 h-72 md:w-96 md:h-96 rounded-full shadow-[0_0_60px_hsl(43,96%,49%,0.4),0_0_120px_hsl(43,96%,49%,0.15)] overflow-hidden">
               <img 
                 src={africanBoyLogo}
                 alt="African Boy Logo"
-                className="w-[115%] h-[115%] object-cover scale-110"
+                className="absolute inset-[-15%] w-[130%] h-[130%] object-cover object-center"
               />
             </div>
           </motion.div>
