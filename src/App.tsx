@@ -4,7 +4,7 @@ import Navbar from './components/Navbar';
 import Header from './components/Header';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
-import Events from './pages/Events';
+
 import Media from './pages/Media';
 import VIP from './pages/VIP';
 import Profile from './pages/Profile';
@@ -39,7 +39,7 @@ function AppContent() {
       case 'home': return <Home onNavigate={setActiveTab} />;
       case 'shop': return <Shop />;
       case 'video': return <Media />;
-      case 'events': return <Events />;
+      
       case 'vip': return <VIP />;
       case 'fitme': return <FitMe />;
       case 'profile': return <Profile />;
