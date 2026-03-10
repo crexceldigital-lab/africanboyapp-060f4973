@@ -10,6 +10,7 @@ import VIP from './pages/VIP';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+import FitMe from './pages/FitMe';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CartProvider } from './context/CartContext';
 import { useCountry } from './context/CountryContext';
@@ -40,6 +41,7 @@ function AppContent() {
       case 'video': return <Media />;
       case 'events': return <Events />;
       case 'vip': return <VIP />;
+      case 'fitme': return <FitMe />;
       case 'profile': return <Profile />;
       case 'admin': return <Admin />;
       default: return <Home onNavigate={setActiveTab} />;
