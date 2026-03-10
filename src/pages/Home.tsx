@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Product, NavTab } from '../types';
 import ProductCard from '../components/ProductCard';
 import { ArrowRight } from 'lucide-react';
