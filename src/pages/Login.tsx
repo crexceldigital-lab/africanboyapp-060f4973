@@ -12,6 +12,7 @@ export default function Login() {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [countryId, setCountryId] = useState(1);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
