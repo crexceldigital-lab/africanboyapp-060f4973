@@ -151,7 +151,7 @@ export default function Profile() {
               <p className="text-sm font-bold">Outside Dar / Other Regions</p>
               <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Delivery to other regions in Tanzania</p>
             </div>
-            <span className="text-primary font-black text-sm">{formatPrice(10000)}</span>
+            <span className="text-primary font-black text-sm">{formatPrice(1000)}</span>
           </button>
         </div>
       </div>
