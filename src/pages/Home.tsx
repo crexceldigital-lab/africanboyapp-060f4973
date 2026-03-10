@@ -94,13 +94,28 @@ export default function Home({ onNavigate }: HomeProps) {
             </div>
 
             <div
-              className="relative w-72 h-72 md:w-96 md:h-96 rounded-full shadow-[0_0_60px_hsl(43,96%,49%,0.4),0_0_120px_hsl(43,96%,49%,0.15)] overflow-hidden bg-black"
+              ref={containerRef}
+              className="relative w-72 h-72 md:w-96 md:h-96 rounded-full shadow-[0_0_60px_hsl(43,96%,49%,0.4),0_0_120px_hsl(43,96%,49%,0.15)] overflow-hidden bg-black cursor-grab active:cursor-grabbing"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+                dragStart.current = { x: e.clientX, y: e.clientY, ox: logoOffset.x, oy: logoOffset.y };
+              }}
+              onMouseMove={(e) => {
+                if (!isDragging || !containerRef.current) return;
+                const size = containerRef.current.getBoundingClientRect().width;
+                const dx = ((e.clientX - dragStart.current.x) / size) * 100;
+                const dy = ((e.clientY - dragStart.current.y) / size) * 100;
+                setLogoOffset({ x: dragStart.current.ox + dx, y: dragStart.current.oy + dy });
+              }}
+              onMouseUp={() => setIsDragging(false)}
+              onMouseLeave={() => setIsDragging(false)}
             >
               <img 
                 src={africanBoyLogo}
                 alt="African Boy Logo"
                 className="absolute w-[130%] h-[130%] object-contain pointer-events-none"
-                style={{ left: '-5%', top: '-5%' }}
+                style={{ left: `${logoOffset.x}%`, top: `${logoOffset.y}%` }}
               />
             </div>
           </motion.div>
