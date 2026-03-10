@@ -1,11 +1,24 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Product, NavTab } from '../types';
 import ProductCard from '../components/ProductCard';
 import { ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 import heroBg from '@/assets/hero-bg.png';
+import spotlight1 from '@/assets/spotlight-1.png';
+import spotlight2 from '@/assets/spotlight-2.png';
+import spotlight3 from '@/assets/spotlight-3.png';
+import spotlight4 from '@/assets/spotlight-4.png';
+import spotlight5 from '@/assets/spotlight-5.png';
+import spotlight6 from '@/assets/spotlight-6.png';
+import spotlight7 from '@/assets/spotlight-7.png';
+import spotlight8 from '@/assets/spotlight-8.png';
+import spotlight9 from '@/assets/spotlight-9.png';
+import spotlight10 from '@/assets/spotlight-10.png';
+
+const updatesImages = [spotlight1, spotlight2, spotlight3, spotlight4, spotlight5];
+const lifestyleImages = [spotlight7, spotlight8, spotlight9, spotlight10, spotlight6];
 
 interface HomeProps {
   onNavigate: (tab: NavTab) => void;
@@ -13,10 +26,22 @@ interface HomeProps {
 
 export default function Home({ onNavigate }: HomeProps) {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [logoOffset, setLogoOffset] = useState({ x: -5, y: -5 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [updatesIndex, setUpdatesIndex] = useState(0);
+  const [lifestyleIndex, setLifestyleIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUpdatesIndex(i => (i + 1) % updatesImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLifestyleIndex(i => (i + 1) % lifestyleImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -65,28 +90,13 @@ export default function Home({ onNavigate }: HomeProps) {
             </div>
 
             <div
-              ref={containerRef}
-              className="relative w-72 h-72 md:w-96 md:h-96 rounded-full shadow-[0_0_60px_hsl(43,96%,49%,0.4),0_0_120px_hsl(43,96%,49%,0.15)] overflow-hidden bg-black cursor-grab active:cursor-grabbing"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-                dragStart.current = { x: e.clientX, y: e.clientY, ox: logoOffset.x, oy: logoOffset.y };
-              }}
-              onMouseMove={(e) => {
-                if (!isDragging || !containerRef.current) return;
-                const size = containerRef.current.getBoundingClientRect().width;
-                const dx = ((e.clientX - dragStart.current.x) / size) * 100;
-                const dy = ((e.clientY - dragStart.current.y) / size) * 100;
-                setLogoOffset({ x: dragStart.current.ox + dx, y: dragStart.current.oy + dy });
-              }}
-              onMouseUp={() => setIsDragging(false)}
-              onMouseLeave={() => setIsDragging(false)}
+              className="relative w-72 h-72 md:w-96 md:h-96 rounded-full shadow-[0_0_60px_hsl(43,96%,49%,0.4),0_0_120px_hsl(43,96%,49%,0.15)] overflow-hidden bg-black"
             >
               <img 
                 src={africanBoyLogo}
                 alt="African Boy Logo"
                 className="absolute w-[130%] h-[130%] object-contain pointer-events-none"
-                style={{ left: `${logoOffset.x}%`, top: `${logoOffset.y}%` }}
+                style={{ left: '-5%', top: '-5%' }}
               />
             </div>
           </motion.div>
@@ -147,23 +157,51 @@ export default function Home({ onNavigate }: HomeProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <motion.div
             whileHover={{ y: -5 }}
-            className="relative h-64 rounded-3xl overflow-hidden group border border-foreground/5 bg-card"
+            className="relative h-80 rounded-3xl overflow-hidden group border border-foreground/5 bg-card"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent p-6 flex flex-col justify-end">
+            {updatesImages.map((img, i) => (
+              <img
+                key={i}
+                src={img}
+                alt={`Updates ${i + 1}`}
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                style={{ opacity: updatesIndex === i ? 1 : 0 }}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent p-6 flex flex-col justify-end z-10">
               <span className="bg-primary text-primary-foreground text-[10px] font-black px-2 py-1 rounded w-fit mb-2">UPDATES</span>
               <h3 className="text-xl font-bold leading-tight">Welcome to African Boy</h3>
               <p className="text-xs text-muted-foreground mt-2">Just now</p>
+              <div className="flex gap-1.5 mt-3">
+                {updatesImages.map((_, i) => (
+                  <button key={i} onClick={() => setUpdatesIndex(i)} className={`h-1 rounded-full transition-all ${updatesIndex === i ? 'w-6 bg-primary' : 'w-2 bg-foreground/20'}`} />
+                ))}
+              </div>
             </div>
           </motion.div>
 
           <motion.div
             whileHover={{ y: -5 }}
-            className="relative h-64 rounded-3xl overflow-hidden group border border-foreground/5 bg-card"
+            className="relative h-80 rounded-3xl overflow-hidden group border border-foreground/5 bg-card"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent p-6 flex flex-col justify-end">
+            {lifestyleImages.map((img, i) => (
+              <img
+                key={i}
+                src={img}
+                alt={`Lifestyle ${i + 1}`}
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                style={{ opacity: lifestyleIndex === i ? 1 : 0 }}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent p-6 flex flex-col justify-end z-10">
               <span className="bg-primary text-primary-foreground text-[10px] font-black px-2 py-1 rounded w-fit mb-2">LIFESTYLE</span>
               <h3 className="text-xl font-bold leading-tight">New Collection Coming Soon</h3>
               <p className="text-xs text-muted-foreground mt-2">Recently</p>
+              <div className="flex gap-1.5 mt-3">
+                {lifestyleImages.map((_, i) => (
+                  <button key={i} onClick={() => setLifestyleIndex(i)} className={`h-1 rounded-full transition-all ${lifestyleIndex === i ? 'w-6 bg-primary' : 'w-2 bg-foreground/20'}`} />
+                ))}
+              </div>
             </div>
           </motion.div>
         </div>
