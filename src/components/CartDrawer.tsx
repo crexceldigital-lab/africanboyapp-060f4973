@@ -32,7 +32,7 @@ function getCartKey(id: number, size?: string, color?: string) {
 }
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart } = useCart();
+  const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal } = useCart();
   const { formatPrice, selectedCountry } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
