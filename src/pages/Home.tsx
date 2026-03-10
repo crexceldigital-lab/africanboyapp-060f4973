@@ -41,10 +41,9 @@ export default function Home({ onNavigate }: HomeProps) {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background z-10" />
           <div className="absolute inset-0 bg-background/40 z-10" />
           <img 
-            src="https://images.unsplash.com/photo-1493225255756-d9584f8606e9?auto=format&fit=crop&q=80&w=2070" 
-            alt="Hero Background"
+            src={heroBg}
+            alt="African Boy Collection"
             className="w-full h-full object-cover opacity-60"
-            referrerPolicy="no-referrer"
           />
         </div>
 
