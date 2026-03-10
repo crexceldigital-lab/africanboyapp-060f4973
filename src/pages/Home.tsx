@@ -85,7 +85,7 @@ export default function Home({ onNavigate }: HomeProps) {
               <img 
                 src={africanBoyLogo}
                 alt="African Boy Logo"
-                className="absolute w-[115%] h-[115%] object-contain pointer-events-none"
+                className="absolute w-[130%] h-[130%] object-contain pointer-events-none"
                 style={{ left: `${logoOffset.x}%`, top: `${logoOffset.y}%` }}
               />
             </div>
