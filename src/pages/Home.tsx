@@ -64,7 +64,7 @@ export default function Home({ onNavigate }: HomeProps) {
               <img 
                 src={africanBoyLogo}
                 alt="African Boy Logo"
-                className="absolute inset-[-15%] w-[130%] h-[130%] object-cover object-center"
+                className="absolute inset-[-15%] w-[130%] h-[130%] object-cover object-[center_35%]"
               />
             </div>
           </motion.div>
