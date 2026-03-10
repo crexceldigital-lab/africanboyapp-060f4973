@@ -63,33 +63,54 @@ export function CountryProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Check existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        try {
-          const u = await buildUserFromSession(session);
-          setUser(u);
-        } catch (e) {
-          console.error('Session build error:', e);
-        }
-      }
-      setLoading(false);
-    }).catch((e) => {
-      console.error('getSession error:', e);
-      setLoading(false);
-    });
+    let mounted = true;
 
-    // Listen for auth changes
+    // Set up auth listener FIRST (best practice)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
       if (event === 'SIGNED_IN' && session) {
-        const u = await buildUserFromSession(session);
-        setUser(u);
+        // Use setTimeout to avoid Supabase deadlock
+        setTimeout(async () => {
+          if (!mounted) return;
+          try {
+            const u = await buildUserFromSession(session);
+            if (mounted) setUser(u);
+          } catch (e) {
+            console.error('Auth state build error:', e);
+          }
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Then check existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+      if (session) {
+        try {
+          const u = await buildUserFromSession(session);
+          if (mounted) setUser(u);
+        } catch (e) {
+          console.error('Session build error:', e);
+        }
+      }
+      if (mounted) setLoading(false);
+    }).catch((e) => {
+      console.error('getSession error:', e);
+      if (mounted) setLoading(false);
+    });
+
+    // Safety timeout - never hang more than 5 seconds
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const selectedCountry = user && countries.length > 0
