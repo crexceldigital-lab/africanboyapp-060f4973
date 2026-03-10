@@ -27,7 +27,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const success = await signup({ full_name: fullName, email, phone_number: phone, password, country_id: 1 });
+    const success = await signup({ full_name: fullName, email, phone_number: phone, password, country_id: countryId });
     if (!success) setError('Signup failed');
     setLoading(false);
   };
