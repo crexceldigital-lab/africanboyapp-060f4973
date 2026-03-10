@@ -10,10 +10,19 @@ export interface Product {
   image_url: string;
   description: string;
   stock_quantity: number;
+  sizes: string[];
+  colors: ProductColor[];
+}
+
+export interface ProductColor {
+  name: string;
+  hex: string;
 }
 
 export interface CartItem extends Product {
   quantity: number;
+  selectedSize?: string;
+  selectedColor?: string;
 }
 
 export interface AppEvent {

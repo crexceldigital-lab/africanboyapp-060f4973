@@ -13,12 +13,14 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { formatPrice } = useCountry();
   const [added, setAdded] = useState(false);
+  const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] || '');
+  const [selectedColor, setSelectedColor] = useState<string>(product.colors[0]?.name || '');
 
   const isOutOfStock = product.stock_quantity <= 0;
 
   const handleAdd = () => {
-    if (isOutOfStock) return;
-    addToCart(product);
+    if (isOutOfStock || !selectedSize || !selectedColor) return;
+    addToCart(product, selectedSize, selectedColor);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -53,7 +55,45 @@ export default function ProductCard({ product }: ProductCardProps) {
             {formatPrice(product.price)}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground mb-4">{product.category}</p>
+        <p className="text-xs text-muted-foreground mb-3">{product.category}</p>
+
+        {/* Colors */}
+        {product.colors.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-3">
+            {product.colors.map(color => (
+              <button
+                key={color.name}
+                onClick={() => setSelectedColor(color.name)}
+                title={color.name}
+                className={`w-6 h-6 rounded-full border-2 transition-all ${
+                  selectedColor === color.name
+                    ? 'border-primary scale-110'
+                    : 'border-foreground/10 hover:border-foreground/30'
+                }`}
+                style={{ backgroundColor: color.hex }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Sizes */}
+        {product.sizes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {product.sizes.map(size => (
+              <button
+                key={size}
+                onClick={() => setSelectedSize(size)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${
+                  selectedSize === size
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:border-foreground/20'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        )}
         
         <button 
           onClick={handleAdd}

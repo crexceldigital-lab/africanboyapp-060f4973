@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Plus } from 'lucide-react';
-import { Product } from '../types';
+import { Product, ProductColor } from '../types';
 import { MOCK_PRODUCTS } from '../data/mockData';
 import ProductTable from '../components/admin/ProductTable';
 import ProductModal from '../components/admin/ProductModal';
@@ -16,7 +16,8 @@ export default function Admin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
-    name: '', category: 'T-Shirt', price: '', stock_quantity: '', image_url: '', description: ''
+    name: '', category: 'T-Shirt', price: '', stock_quantity: '', image_url: '', description: '',
+    sizes: [] as string[], colors: [] as ProductColor[]
   });
 
   const categories = ['T-Shirt', 'Hoods', 'Jeans', 'Accessories'];
@@ -31,11 +32,12 @@ export default function Admin() {
       setEditingProduct(product);
       setFormData({
         name: product.name, category: product.category, price: String(product.price),
-        stock_quantity: String(product.stock_quantity), image_url: product.image_url, description: product.description
+        stock_quantity: String(product.stock_quantity), image_url: product.image_url, description: product.description,
+        sizes: [...product.sizes], colors: [...product.colors]
       });
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', category: 'T-Shirt', price: '', stock_quantity: '', image_url: '', description: '' });
+      setFormData({ name: '', category: 'T-Shirt', price: '', stock_quantity: '', image_url: '', description: '', sizes: [], colors: [] });
     }
     setIsModalOpen(true);
   };
@@ -45,13 +47,15 @@ export default function Admin() {
     if (editingProduct) {
       setProducts(products.map(p => p.id === editingProduct.id ? {
         ...p, name: formData.name, category: formData.category, price: Number(formData.price),
-        stock_quantity: Number(formData.stock_quantity), image_url: formData.image_url, description: formData.description
+        stock_quantity: Number(formData.stock_quantity), image_url: formData.image_url, description: formData.description,
+        sizes: formData.sizes, colors: formData.colors
       } : p));
     } else {
       const newProduct: Product = {
         id: Math.max(...products.map(p => p.id)) + 1, name: formData.name, category: formData.category,
         price: Number(formData.price), stock_quantity: Number(formData.stock_quantity),
-        image_url: formData.image_url, description: formData.description
+        image_url: formData.image_url, description: formData.description,
+        sizes: formData.sizes, colors: formData.colors
       };
       setProducts([...products, newProduct]);
     }
@@ -74,7 +78,6 @@ export default function Admin() {
         <h1 className="text-4xl font-black tracking-tighter italic uppercase">ADMIN <span className="text-primary">PANEL</span></h1>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-8 overflow-x-auto no-scrollbar">
         {(['products', 'inventory', 'gallery', 'events'] as AdminTab[]).map(tab => (
           <button
@@ -91,7 +94,6 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* Product/Inventory Views */}
       {showProductViews && (
         <>
           <div className="flex gap-4 mb-8">
@@ -130,10 +132,7 @@ export default function Admin() {
         </>
       )}
 
-      {/* Gallery View */}
       {activeTab === 'gallery' && <GalleryManager />}
-
-      {/* Events View */}
       {activeTab === 'events' && <EventManager />}
     </div>
   );

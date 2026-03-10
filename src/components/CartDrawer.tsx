@@ -27,6 +27,10 @@ const PAYMENT_METHODS_NG = [
   { id: 'moniepoint', name: 'MONIEPOINT', icon: Landmark, color: 'text-blue-500' },
 ];
 
+function getCartKey(id: number, size?: string, color?: string) {
+  return `${id}-${size || ''}-${color || ''}`;
+}
+
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart } = useCart();
   const { formatPrice, selectedCountry } = useCountry();
@@ -104,29 +108,37 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Your cart is empty</p>
                       </div>
                     ) : (
-                      cart.map(item => (
-                        <div key={item.id} className="flex gap-4 bg-card rounded-2xl p-4 border border-foreground/5">
-                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
-                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-sm truncate">{item.name}</h4>
-                            <p className="text-primary font-bold text-sm mt-1">{formatPrice(item.price)}</p>
-                            <div className="flex items-center gap-3 mt-2">
-                              <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-7 rounded-lg bg-foreground/5 flex items-center justify-center hover:bg-foreground/10">
-                                <Minus size={14} />
-                              </button>
-                              <span className="text-sm font-black">{item.quantity}</span>
-                              <button onClick={() => updateQuantity(item.id, 1)} className="w-7 h-7 rounded-lg bg-foreground/5 flex items-center justify-center hover:bg-foreground/10">
-                                <Plus size={14} />
-                              </button>
-                              <button onClick={() => removeFromCart(item.id)} className="ml-auto p-1 text-muted-foreground hover:text-destructive">
-                                <Trash2 size={16} />
-                              </button>
+                      cart.map(item => {
+                        const key = getCartKey(item.id, item.selectedSize, item.selectedColor);
+                        return (
+                          <div key={key} className="flex gap-4 bg-card rounded-2xl p-4 border border-foreground/5">
+                            <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
+                              <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-sm truncate">{item.name}</h4>
+                              {(item.selectedSize || item.selectedColor) && (
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+                                  {[item.selectedColor, item.selectedSize].filter(Boolean).join(' · ')}
+                                </p>
+                              )}
+                              <p className="text-primary font-bold text-sm mt-1">{formatPrice(item.price)}</p>
+                              <div className="flex items-center gap-3 mt-2">
+                                <button onClick={() => updateQuantity(key, -1)} className="w-7 h-7 rounded-lg bg-foreground/5 flex items-center justify-center hover:bg-foreground/10">
+                                  <Minus size={14} />
+                                </button>
+                                <span className="text-sm font-black">{item.quantity}</span>
+                                <button onClick={() => updateQuantity(key, 1)} className="w-7 h-7 rounded-lg bg-foreground/5 flex items-center justify-center hover:bg-foreground/10">
+                                  <Plus size={14} />
+                                </button>
+                                <button onClick={() => removeFromCart(key)} className="ml-auto p-1 text-muted-foreground hover:text-destructive">
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </motion.div>
                 )}
