@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { Purchase } from '../types';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Mail, Crown, ShoppingBag, Edit2, Save, X, Globe, LogOut, ChevronDown } from 'lucide-react';
+import { User as UserIcon, Mail, Crown, ShoppingBag, Edit2, Save, X, Globe, LogOut, ChevronDown, Truck, MapPin } from 'lucide-react';
 import { useCountry } from '../context/CountryContext';
 import { MOCK_PURCHASES } from '../data/mockData';
+
+type DeliveryZone = 'inside_dar' | 'outside_dar';
 
 export default function Profile() {
   const { user, countries, refreshUser, formatPrice, logout, loading: countryLoading } = useCountry();
   const [purchases] = useState<Purchase[]>(MOCK_PURCHASES);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: user?.full_name || '', email: user?.email || '', country_id: user?.country_id || 0 });
+  const [deliveryZone, setDeliveryZone] = useState<DeliveryZone>('inside_dar');
 
   if (countryLoading || !user) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
