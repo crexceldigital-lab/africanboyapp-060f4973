@@ -3,10 +3,10 @@ import { Product, CartItem, AppEvent } from '../types';
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product) => void;
+  addToCart: (product: Product, size?: string, color?: string) => void;
   addTicket: (event: AppEvent) => void;
-  removeFromCart: (productId: number) => void;
-  updateQuantity: (productId: number, delta: number) => void;
+  removeFromCart: (cartKey: string) => void;
+  updateQuantity: (cartKey: string, delta: number) => void;
   clearCart: () => void;
   cartCount: number;
   cartTotal: number;
@@ -14,18 +14,25 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+function getCartKey(productId: number, size?: string, color?: string) {
+  return `${productId}-${size || ''}-${color || ''}`;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, size?: string, color?: string) => {
+    const key = getCartKey(product.id, size, color);
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
+      const existingItem = prevCart.find(item => getCartKey(item.id, item.selectedSize, item.selectedColor) === key);
       if (existingItem) {
         return prevCart.map(item =>
-          (item.id === product.id) ? { ...item, quantity: item.quantity + 1 } : item
+          getCartKey(item.id, item.selectedSize, item.selectedColor) === key
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
         );
       }
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prevCart, { ...product, quantity: 1, selectedSize: size, selectedColor: color }];
     });
   };
 
@@ -37,25 +44,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
       category: 'Ticket',
       image_url: event.image_url,
       description: `Entry ticket for ${event.title} at ${event.location}`,
-      stock_quantity: 999
+      stock_quantity: 999,
+      sizes: [],
+      colors: [],
     };
     addToCart(ticketProduct);
   };
 
-  const updateQuantity = (productId: number, delta: number) => {
-    setCart(prevCart => {
-      return prevCart.map(item => {
-        if (item.id === productId) {
+  const updateQuantity = (cartKey: string, delta: number) => {
+    setCart(prevCart =>
+      prevCart.map(item => {
+        if (getCartKey(item.id, item.selectedSize, item.selectedColor) === cartKey) {
           const newQuantity = Math.max(1, item.quantity + delta);
           return { ...item, quantity: newQuantity };
         }
         return item;
-      });
-    });
+      })
+    );
   };
 
-  const removeFromCart = (productId: number) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  const removeFromCart = (cartKey: string) => {
+    setCart(prevCart => prevCart.filter(item => getCartKey(item.id, item.selectedSize, item.selectedColor) !== cartKey));
   };
 
   const clearCart = () => setCart([]);
