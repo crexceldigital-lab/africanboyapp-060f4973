@@ -1,6 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 
-export type NavTab = 'home' | 'shop' | 'video' | 'events' | 'vip' | 'fitme' | 'profile' | 'admin';
+export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin';
 
 export interface Product {
   id: number;

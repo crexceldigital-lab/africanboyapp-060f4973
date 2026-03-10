@@ -6,7 +6,7 @@ export const NAV_ITEMS: { id: NavTab; icon: LucideIcon; label: string }[] = [
   { id: 'home', icon: Home, label: 'Home' },
   { id: 'video', icon: Play, label: 'Gallery' },
   { id: 'shop', icon: ShoppingBag, label: 'Shop' },
-  { id: 'events', icon: Calendar, label: 'Events' },
+  
   { id: 'vip', icon: Zap, label: 'COMBOS' },
   { id: 'fitme', icon: Sparkles, label: 'Fit Me' },
   { id: 'profile', icon: User, label: 'Profile' },

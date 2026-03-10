@@ -39,7 +39,7 @@ function AppContent() {
       case 'home': return <Home onNavigate={setActiveTab} />;
       case 'shop': return <Shop />;
       case 'video': return <Media />;
-      case 'events': return <Events />;
+      
       case 'vip': return <VIP />;
       case 'fitme': return <FitMe />;
       case 'profile': return <Profile />;
