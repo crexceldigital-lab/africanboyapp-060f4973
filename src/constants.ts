@@ -1,4 +1,4 @@
-import { Home, Play, ShoppingBag, Calendar, Zap, User, ShieldCheck, Sparkles } from 'lucide-react';
+import { Home, Image, ShoppingBag, Calendar, Zap, User, ShieldCheck, Sparkles } from 'lucide-react';
 import { NavTab } from './types';
 import type { LucideIcon } from 'lucide-react';
 
