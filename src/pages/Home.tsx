@@ -28,6 +28,10 @@ export default function Home({ onNavigate }: HomeProps) {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [updatesIndex, setUpdatesIndex] = useState(0);
   const [lifestyleIndex, setLifestyleIndex] = useState(0);
+  const [logoOffset, setLogoOffset] = useState({ x: -5, y: -5 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
