@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Product, NavTab } from '../types';
 import ProductCard from '../components/ProductCard';
 import { ArrowRight } from 'lucide-react';
@@ -13,6 +13,9 @@ interface HomeProps {
 
 export default function Home({ onNavigate }: HomeProps) {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [logoPos, setLogoPos] = useState({ x: 0, y: -15 }); // percentage offset
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -60,11 +63,31 @@ export default function Home({ onNavigate }: HomeProps) {
               </span>
             </div>
 
-            <div className="relative w-72 h-72 md:w-96 md:h-96 rounded-full shadow-[0_0_60px_hsl(43,96%,49%,0.4),0_0_120px_hsl(43,96%,49%,0.15)] overflow-hidden">
+            <div 
+              ref={containerRef}
+              className="relative w-72 h-72 md:w-96 md:h-96 rounded-full shadow-[0_0_60px_hsl(43,96%,49%,0.4),0_0_120px_hsl(43,96%,49%,0.15)] overflow-hidden cursor-grab active:cursor-grabbing"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onMouseMove={(e) => {
+                if (!isDragging || !containerRef.current) return;
+                const rect = containerRef.current.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width - 0.5) * -30;
+                const y = ((e.clientY - rect.top) / rect.height - 0.5) * -30;
+                setLogoPos({ x, y });
+              }}
+              onMouseUp={() => setIsDragging(false)}
+              onMouseLeave={() => setIsDragging(false)}
+            >
               <img 
                 src={africanBoyLogo}
                 alt="African Boy Logo"
-                className="absolute inset-[-15%] w-[130%] h-[130%] object-cover object-[center_35%]"
+                className="absolute w-[130%] h-[130%] object-cover pointer-events-none transition-all duration-75"
+                style={{
+                  left: `${logoPos.x - 15}%`,
+                  top: `${logoPos.y - 15}%`,
+                }}
               />
             </div>
           </motion.div>
