@@ -27,7 +27,7 @@ const PAYMENT_METHODS_NG = [
   { id: 'moniepoint', name: 'MONIEPOINT', icon: Landmark, color: 'text-blue-500' },
 ];
 
-function getCartKey(id: number, size?: string, color?: string) {
+function getCartKey(id: string, size?: string, color?: string) {
   return `${id}-${size || ''}-${color || ''}`;
 }
 

@@ -86,7 +86,7 @@ export default function Admin() {
     } else {
       const { error } = await supabase
         .from('products')
-        .insert(productData);
+        .insert({ ...productData, colors: productData.colors as any });
 
       if (error) {
         toast.error('Failed to add product');

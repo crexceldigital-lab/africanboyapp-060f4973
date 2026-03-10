@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, X, Save, Calendar, MapPin } from 'lucide-react';
 import { AppEvent } from '../../types';
-import { MOCK_EVENTS } from '../../data/mockData';
 
 export default function EventManager() {
-  const [events, setEvents] = useState<AppEvent[]>(MOCK_EVENTS);
+  const [events, setEvents] = useState<AppEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null);
   const [formData, setFormData] = useState({ title: '', date: '', location: '', price: '', image_url: '' });
@@ -27,7 +26,7 @@ export default function EventManager() {
       setEvents(events.map(ev => ev.id === editingEvent.id ? { ...ev, title: formData.title, date: formData.date, location: formData.location, price: Number(formData.price), image_url: formData.image_url } : ev));
     } else {
       const newEvent: AppEvent = {
-        id: Math.max(...events.map(ev => ev.id), 0) + 1,
+        id: crypto.randomUUID(),
         title: formData.title,
         date: formData.date,
         location: formData.location,
@@ -39,7 +38,7 @@ export default function EventManager() {
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     setEvents(events.filter(ev => ev.id !== id));
   };
 
@@ -105,7 +104,6 @@ export default function EventManager() {
         </div>
       )}
 
-      {/* Event Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
