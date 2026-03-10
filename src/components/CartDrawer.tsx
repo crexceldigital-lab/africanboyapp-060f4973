@@ -200,9 +200,46 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
             {step === 'cart' && cart.length > 0 && (
               <div className="p-6 border-t border-foreground/5 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Total ({cartCount} items)</span>
-                  <span className="text-xl font-black text-primary">{formatPrice(cartTotal)}</span>
+                {/* Delivery zone selector */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery Zone</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setDeliveryZone('inside_dar')}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${
+                        deliveryZone === 'inside_dar'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-foreground/10 text-muted-foreground hover:border-foreground/20'
+                      }`}
+                    >
+                      Inside Dar · {formatPrice(3000)}
+                    </button>
+                    <button
+                      onClick={() => setDeliveryZone('outside_dar')}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${
+                        deliveryZone === 'outside_dar'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-foreground/10 text-muted-foreground hover:border-foreground/20'
+                      }`}
+                    >
+                      Other Regions · {formatPrice(10000)}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subtotal ({cartCount} items)</span>
+                    <span className="text-sm font-bold">{formatPrice(cartTotal)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery</span>
+                    <span className="text-sm font-bold">{formatPrice(deliveryFee)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-foreground/10">
+                    <span className="text-xs font-black uppercase tracking-widest">Total</span>
+                    <span className="text-xl font-black text-primary">{formatPrice(grandTotal)}</span>
+                  </div>
                 </div>
                 <button onClick={() => setStep('payment')} className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
                   CHECKOUT
