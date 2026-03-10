@@ -4,6 +4,7 @@ import { Product, NavTab } from '../types';
 import ProductCard from '../components/ProductCard';
 import { ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import africanBoyLogo from '@/assets/african-boy-logo.png';
 
 interface HomeProps {
   onNavigate: (tab: NavTab) => void;
