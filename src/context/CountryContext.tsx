@@ -66,9 +66,16 @@ export function CountryProvider({ children }: { children: ReactNode }) {
     // Check existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        const u = await buildUserFromSession(session);
-        setUser(u);
+        try {
+          const u = await buildUserFromSession(session);
+          setUser(u);
+        } catch (e) {
+          console.error('Session build error:', e);
+        }
       }
+      setLoading(false);
+    }).catch((e) => {
+      console.error('getSession error:', e);
       setLoading(false);
     });
 
