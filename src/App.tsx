@@ -10,6 +10,7 @@ import VIP from './pages/VIP';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+import FitMe from './pages/FitMe';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CartProvider } from './context/CartContext';
 import { useCountry } from './context/CountryContext';
