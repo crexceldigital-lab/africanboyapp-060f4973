@@ -73,11 +73,17 @@ export function CountryProvider({ children }: { children: ReactNode }) {
 
   const signup = async (data: any) => {
     await new Promise(resolve => setTimeout(resolve, 500));
+    const country = countries.find(c => c.id === data.country_id) || countries[0];
     setUser({
       ...MOCK_USER,
       full_name: data.full_name || 'New User',
       email: data.email || '',
       phone_number: data.phone_number || '',
+      country_id: country.id,
+      country_name: country.name,
+      country_code: country.code,
+      currency_code: country.currency_code,
+      currency_symbol: country.currency_symbol,
     });
     return true;
   };
