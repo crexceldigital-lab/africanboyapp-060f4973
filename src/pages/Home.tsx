@@ -157,23 +157,51 @@ export default function Home({ onNavigate }: HomeProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <motion.div
             whileHover={{ y: -5 }}
-            className="relative h-64 rounded-3xl overflow-hidden group border border-foreground/5 bg-card"
+            className="relative h-80 rounded-3xl overflow-hidden group border border-foreground/5 bg-card"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent p-6 flex flex-col justify-end">
+            {updatesImages.map((img, i) => (
+              <img
+                key={i}
+                src={img}
+                alt={`Updates ${i + 1}`}
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                style={{ opacity: updatesIndex === i ? 1 : 0 }}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent p-6 flex flex-col justify-end z-10">
               <span className="bg-primary text-primary-foreground text-[10px] font-black px-2 py-1 rounded w-fit mb-2">UPDATES</span>
               <h3 className="text-xl font-bold leading-tight">Welcome to African Boy</h3>
               <p className="text-xs text-muted-foreground mt-2">Just now</p>
+              <div className="flex gap-1.5 mt-3">
+                {updatesImages.map((_, i) => (
+                  <button key={i} onClick={() => setUpdatesIndex(i)} className={`h-1 rounded-full transition-all ${updatesIndex === i ? 'w-6 bg-primary' : 'w-2 bg-foreground/20'}`} />
+                ))}
+              </div>
             </div>
           </motion.div>
 
           <motion.div
             whileHover={{ y: -5 }}
-            className="relative h-64 rounded-3xl overflow-hidden group border border-foreground/5 bg-card"
+            className="relative h-80 rounded-3xl overflow-hidden group border border-foreground/5 bg-card"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent p-6 flex flex-col justify-end">
+            {lifestyleImages.map((img, i) => (
+              <img
+                key={i}
+                src={img}
+                alt={`Lifestyle ${i + 1}`}
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                style={{ opacity: lifestyleIndex === i ? 1 : 0 }}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent p-6 flex flex-col justify-end z-10">
               <span className="bg-primary text-primary-foreground text-[10px] font-black px-2 py-1 rounded w-fit mb-2">LIFESTYLE</span>
               <h3 className="text-xl font-bold leading-tight">New Collection Coming Soon</h3>
               <p className="text-xs text-muted-foreground mt-2">Recently</p>
+              <div className="flex gap-1.5 mt-3">
+                {lifestyleImages.map((_, i) => (
+                  <button key={i} onClick={() => setLifestyleIndex(i)} className={`h-1 rounded-full transition-all ${lifestyleIndex === i ? 'w-6 bg-primary' : 'w-2 bg-foreground/20'}`} />
+                ))}
+              </div>
             </div>
           </motion.div>
         </div>
