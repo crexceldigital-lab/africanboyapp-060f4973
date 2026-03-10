@@ -124,6 +124,16 @@ export default function FitMe() {
         })}
       </div>
 
+      {/* Hidden file input - outside AnimatePresence */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+
       <AnimatePresence mode="wait">
         {/* Step 1: Upload */}
         {step === 'upload' && (
@@ -134,9 +144,10 @@ export default function FitMe() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            <div
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="aspect-[3/4] max-w-xs mx-auto border-2 border-dashed border-foreground/20 rounded-3xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary transition-all bg-card/50 group"
+              className="aspect-[3/4] max-w-xs mx-auto border-2 border-dashed border-foreground/20 rounded-3xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary transition-all bg-card/50 group w-full"
             >
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all">
                 <Camera size={28} className="text-primary" />
@@ -145,14 +156,7 @@ export default function FitMe() {
                 <p className="text-sm font-bold">Tap to upload your photo</p>
                 <p className="text-xs text-muted-foreground mt-1">Full body photo works best</p>
               </div>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
+            </button>
           </motion.div>
         )}
 
