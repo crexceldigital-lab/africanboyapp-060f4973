@@ -13,6 +13,9 @@ interface HomeProps {
 
 export default function Home({ onNavigate }: HomeProps) {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [logoPos, setLogoPos] = useState({ x: 0, y: -15 }); // percentage offset
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchFeatured = async () => {
