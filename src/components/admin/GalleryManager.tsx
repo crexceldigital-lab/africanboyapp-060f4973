@@ -1,14 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, X, Save, Image as ImageIcon } from 'lucide-react';
+import { Plus, X, Save, Image as ImageIcon } from 'lucide-react';
 import { GalleryItem } from '../../types';
-import { MOCK_GALLERY } from '../../data/mockData';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function GalleryManager() {
-  const [gallery, setGallery] = useState<GalleryItem[]>(MOCK_GALLERY);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
   const [formData, setFormData] = useState({ image_url: '' });
+
+  const fetchGallery = async () => {
+    const { data, error } = await supabase
+      .from('gallery_items')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setGallery(data as GalleryItem[]);
+    }
+  };
+
+  useEffect(() => { fetchGallery(); }, []);
 
   const handleOpenModal = (item?: GalleryItem) => {
     if (item) {
@@ -21,23 +35,31 @@ export default function GalleryManager() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingItem) {
-      setGallery(gallery.map(g => g.id === editingItem.id ? { ...g, ...formData } : g));
+      const { error } = await supabase
+        .from('gallery_items')
+        .update({ image_url: formData.image_url })
+        .eq('id', editingItem.id);
+      if (error) { toast.error('Failed to update'); return; }
+      toast.success('Image updated!');
     } else {
-      const newItem: GalleryItem = {
-        id: Math.max(...gallery.map(g => g.id), 0) + 1,
-        image_url: formData.image_url,
-        created_at: new Date().toISOString().split('T')[0],
-      };
-      setGallery([newItem, ...gallery]);
+      const { error } = await supabase
+        .from('gallery_items')
+        .insert({ image_url: formData.image_url });
+      if (error) { toast.error('Failed to upload'); return; }
+      toast.success('Image added!');
     }
     setIsModalOpen(false);
+    fetchGallery();
   };
 
-  const handleDelete = (id: number) => {
-    setGallery(gallery.filter(g => g.id !== id));
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('gallery_items').delete().eq('id', id);
+    if (error) { toast.error('Failed to delete'); return; }
+    toast.success('Image deleted');
+    fetchGallery();
   };
 
   return (
@@ -64,7 +86,7 @@ export default function GalleryManager() {
               <img src={item.image_url} alt="Gallery" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{item.created_at}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{item.created_at?.split('T')[0]}</p>
               <div className="flex gap-2 mt-3">
                 <button onClick={() => handleOpenModal(item)} className="px-3 py-1.5 bg-foreground/10 backdrop-blur-sm rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-foreground/20 transition-all">
                   Edit

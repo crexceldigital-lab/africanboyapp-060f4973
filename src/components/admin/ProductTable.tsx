@@ -5,8 +5,8 @@ interface ProductTableProps {
   products: Product[];
   activeTab: string;
   onEdit: (product: Product) => void;
-  onDelete: (id: number) => void;
-  onUpdateStock: (id: number, newStock: number) => void;
+  onDelete: (id: string) => void;
+  onUpdateStock: (id: string, newStock: number) => void;
 }
 
 export default function ProductTable({ products, activeTab, onEdit, onDelete, onUpdateStock }: ProductTableProps) {

@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { Product, ProductColor } from '../types';
-import { MOCK_PRODUCTS } from '../data/mockData';
 import ProductTable from '../components/admin/ProductTable';
 import ProductModal from '../components/admin/ProductModal';
 import GalleryManager from '../components/admin/GalleryManager';
-import EventManager from '../components/admin/EventManager';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-type AdminTab = 'products' | 'inventory' | 'gallery' | 'events';
+type AdminTab = 'products' | 'inventory' | 'gallery';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -21,6 +21,23 @@ export default function Admin() {
   });
 
   const categories = ['T-Shirt', 'Hoods', 'Jeans', 'Accessories'];
+
+  const fetchProducts = async () => {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setProducts(data.map((p: any) => ({
+        ...p,
+        price: Number(p.price),
+        colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
+      })));
+    }
+  };
+
+  useEffect(() => { fetchProducts(); }, []);
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -42,31 +59,65 @@ export default function Admin() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const productData = {
+      name: formData.name,
+      category: formData.category,
+      price: Number(formData.price),
+      stock_quantity: Number(formData.stock_quantity),
+      image_url: formData.image_url,
+      description: formData.description,
+      sizes: formData.sizes,
+      colors: formData.colors,
+    };
+
     if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? {
-        ...p, name: formData.name, category: formData.category, price: Number(formData.price),
-        stock_quantity: Number(formData.stock_quantity), image_url: formData.image_url, description: formData.description,
-        sizes: formData.sizes, colors: formData.colors
-      } : p));
+      const { error } = await supabase
+        .from('products')
+        .update({ ...productData, updated_at: new Date().toISOString() })
+        .eq('id', editingProduct.id);
+
+      if (error) {
+        toast.error('Failed to update product');
+        return;
+      }
+      toast.success('Product updated!');
     } else {
-      const newProduct: Product = {
-        id: Math.max(...products.map(p => p.id)) + 1, name: formData.name, category: formData.category,
-        price: Number(formData.price), stock_quantity: Number(formData.stock_quantity),
-        image_url: formData.image_url, description: formData.description,
-        sizes: formData.sizes, colors: formData.colors
-      };
-      setProducts([...products, newProduct]);
+      const { error } = await supabase
+        .from('products')
+        .insert(productData);
+
+      if (error) {
+        toast.error('Failed to add product');
+        return;
+      }
+      toast.success('Product added!');
     }
     setIsModalOpen(false);
+    fetchProducts();
   };
 
-  const handleDelete = (id: number) => setProducts(products.filter(p => p.id !== id));
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) {
+      toast.error('Failed to delete product');
+      return;
+    }
+    toast.success('Product deleted');
+    fetchProducts();
+  };
 
-  const handleUpdateStock = (id: number, newStock: number) => {
+  const handleUpdateStock = async (id: string, newStock: number) => {
     if (newStock < 0) return;
-    setProducts(products.map(p => p.id === id ? { ...p, stock_quantity: newStock } : p));
+    const { error } = await supabase
+      .from('products')
+      .update({ stock_quantity: newStock, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (!error) {
+      setProducts(products.map(p => p.id === id ? { ...p, stock_quantity: newStock } : p));
+    }
   };
 
   const showProductViews = activeTab === 'products' || activeTab === 'inventory';
@@ -79,7 +130,7 @@ export default function Admin() {
       </div>
 
       <div className="flex gap-2 mb-8 overflow-x-auto no-scrollbar">
-        {(['products', 'inventory', 'gallery', 'events'] as AdminTab[]).map(tab => (
+        {(['products', 'inventory', 'gallery'] as AdminTab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -133,7 +184,6 @@ export default function Admin() {
       )}
 
       {activeTab === 'gallery' && <GalleryManager />}
-      {activeTab === 'events' && <EventManager />}
     </div>
   );
 }
