@@ -1,11 +1,24 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, NavTab } from '../types';
 import ProductCard from '../components/ProductCard';
 import { ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 import heroBg from '@/assets/hero-bg.png';
+import spotlight1 from '@/assets/spotlight-1.png';
+import spotlight2 from '@/assets/spotlight-2.png';
+import spotlight3 from '@/assets/spotlight-3.png';
+import spotlight4 from '@/assets/spotlight-4.png';
+import spotlight5 from '@/assets/spotlight-5.png';
+import spotlight6 from '@/assets/spotlight-6.png';
+import spotlight7 from '@/assets/spotlight-7.png';
+import spotlight8 from '@/assets/spotlight-8.png';
+import spotlight9 from '@/assets/spotlight-9.png';
+import spotlight10 from '@/assets/spotlight-10.png';
+
+const updatesImages = [spotlight1, spotlight2, spotlight3, spotlight5, spotlight12];
+const lifestyleImages = [spotlight7, spotlight8, spotlight9, spotlight10, spotlight6];
 
 interface HomeProps {
   onNavigate: (tab: NavTab) => void;
