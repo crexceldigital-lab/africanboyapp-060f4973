@@ -1,11 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Product } from '../types';
 import ProductCard from '../components/ProductCard';
-import { MOCK_PRODUCTS } from '../data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Shop() {
   const [category, setCategory] = useState('All');
-  const [products] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setProducts(data.map((p: any) => ({
+          ...p,
+          price: Number(p.price),
+          colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
+        })));
+      }
+      setLoading(false);
+    };
+    fetchProducts();
+  }, []);
 
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
   const filteredProducts = category === 'All' ? products : products.filter(p => p.category === category);
@@ -33,11 +53,22 @@ export default function Shop() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filteredProducts.map(product => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center py-20">
+          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest">Loading products...</p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="text-center py-20">
+          <p className="text-muted-foreground text-sm font-bold">No products available yet</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredProducts.map(product => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,19 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Check, Zap, Plus, ArrowRight, ShoppingBag } from 'lucide-react';
+import { Crown, Check, Zap, Plus, ShoppingBag } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { useCountry } from '../context/CountryContext';
-import { MOCK_PRODUCTS } from '../data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function VIP() {
-  const [products] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedTop, setSelectedTop] = useState<Product | null>(null);
   const [selectedBottom, setSelectedBottom] = useState<Product | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const { addToCart } = useCart();
   const { formatPrice } = useCountry();
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setProducts(data.map((p: any) => ({
+          ...p,
+          price: Number(p.price),
+          colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
+        })));
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const tops = products.filter(p => ['T-Shirt', 'Hoods'].includes(p.category));
   const bottoms = products.filter(p => p.category === 'Jeans');
@@ -25,7 +43,7 @@ export default function VIP() {
   const handleAddComboToCart = () => {
     if (selectedTop && selectedBottom) {
       const comboItem: Product = {
-        id: Math.random(), 
+        id: `combo-${Date.now()}`,
         name: `COMBO: ${selectedTop.name} + ${selectedBottom.name}`,
         price: comboPrice,
         category: 'Combo',

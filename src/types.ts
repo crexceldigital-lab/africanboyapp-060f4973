@@ -3,7 +3,7 @@ import { LucideIcon } from 'lucide-react';
 export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin';
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   price: number;
   category: string;
@@ -12,6 +12,8 @@ export interface Product {
   stock_quantity: number;
   sizes: string[];
   colors: ProductColor[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ProductColor {
@@ -26,7 +28,7 @@ export interface CartItem extends Product {
 }
 
 export interface AppEvent {
-  id: number;
+  id: string;
   title: string;
   date: string;
   location: string;
@@ -43,13 +45,13 @@ export interface ContentItem {
 }
 
 export interface GalleryItem {
-  id: number;
+  id: string;
   image_url: string;
   created_at: string;
 }
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
   phone_number: string;
   full_name: string;

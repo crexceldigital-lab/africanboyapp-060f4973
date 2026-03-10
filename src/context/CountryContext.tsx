@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Country, ExchangeRate } from '../types';
-import { MOCK_USER, MOCK_COUNTRIES, MOCK_EXCHANGE_RATES } from '../data/mockData';
+import { MOCK_COUNTRIES, MOCK_EXCHANGE_RATES } from '../data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CountryContextType {
   user: User | null;
@@ -26,12 +27,62 @@ export function CountryProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
 
+  const buildUserFromSession = async (session: any): Promise<User | null> => {
+    if (!session?.user) return null;
+    const authUser = session.user;
+
+    // Fetch profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .single();
+
+    // Fetch roles
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', authUser.id);
+
+    const isAdmin = roles?.some((r: any) => r.role === 'admin') || false;
+    const country = countries.find(c => c.id === (profile?.country_id || 1)) || countries[0];
+
+    return {
+      id: authUser.id,
+      email: authUser.email || '',
+      phone_number: profile?.phone_number || '',
+      full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
+      role: isAdmin ? 'admin' : 'user',
+      vip_tier: profile?.vip_tier || 'None',
+      country_id: profile?.country_id || 1,
+      country_name: country?.name,
+      country_code: country?.code,
+      currency_code: country?.currency_code,
+      currency_symbol: country?.currency_symbol,
+    };
+  };
+
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
+    // Check existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        const u = await buildUserFromSession(session);
+        setUser(u);
+      }
       setLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const u = await buildUserFromSession(session);
+        setUser(u);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const selectedCountry = user && countries.length > 0
@@ -40,82 +91,90 @@ export function CountryProvider({ children }: { children: ReactNode }) {
 
   const formatPrice = (priceInTZS: number) => {
     if (!selectedCountry) return `${priceInTZS.toLocaleString()} TZS`;
-
     const rate = exchangeRates.find(r => r.from_currency === 'TZS' && r.to_currency === selectedCountry.currency_code);
     const convertedPrice = rate ? priceInTZS * rate.rate : priceInTZS;
-
     if (selectedCountry.code === 'NG') {
       return `${selectedCountry.currency_symbol}${Math.round(convertedPrice).toLocaleString()}`;
     }
-
     return `${Math.round(convertedPrice).toLocaleString()} ${selectedCountry.currency_code}`;
   };
 
   const updateUserCountry = (countryId: number) => {
     if (user) {
       setUser({ ...user, country_id: countryId });
+      supabase.from('profiles').update({ country_id: countryId }).eq('id', user.id);
     }
   };
 
-  const refreshUser = () => {
-    // No-op in mock mode
+  const refreshUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const u = await buildUserFromSession(session);
+      setUser(u);
+    }
   };
 
-  const ADMIN_EMAIL = 'africanboy.admin@gmail.com';
-  const ADMIN_PASSWORD = 'Africanboyadminrevoltek';
-
   const login = async (identifier: string, password: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    if (!identifier || !password) return false;
-
-    const isAdmin = identifier.toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD;
-    const role = isAdmin ? 'admin' : 'user';
-
-    setUser({
-      ...MOCK_USER,
-      email: identifier.includes('@') ? identifier : MOCK_USER.email,
-      phone_number: !identifier.includes('@') ? identifier : MOCK_USER.phone_number,
-      role,
-    });
-    return true;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: identifier,
+        password,
+      });
+      if (error) {
+        console.error('Login error:', error.message);
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const signup = async (data: any) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const country = countries.find(c => c.id === data.country_id) || countries[0];
-    setUser({
-      ...MOCK_USER,
-      full_name: data.full_name || 'New User',
-      email: data.email || '',
-      phone_number: data.phone_number || '',
-      role: 'user',
-      country_id: country.id,
-      country_name: country.name,
-      country_code: country.code,
-      currency_code: country.currency_code,
-      currency_symbol: country.currency_symbol,
-    });
-    return true;
+    try {
+      const { data: signupData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: { full_name: data.full_name || '' },
+        },
+      });
+      if (error) {
+        console.error('Signup error:', error.message);
+        return false;
+      }
+      
+      // Setup profile and roles via security definer function
+      if (signupData.user) {
+        await supabase.rpc('handle_new_user_setup', {
+          p_user_id: signupData.user.id,
+          p_email: data.email,
+          p_full_name: data.full_name || '',
+        });
+
+        // Update profile with extra fields
+        if (data.phone_number || data.country_id) {
+          await supabase.from('profiles').update({
+            phone_number: data.phone_number || '',
+            country_id: data.country_id || 1,
+          }).eq('id', signupData.user.id);
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
   return (
     <CountryContext.Provider value={{
-      user,
-      countries,
-      exchangeRates,
-      selectedCountry,
-      loading,
-      error,
-      formatPrice,
-      updateUserCountry,
-      refreshUser,
-      login,
-      signup,
-      logout
+      user, countries, exchangeRates, selectedCountry, loading, error,
+      formatPrice, updateUserCountry, refreshUser, login, signup, logout
     }}>
       {children}
     </CountryContext.Provider>

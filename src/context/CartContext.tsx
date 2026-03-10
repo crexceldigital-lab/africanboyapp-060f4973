@@ -25,7 +25,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-function getCartKey(productId: number, size?: string, color?: string) {
+function getCartKey(productId: string, size?: string, color?: string) {
   return `${productId}-${size || ''}-${color || ''}`;
 }
 
@@ -50,7 +50,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addTicket = (event: AppEvent) => {
     const ticketProduct: Product = {
-      id: event.id + 10000,
+      id: `ticket-${event.id}`,
       name: `Ticket: ${event.title}`,
       price: event.price,
       category: 'Ticket',
