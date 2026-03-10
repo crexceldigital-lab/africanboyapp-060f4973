@@ -1,16 +1,35 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Product, NavTab } from '../types';
 import ProductCard from '../components/ProductCard';
 import { ArrowRight } from 'lucide-react';
-import { MOCK_PRODUCTS } from '../data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 interface HomeProps {
   onNavigate: (tab: NavTab) => void;
 }
 
 export default function Home({ onNavigate }: HomeProps) {
-  const [featuredProducts] = useState<Product[]>(MOCK_PRODUCTS.slice(0, 4));
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(4);
+
+      if (data) {
+        setFeaturedProducts(data.map((p: any) => ({
+          ...p,
+          price: Number(p.price),
+          colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
+        })));
+      }
+    };
+    fetchFeatured();
+  }, []);
 
   return (
     <div className="pb-24 pt-16">
@@ -142,11 +161,15 @@ export default function Home({ onNavigate }: HomeProps) {
             SHOW ALL <ArrowRight size={14} />
           </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {featuredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {featuredProducts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {featuredProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-sm text-center py-8">Products coming soon...</p>
+        )}
       </section>
     </div>
   );
