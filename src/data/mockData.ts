@@ -5,7 +5,7 @@ export const MOCK_USER: User = {
   email: 'fan@africanboy.com',
   phone_number: '+255712345678',
   full_name: 'Jux Fan',
-  role: 'user',
+  role: 'admin',
   vip_tier: 'Gold',
   country_id: 1,
   country_name: 'Tanzania',
