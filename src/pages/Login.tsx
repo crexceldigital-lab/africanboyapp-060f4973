@@ -98,6 +98,16 @@ export default function Login() {
               className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
               required
             />
+            <select
+              value={countryId}
+              onChange={e => setCountryId(Number(e.target.value))}
+              className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all appearance-none"
+              required
+            >
+              {countries.map(c => (
+                <option key={c.id} value={c.id}>{c.flag_emoji} {c.name} ({c.currency_code})</option>
+              ))}
+            </select>
             <input
               type="password"
               placeholder="Password"
