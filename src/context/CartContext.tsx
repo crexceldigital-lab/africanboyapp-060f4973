@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Product, CartItem, AppEvent } from '../types';
 
+export type DeliveryZone = 'inside_dar' | 'outside_dar';
+
+const DELIVERY_PRICES: Record<DeliveryZone, number> = {
+  inside_dar: 3000,
+  outside_dar: 10000,
+};
+
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product, size?: string, color?: string) => void;
@@ -10,6 +17,10 @@ interface CartContextType {
   clearCart: () => void;
   cartCount: number;
   cartTotal: number;
+  deliveryZone: DeliveryZone;
+  setDeliveryZone: (zone: DeliveryZone) => void;
+  deliveryFee: number;
+  grandTotal: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -20,6 +31,7 @@ function getCartKey(productId: number, size?: string, color?: string) {
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [deliveryZone, setDeliveryZone] = useState<DeliveryZone>('inside_dar');
 
   const addToCart = (product: Product, size?: string, color?: string) => {
     const key = getCartKey(product.id, size, color);
@@ -71,9 +83,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
   const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const deliveryFee = cart.length > 0 ? DELIVERY_PRICES[deliveryZone] : 0;
+  const grandTotal = cartTotal + deliveryFee;
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, addTicket, removeFromCart, updateQuantity, clearCart, cartCount, cartTotal }}>
+    <CartContext.Provider value={{ cart, addToCart, addTicket, removeFromCart, updateQuantity, clearCart, cartCount, cartTotal, deliveryZone, setDeliveryZone, deliveryFee, grandTotal }}>
       {children}
     </CartContext.Provider>
   );
