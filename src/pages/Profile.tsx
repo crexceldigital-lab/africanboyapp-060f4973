@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { Purchase } from '../types';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Mail, Crown, ShoppingBag, Edit2, Save, X, Globe, LogOut, ChevronDown } from 'lucide-react';
+import { User as UserIcon, Mail, Crown, ShoppingBag, Edit2, Save, X, Globe, LogOut, ChevronDown, Truck, MapPin } from 'lucide-react';
 import { useCountry } from '../context/CountryContext';
 import { MOCK_PURCHASES } from '../data/mockData';
+
+type DeliveryZone = 'inside_dar' | 'outside_dar';
 
 export default function Profile() {
   const { user, countries, refreshUser, formatPrice, logout, loading: countryLoading } = useCountry();
   const [purchases] = useState<Purchase[]>(MOCK_PURCHASES);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: user?.full_name || '', email: user?.email || '', country_id: user?.country_id || 0 });
+  const [deliveryZone, setDeliveryZone] = useState<DeliveryZone>('inside_dar');
 
   if (countryLoading || !user) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -99,6 +102,58 @@ export default function Profile() {
             <Save size={16} /> Save Changes
           </button>
         )}
+      </div>
+
+      {/* Delivery Options */}
+      <div className="bg-card rounded-[2rem] border border-foreground/5 p-6 space-y-4">
+        <h2 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+          <Truck size={16} className="text-primary" />
+          Delivery Option
+        </h2>
+
+        <div className="space-y-3">
+          <button
+            onClick={() => setDeliveryZone('inside_dar')}
+            className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
+              deliveryZone === 'inside_dar'
+                ? 'border-primary bg-primary/10'
+                : 'border-foreground/10 bg-foreground/5 hover:border-foreground/20'
+            }`}
+          >
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+              deliveryZone === 'inside_dar' ? 'border-primary' : 'border-muted-foreground'
+            }`}>
+              {deliveryZone === 'inside_dar' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+            </div>
+            <MapPin size={16} className="text-muted-foreground" />
+            <div className="flex-1 text-left">
+              <p className="text-sm font-bold">Inside Dar es Salaam</p>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Delivery within the city</p>
+            </div>
+            <span className="text-primary font-black text-sm">{formatPrice(3000)}</span>
+          </button>
+
+          <button
+            onClick={() => setDeliveryZone('outside_dar')}
+            className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
+              deliveryZone === 'outside_dar'
+                ? 'border-primary bg-primary/10'
+                : 'border-foreground/10 bg-foreground/5 hover:border-foreground/20'
+            }`}
+          >
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+              deliveryZone === 'outside_dar' ? 'border-primary' : 'border-muted-foreground'
+            }`}>
+              {deliveryZone === 'outside_dar' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+            </div>
+            <MapPin size={16} className="text-muted-foreground" />
+            <div className="flex-1 text-left">
+              <p className="text-sm font-bold">Outside Dar / Other Regions</p>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Delivery to other regions in Tanzania</p>
+            </div>
+            <span className="text-primary font-black text-sm">{formatPrice(10000)}</span>
+          </button>
+        </div>
       </div>
 
       {/* Order History */}
