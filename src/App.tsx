@@ -41,6 +41,7 @@ function AppContent() {
       case 'video': return <Media />;
       case 'events': return <Events />;
       case 'vip': return <VIP />;
+      case 'fitme': return <FitMe />;
       case 'profile': return <Profile />;
       case 'admin': return <Admin />;
       default: return <Home onNavigate={setActiveTab} />;
