@@ -29,12 +29,7 @@ export default function Media() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {gallery.map(item => (
             <div key={item.id} className="group relative aspect-square bg-card border border-foreground/5 rounded-2xl overflow-hidden">
-              <img src={item.image_url} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              {item.title && (
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-xs font-black uppercase tracking-widest">{item.title}</p>
-                </div>
-              )}
+              <img src={item.image_url} alt="Gallery" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
             </div>
           ))}
         </div>

@@ -49,14 +49,14 @@ export const MOCK_CONTENT: ContentItem[] = [
 ];
 
 export const MOCK_GALLERY: GalleryItem[] = [
-  { id: 1, title: 'Concert Vibes', image_url: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400', created_at: '2026-01-15' },
-  { id: 2, title: 'Studio Flow', image_url: 'https://images.unsplash.com/photo-1598653222000-6b7b7a552625?w=400', created_at: '2026-01-10' },
-  { id: 3, title: 'Fashion Shoot', image_url: 'https://images.unsplash.com/photo-1503443207922-dff7d543fd0e?w=400', created_at: '2026-01-05' },
-  { id: 4, title: 'On Tour', image_url: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400', created_at: '2025-12-20' },
-  { id: 5, title: 'Behind the Scenes', image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', created_at: '2025-12-15' },
-  { id: 6, title: 'Meet & Greet', image_url: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400', created_at: '2025-12-10' },
-  { id: 7, title: 'Acoustic Set', image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', created_at: '2025-12-05' },
-  { id: 8, title: 'Red Carpet', image_url: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=400', created_at: '2025-12-01' },
+  { id: 1, image_url: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400', created_at: '2026-01-15' },
+  { id: 2, image_url: 'https://images.unsplash.com/photo-1598653222000-6b7b7a552625?w=400', created_at: '2026-01-10' },
+  { id: 3, image_url: 'https://images.unsplash.com/photo-1503443207922-dff7d543fd0e?w=400', created_at: '2026-01-05' },
+  { id: 4, image_url: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400', created_at: '2025-12-20' },
+  { id: 5, image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', created_at: '2025-12-15' },
+  { id: 6, image_url: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400', created_at: '2025-12-10' },
+  { id: 7, image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', created_at: '2025-12-05' },
+  { id: 8, image_url: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=400', created_at: '2025-12-01' },
 ];
 
 export const MOCK_PURCHASES: Purchase[] = [
