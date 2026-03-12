@@ -33,10 +33,20 @@ function getCartKey(id: string, size?: string, color?: string) {
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal } = useCart();
-  const { formatPrice, selectedCountry } = useCountry();
+  const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
+  
+  // Auth form state
+  const [isSignup, setIsSignup] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [authCountryId, setAuthCountryId] = useState(1);
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
   const paymentMethods = selectedCountry?.code === 'NG' ? PAYMENT_METHODS_NG : PAYMENT_METHODS_TZ;
 
