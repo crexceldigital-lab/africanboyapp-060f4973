@@ -30,9 +30,7 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    return <Login />;
-  }
+  // No login gate - users can browse freely. Auth is required only at checkout.
 
   const renderPage = () => {
     switch (activeTab) {

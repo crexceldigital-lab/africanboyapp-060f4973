@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Plus, Trash2, ShoppingBag, Smartphone, CheckCircle2, ArrowLeft, Loader2, Landmark, Wallet } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, Smartphone, CheckCircle2, ArrowLeft, Loader2, Landmark, Wallet, LogIn } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useState } from 'react';
 import { useCountry } from '../context/CountryContext';
@@ -9,7 +9,7 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-type CheckoutStep = 'cart' | 'payment' | 'processing' | 'success';
+type CheckoutStep = 'cart' | 'auth' | 'payment' | 'processing' | 'success';
 
 const PAYMENT_METHODS_TZ = [
   { id: 'vodacom', name: 'VODACOM M-PESA', icon: Smartphone, color: 'text-red-600' },
@@ -33,12 +33,56 @@ function getCartKey(id: string, size?: string, color?: string) {
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal } = useCart();
-  const { formatPrice, selectedCountry } = useCountry();
+  const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
+  
+  // Auth form state
+  const [isSignup, setIsSignup] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [authCountryId, setAuthCountryId] = useState(1);
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
   const paymentMethods = selectedCountry?.code === 'NG' ? PAYMENT_METHODS_NG : PAYMENT_METHODS_TZ;
+
+  const handleCheckoutClick = () => {
+    if (!user) {
+      setStep('auth');
+    } else {
+      setStep('payment');
+    }
+  };
+
+  const handleAuthLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+    const success = await login(authEmail, authPassword);
+    if (success) {
+      setStep('payment');
+    } else {
+      setAuthError('Invalid credentials');
+    }
+    setAuthLoading(false);
+  };
+
+  const handleAuthSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+    const success = await signup({ full_name: authName, email: authEmail, phone_number: authPhone, password: authPassword, country_id: authCountryId });
+    if (success) {
+      setStep('payment');
+    } else {
+      setAuthError('Signup failed. Please try again.');
+    }
+    setAuthLoading(false);
+  };
 
   const handleCheckout = async () => {
     setStep('processing');
@@ -53,6 +97,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       setStep('cart');
       setSelectedMethod(null);
       setPhoneNumber('');
+      setAuthError('');
+      setIsSignup(false);
     }, 300);
   };
 
@@ -77,7 +123,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           >
             <div className="p-6 border-b border-foreground/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {step === 'payment' ? (
+                {(step === 'payment' || step === 'auth') ? (
                   <button onClick={() => setStep('cart')} className="p-1 hover:text-primary transition-colors">
                     <ArrowLeft size={20} />
                   </button>
@@ -85,9 +131,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   <ShoppingBag className="text-primary" size={24} />
                 )}
                 <h2 className="text-xl font-black italic tracking-tight uppercase">
-                  {step === 'cart' ? 'Your ' : step === 'payment' ? 'Payment ' : step === 'success' ? 'Order ' : 'Processing '}
+                  {step === 'cart' ? 'Your ' : step === 'auth' ? 'Sign ' : step === 'payment' ? 'Payment ' : step === 'success' ? 'Order ' : 'Processing '}
                   <span className="text-primary">
-                    {step === 'cart' ? 'Cart' : step === 'payment' ? 'Method' : step === 'success' ? 'Success' : '...'}
+                    {step === 'cart' ? 'Cart' : step === 'auth' ? 'In' : step === 'payment' ? 'Method' : step === 'success' ? 'Success' : '...'}
                   </span>
                 </h2>
               </div>
@@ -140,6 +186,54 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         );
                       })
                     )}
+                  </motion.div>
+                )}
+
+                {step === 'auth' && (
+                  <motion.div key="auth-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                    <div className="text-center space-y-2">
+                      <LogIn size={32} className="text-primary mx-auto" />
+                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Sign in to complete your order</p>
+                    </div>
+
+                    {!isSignup ? (
+                      <form onSubmit={handleAuthLogin} className="space-y-4">
+                        <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        <input type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
+                        <button type="submit" disabled={authLoading}
+                          className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
+                          {authLoading ? 'SIGNING IN...' : 'SIGN IN'}
+                        </button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleAuthSignup} className="space-y-4">
+                        <input type="text" placeholder="Full Name" value={authName} onChange={e => setAuthName(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        <input type="tel" placeholder="Phone Number" value={authPhone} onChange={e => setAuthPhone(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        <select value={authCountryId} onChange={e => setAuthCountryId(Number(e.target.value))}
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all appearance-none">
+                          {countries.map(c => <option key={c.id} value={c.id}>{c.flag_emoji} {c.name} ({c.currency_code})</option>)}
+                        </select>
+                        <input type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
+                        <button type="submit" disabled={authLoading}
+                          className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
+                          {authLoading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+                        </button>
+                      </form>
+                    )}
+
+                    <button onClick={() => { setIsSignup(!isSignup); setAuthError(''); }}
+                      className="w-full text-center text-xs font-bold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest">
+                      {isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                    </button>
                   </motion.div>
                 )}
 
@@ -241,7 +335,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <span className="text-xl font-black text-primary">{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
-                <button onClick={() => setStep('payment')} className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
+                <button onClick={handleCheckoutClick} className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
                   CHECKOUT
                 </button>
               </div>
