@@ -13,13 +13,15 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: user?.full_name || '', email: user?.email || '', country_id: user?.country_id || 0 });
 
-  if (countryLoading || !user) return (
+  if (countryLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="animate-pulse flex flex-col items-center gap-4">
         <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     </div>
   );
+
+  if (!user) return <Login />;
 
   return (
     <div className="pb-24 pt-20 px-6 max-w-2xl mx-auto space-y-8">

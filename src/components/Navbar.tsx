@@ -15,6 +15,9 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
     if (item.id === 'admin') {
       return user?.role === 'admin';
     }
+    if (item.id === 'profile') {
+      return !!user;
+    }
     return true;
   });
 
