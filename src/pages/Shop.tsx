@@ -27,7 +27,7 @@ export default function Shop() {
     fetchProducts();
   }, []);
 
-  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
+  const categories = ['All', 'T-Shirt', 'Jeans', 'Hoods', 'Boxer', 'Footwear', 'Accessories', 'Tracksuits', 'Caps'];
   const filteredProducts = category === 'All' ? products : products.filter(p => p.category === category);
 
   return (
