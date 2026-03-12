@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Plus, Trash2, ShoppingBag, Smartphone, CheckCircle2, ArrowLeft, Loader2, Landmark, Wallet } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, Smartphone, CheckCircle2, ArrowLeft, Loader2, Landmark, Wallet, LogIn } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useState } from 'react';
 import { useCountry } from '../context/CountryContext';
@@ -9,7 +9,7 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-type CheckoutStep = 'cart' | 'payment' | 'processing' | 'success';
+type CheckoutStep = 'cart' | 'auth' | 'payment' | 'processing' | 'success';
 
 const PAYMENT_METHODS_TZ = [
   { id: 'vodacom', name: 'VODACOM M-PESA', icon: Smartphone, color: 'text-red-600' },
