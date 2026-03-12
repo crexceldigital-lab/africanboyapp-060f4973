@@ -189,7 +189,54 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   </motion.div>
                 )}
 
-                {step === 'payment' && (
+                {step === 'auth' && (
+                  <motion.div key="auth-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                    <div className="text-center space-y-2">
+                      <LogIn size={32} className="text-primary mx-auto" />
+                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Sign in to complete your order</p>
+                    </div>
+
+                    {!isSignup ? (
+                      <form onSubmit={handleAuthLogin} className="space-y-4">
+                        <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        <input type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
+                        <button type="submit" disabled={authLoading}
+                          className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
+                          {authLoading ? 'SIGNING IN...' : 'SIGN IN'}
+                        </button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleAuthSignup} className="space-y-4">
+                        <input type="text" placeholder="Full Name" value={authName} onChange={e => setAuthName(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        <input type="tel" placeholder="Phone Number" value={authPhone} onChange={e => setAuthPhone(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        <select value={authCountryId} onChange={e => setAuthCountryId(Number(e.target.value))}
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all appearance-none">
+                          {countries.map(c => <option key={c.id} value={c.id}>{c.flag_emoji} {c.name} ({c.currency_code})</option>)}
+                        </select>
+                        <input type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                        {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
+                        <button type="submit" disabled={authLoading}
+                          className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
+                          {authLoading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+                        </button>
+                      </form>
+                    )}
+
+                    <button onClick={() => { setIsSignup(!isSignup); setAuthError(''); }}
+                      className="w-full text-center text-xs font-bold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest">
+                      {isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                    </button>
+                  </motion.div>
+                )}
+
                   <motion.div key="payment-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                     <div className="space-y-3">
                       {paymentMethods.map(method => {
