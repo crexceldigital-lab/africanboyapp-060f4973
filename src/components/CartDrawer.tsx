@@ -123,7 +123,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           >
             <div className="p-6 border-b border-foreground/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {step === 'payment' ? (
+                {(step === 'payment' || step === 'auth') ? (
                   <button onClick={() => setStep('cart')} className="p-1 hover:text-primary transition-colors">
                     <ArrowLeft size={20} />
                   </button>
@@ -131,9 +131,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   <ShoppingBag className="text-primary" size={24} />
                 )}
                 <h2 className="text-xl font-black italic tracking-tight uppercase">
-                  {step === 'cart' ? 'Your ' : step === 'payment' ? 'Payment ' : step === 'success' ? 'Order ' : 'Processing '}
+                  {step === 'cart' ? 'Your ' : step === 'auth' ? 'Sign ' : step === 'payment' ? 'Payment ' : step === 'success' ? 'Order ' : 'Processing '}
                   <span className="text-primary">
-                    {step === 'cart' ? 'Cart' : step === 'payment' ? 'Method' : step === 'success' ? 'Success' : '...'}
+                    {step === 'cart' ? 'Cart' : step === 'auth' ? 'In' : step === 'payment' ? 'Method' : step === 'success' ? 'Success' : '...'}
                   </span>
                 </h2>
               </div>
