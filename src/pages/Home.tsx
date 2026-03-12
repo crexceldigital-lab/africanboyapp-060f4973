@@ -199,30 +199,6 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
       </section>
 
-      {/* Featured Merch */}
-      <section className="px-6 py-12 bg-popover">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <span className="text-primary text-xs font-bold tracking-widest uppercase">Collection</span>
-            <h2 className="text-3xl font-black tracking-tight">FOR MEN</h2>
-          </div>
-          <button 
-            onClick={() => onNavigate('shop')}
-            className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-          >
-            SHOW ALL <ArrowRight size={14} />
-          </button>
-        </div>
-        {featuredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {featuredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm text-center py-8">Products coming soon...</p>
-        )}
-      </section>
     </div>
   );
 }
