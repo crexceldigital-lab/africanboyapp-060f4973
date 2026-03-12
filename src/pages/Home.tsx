@@ -77,12 +77,7 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
 
         <div className="relative z-20 flex flex-col items-center text-center px-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative mb-8"
-          >
+          <div className="relative mb-8">
             <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-[300px] h-[100px] flex items-center justify-center">
               <span className="text-foreground/20 text-4xl font-black tracking-[0.5em] uppercase pointer-events-none">
                 AFRICAN BOY
@@ -97,7 +92,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 style={{ left: '-5%', top: '-5%' }}
               />
             </div>
-          </motion.div>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
