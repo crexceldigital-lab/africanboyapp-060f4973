@@ -50,6 +50,40 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
   const paymentMethods = selectedCountry?.code === 'NG' ? PAYMENT_METHODS_NG : PAYMENT_METHODS_TZ;
 
+  const handleCheckoutClick = () => {
+    if (!user) {
+      setStep('auth');
+    } else {
+      setStep('payment');
+    }
+  };
+
+  const handleAuthLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+    const success = await login(authEmail, authPassword);
+    if (success) {
+      setStep('payment');
+    } else {
+      setAuthError('Invalid credentials');
+    }
+    setAuthLoading(false);
+  };
+
+  const handleAuthSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+    const success = await signup({ full_name: authName, email: authEmail, phone_number: authPhone, password: authPassword, country_id: authCountryId });
+    if (success) {
+      setStep('payment');
+    } else {
+      setAuthError('Signup failed. Please try again.');
+    }
+    setAuthLoading(false);
+  };
+
   const handleCheckout = async () => {
     setStep('processing');
     await new Promise(resolve => setTimeout(resolve, 2500));
@@ -63,6 +97,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       setStep('cart');
       setSelectedMethod(null);
       setPhoneNumber('');
+      setAuthError('');
+      setIsSignup(false);
     }, 300);
   };
 
