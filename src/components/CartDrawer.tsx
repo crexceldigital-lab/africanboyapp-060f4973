@@ -334,7 +334,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <span className="text-xl font-black text-primary">{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
-                <button onClick={() => setStep('payment')} className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
+                <button onClick={handleCheckoutClick} className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
                   CHECKOUT
                 </button>
               </div>
