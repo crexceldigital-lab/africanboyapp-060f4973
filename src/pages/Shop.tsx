@@ -27,7 +27,7 @@ export default function Shop() {
     fetchProducts();
   }, []);
 
-  const categories = ['All', 'T-Shirt', 'Jeans', 'Hoods', 'Boxer', 'Footwear', 'Accessories', 'Tracksuits', 'Caps'];
+  const categories = ['All', 'T-Shirt', 'Jeans', 'Caps', 'Hoods', 'Boxer', 'Footwear', 'Accessories', 'Tracksuits'];
   const filteredProducts = category === 'All' ? products : products.filter(p => p.category === category);
 
   return (
