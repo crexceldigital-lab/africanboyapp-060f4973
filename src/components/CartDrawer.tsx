@@ -237,6 +237,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   </motion.div>
                 )}
 
+                {step === 'payment' && (
                   <motion.div key="payment-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                     <div className="space-y-3">
                       {paymentMethods.map(method => {
