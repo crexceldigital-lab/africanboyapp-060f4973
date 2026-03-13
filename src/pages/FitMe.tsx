@@ -103,8 +103,8 @@ export default function FitMe() {
     setStep('upload');
   };
 
-  const clothingProducts = MOCK_PRODUCTS.filter(p =>
-    ['T-Shirt', 'Hoods', 'Jeans', 'Boxer', 'Tracksuits', 'Footwear', 'Caps'].includes(p.category)
+  const clothingProducts = products.filter(p =>
+    ['T-Shirt', 'Hoods', 'Jeans', 'Boxer', 'Tracksuits', 'Footwear', 'Caps', 'Accessories'].includes(p.category)
   );
 
   return (
