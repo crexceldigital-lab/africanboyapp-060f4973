@@ -1,19 +1,37 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Sparkles, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { MOCK_PRODUCTS } from '../data/mockData';
 import { Product } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export default function FitMe() {
   const [userImage, setUserImage] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'upload' | 'select' | 'result'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setProducts(data.map((p: any) => ({
+          ...p,
+          price: Number(p.price),
+          colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
+        })));
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,8 +103,8 @@ export default function FitMe() {
     setStep('upload');
   };
 
-  const clothingProducts = MOCK_PRODUCTS.filter(p =>
-    ['T-Shirt', 'Hoods', 'Jeans', 'Boxer', 'Tracksuits', 'Footwear', 'Caps'].includes(p.category)
+  const clothingProducts = products.filter(p =>
+    ['T-Shirt', 'Hoods', 'Jeans', 'Boxer', 'Tracksuits', 'Footwear', 'Caps', 'Accessories'].includes(p.category)
   );
 
   return (
