@@ -95,7 +95,7 @@ export default function FitMe() {
     if (!resultImage) return;
     const link = document.createElement('a');
     link.href = resultImage;
-    link.download = `fit-me-${selectedProduct?.name || 'result'}.png`;
+    link.download = `fit-me-outfit.png`;
     link.click();
   };
 
