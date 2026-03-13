@@ -101,8 +101,8 @@ export default function FitMe() {
 
   const handleReset = () => {
     setUserImage(null);
-    setSelectedProduct(null);
-    setSelectedColor('');
+    setSelectedProducts([]);
+    setSelectedColors({});
     setResultImage(null);
     setStep('upload');
   };
