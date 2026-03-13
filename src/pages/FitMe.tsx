@@ -51,18 +51,22 @@ export default function FitMe() {
   };
 
   const handleGenerate = async () => {
-    if (!userImage || !selectedProduct) return;
+    if (!userImage || selectedProducts.length === 0) return;
 
     setLoading(true);
     setResultImage(null);
 
     try {
+      const productsPayload = selectedProducts.map(p => ({
+        imageUrl: p.image_url,
+        name: p.name,
+        color: selectedColors[p.id] || undefined,
+      }));
+
       const { data, error } = await supabase.functions.invoke('fit-me-ai', {
         body: {
           userImageBase64: userImage,
-          productImageUrl: selectedProduct.image_url,
-          productName: selectedProduct.name,
-          selectedColor: selectedColor || undefined,
+          products: productsPayload,
         },
       });
 
