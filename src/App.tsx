@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CartProvider } from './context/CartContext';
 import { useCountry } from './context/CountryContext';
 import SplashScreen from './components/SplashScreen';
-import BackgroundMusic from './components/BackgroundMusic';
+
 
 function AppContent() {
   const { user, loading } = useCountry();
@@ -90,7 +90,7 @@ function AppContent() {
           </AnimatePresence>
         </main>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <BackgroundMusic />
+        
       </div>
     </CartProvider>
   );
