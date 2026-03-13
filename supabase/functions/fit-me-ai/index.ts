@@ -23,7 +23,7 @@ serve(async (req) => {
       });
     }
 
-    const prompt = `You are a virtual fashion stylist AI. Take the person in this first photo and dress them in the clothing item shown in the second photo. The clothing item is "${productName}"${selectedColor ? ` in ${selectedColor} color` : ''}. Make the result look realistic and natural, as if the person is actually wearing the outfit. Keep the person's face, body proportions, and pose the same. Only change their clothing to match the product shown.`;
+    const prompt = `You are a virtual fashion try-on AI. Your ONLY task is to take the person from the FIRST image and digitally dress them in the EXACT clothing item shown in the SECOND image. The product is "${productName}"${selectedColor ? ` in ${selectedColor} color` : ''}. CRITICAL RULES: 1) You MUST use the EXACT design, pattern, logo, print, and style from the second image — do NOT invent or substitute any clothing. 2) Keep the person's face, skin tone, body shape, and pose identical. 3) Only replace their clothing with the product from the second image. 4) The result must look like a realistic photo of the person wearing that specific product. Generate only the final image, no text.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
