@@ -14,16 +14,28 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { userImageBase64, productImageUrl, productName, selectedColor } = await req.json();
+    const { userImageBase64, products: productsList, productImageUrl, productName, selectedColor } = await req.json();
 
-    if (!userImageBase64 || !productImageUrl) {
-      return new Response(JSON.stringify({ error: "User image and product image are required" }), {
+    // Support both new multi-product and legacy single-product format
+    const products = productsList || [{ imageUrl: productImageUrl, name: productName, color: selectedColor }];
+
+    if (!userImageBase64 || !products?.length) {
+      return new Response(JSON.stringify({ error: "User image and at least one product are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const prompt = `You are a virtual fashion try-on AI. Your ONLY task is to take the person from the FIRST image and digitally dress them in the EXACT clothing item shown in the SECOND image. The product is "${productName}"${selectedColor ? ` in ${selectedColor} color` : ''}. CRITICAL RULES: 1) You MUST use the EXACT design, pattern, logo, print, and style from the second image — do NOT invent or substitute any clothing. 2) Keep the person's face, skin tone, body shape, and pose identical. 3) Only replace their clothing with the product from the second image. 4) The result must look like a realistic photo of the person wearing that specific product. Generate only the final image, no text.`;
+    const productDescriptions = products.map((p: any, i: number) => 
+      `Item ${i + 1}: "${p.name}"${p.color ? ` in ${p.color}` : ''}`
+    ).join(', ');
+
+    const prompt = `You are a virtual fashion try-on AI. Your ONLY task is to take the person from the FIRST image and digitally dress them in ALL the clothing items shown in the following images. The items are: ${productDescriptions}. CRITICAL RULES: 1) You MUST use the EXACT design, pattern, logo, print, and style from each product image — do NOT invent or substitute any clothing. 2) Combine all selected items into one cohesive outfit on the person. 3) Keep the person's face, skin tone, body shape, and pose identical. 4) Only replace their clothing with the products from the images. 5) The result must look like a realistic photo of the person wearing all the selected items together. Generate only the final image, no text.`;
+
+    const imageContents = [
+      { type: "image_url", image_url: { url: userImageBase64 } },
+      ...products.map((p: any) => ({ type: "image_url", image_url: { url: p.imageUrl } })),
+    ];
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
