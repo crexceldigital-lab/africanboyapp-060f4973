@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavTab } from './types';
 import Navbar from './components/Navbar';
 import Header from './components/Header';
@@ -14,10 +14,35 @@ import FitMe from './pages/FitMe';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CartProvider } from './context/CartContext';
 import { useCountry } from './context/CountryContext';
+import SplashScreen from './components/SplashScreen';
 
 function AppContent() {
   const { user, loading } = useCountry();
   const [activeTab, setActiveTab] = useState<NavTab>('home');
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    if (showSplash) {
+      const timer = setTimeout(() => {
+        setShowSplash(false);
+        setSplashDone(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSplash]);
+
+  if (!splashDone) {
+    return (
+      <SplashScreen
+        show={showSplash}
+        onComplete={() => {
+          setShowSplash(false);
+          setSplashDone(true);
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return (
