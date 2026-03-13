@@ -278,7 +278,7 @@ export default function FitMe() {
               </button>
               <button
                 onClick={handleGenerate}
-                disabled={!selectedProduct || loading}
+                disabled={selectedProducts.length === 0 || loading}
                 className="flex-1 py-4 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 {loading ? (
