@@ -32,7 +32,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: "google/gemini-3.1-flash-image-preview",
         messages: [
           {
             role: "user",
@@ -75,8 +75,15 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const generatedImage = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    const textResponse = data.choices?.[0]?.message?.content;
+    console.log("AI response structure:", JSON.stringify(data?.choices?.[0]?.message, null, 2)?.substring(0, 500));
+    
+    // Try multiple possible response formats
+    const message = data.choices?.[0]?.message;
+    const generatedImage = message?.images?.[0]?.image_url?.url 
+      || message?.images?.[0]?.url
+      || message?.images?.[0]
+      || (typeof message?.content === 'string' && message.content.startsWith('data:') ? message.content : null);
+    const textResponse = typeof message?.content === 'string' && !message.content.startsWith('data:') ? message.content : null;
 
     if (!generatedImage) {
       return new Response(JSON.stringify({ error: "AI could not generate the image. Try a different photo.", text: textResponse }), {
