@@ -8,8 +8,8 @@ import { toast } from 'sonner';
 export default function FitMe() {
   const [userImage, setUserImage] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [selectedColors, setSelectedColors] = useState<Record<string, string>>({});
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'upload' | 'select' | 'result'>('upload');
