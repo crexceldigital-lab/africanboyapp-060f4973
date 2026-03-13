@@ -200,49 +200,66 @@ export default function FitMe() {
               </button>
             </div>
 
-            <h2 className="text-lg font-black uppercase tracking-tight text-center">Choose your outfit</h2>
-
-            <div className="grid grid-cols-2 gap-4">
-              {clothingProducts.map(product => (
-                <button
-                  key={product.id}
-                  onClick={() => {
-                    setSelectedProduct(product);
-                    setSelectedColor(product.colors[0]?.name || '');
-                  }}
-                  className={`relative rounded-2xl overflow-hidden border-2 transition-all ${
-                    selectedProduct?.id === product.id
-                      ? 'border-primary scale-[1.02] shadow-lg shadow-primary/20'
-                      : 'border-foreground/5 hover:border-foreground/20'
-                  }`}
-                >
-                  <div className="aspect-square">
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-3 bg-card">
-                    <p className="text-xs font-bold truncate">{product.name}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase">{product.category}</p>
-                  </div>
-                  {selectedProduct?.id === product.id && (
-                    <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                      <span className="text-primary-foreground text-xs">✓</span>
-                    </div>
-                  )}
-                </button>
-              ))}
+            <div className="text-center">
+              <h2 className="text-lg font-black uppercase tracking-tight">Choose your outfit</h2>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+                Select up to 5 items ({selectedProducts.length}/5)
+              </p>
             </div>
 
-            {/* Color selection */}
-            {selectedProduct && selectedProduct.colors.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-center">Color</p>
+            <div className="grid grid-cols-2 gap-4">
+              {clothingProducts.map(product => {
+                const isSelected = selectedProducts.some(p => p.id === product.id);
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
+                        setSelectedColors(prev => { const n = { ...prev }; delete n[product.id]; return n; });
+                      } else if (selectedProducts.length < 5) {
+                        setSelectedProducts(prev => [...prev, product]);
+                        if (product.colors[0]?.name) {
+                          setSelectedColors(prev => ({ ...prev, [product.id]: product.colors[0].name }));
+                        }
+                      } else {
+                        toast.error('You can select up to 5 items');
+                      }
+                    }}
+                    className={`relative rounded-2xl overflow-hidden border-2 transition-all ${
+                      isSelected
+                        ? 'border-primary scale-[1.02] shadow-lg shadow-primary/20'
+                        : 'border-foreground/5 hover:border-foreground/20'
+                    }`}
+                  >
+                    <div className="aspect-square">
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="p-3 bg-card">
+                      <p className="text-xs font-bold truncate">{product.name}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">{product.category}</p>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <span className="text-primary-foreground text-xs">✓</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Color selection for selected products */}
+            {selectedProducts.filter(p => p.colors.length > 0).map(product => (
+              <div key={product.id} className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-center">{product.name} — Color</p>
                 <div className="flex justify-center gap-3">
-                  {selectedProduct.colors.map(color => (
+                  {product.colors.map(color => (
                     <button
                       key={color.name}
-                      onClick={() => setSelectedColor(color.name)}
+                      onClick={() => setSelectedColors(prev => ({ ...prev, [product.id]: color.name }))}
                       className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        selectedColor === color.name ? 'border-primary scale-125' : 'border-foreground/10'
+                        selectedColors[product.id] === color.name ? 'border-primary scale-125' : 'border-foreground/10'
                       }`}
                       style={{ backgroundColor: color.hex }}
                       title={color.name}
@@ -250,7 +267,7 @@ export default function FitMe() {
                   ))}
                 </div>
               </div>
-            )}
+            ))}
 
             <div className="flex gap-3">
               <button
