@@ -45,22 +45,15 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3.1-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: { url: userImageBase64 }
-              },
-              {
-                type: "image_url",
-                image_url: { url: productImageUrl }
-              }
-            ]
-          }
-        ],
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                ...imageContents,
+              ]
+            }
+          ],
         modalities: ["image", "text"]
       }),
     });
