@@ -103,9 +103,8 @@ export default function FitMe() {
     setStep('upload');
   };
 
-  const clothingProducts = products.filter(p =>
-    ['T-Shirt', 'Hoods', 'Jeans', 'Boxer', 'Tracksuits', 'Footwear', 'Caps', 'Accessories'].includes(p.category)
-  );
+  // Show all products for Fit Me selection
+  const clothingProducts = products;
 
   return (
     <div className="pb-24 pt-20 px-6 max-w-2xl mx-auto">
