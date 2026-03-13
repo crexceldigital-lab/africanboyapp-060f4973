@@ -90,6 +90,7 @@ function AppContent() {
           </AnimatePresence>
         </main>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <BackgroundMusic />
       </div>
     </CartProvider>
   );
