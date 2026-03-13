@@ -84,7 +84,7 @@ export default function VIP() {
             <span className="text-[10px] font-black text-primary uppercase tracking-widest">Exclusive Deal</span>
           </div>
           <h2 className="text-2xl font-black tracking-tighter italic uppercase">Build Your <span className="text-primary">Custom Bundle</span></h2>
-          <p className="text-muted-foreground text-sm mt-2">Combine any Top & Bottom for an automatic 15% discount.</p>
+          <p className="text-muted-foreground text-sm mt-2">Combine any Top & Bottom for an automatic 10% discount.</p>
           
           <div className="flex justify-center items-center gap-4 mt-8">
             <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${currentStep === 1 ? 'bg-primary border-primary text-primary-foreground' : 'bg-card border-foreground/10 text-muted-foreground'}`}>
