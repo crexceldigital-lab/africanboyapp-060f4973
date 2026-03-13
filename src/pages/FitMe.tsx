@@ -209,8 +209,30 @@ export default function FitMe() {
               </p>
             </div>
 
+            {/* Category Tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                    activeCategory === cat
+                      ? 'bg-primary text-primary-foreground scale-105'
+                      : 'bg-card border border-foreground/10 text-muted-foreground hover:border-foreground/20'
+                  }`}
+                >
+                  {cat}
+                  {cat !== 'All' && (
+                    <span className="ml-1 opacity-60">
+                      ({products.filter(p => p.category === cat).length})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
-              {clothingProducts.map(product => {
+              {filteredProducts.map(product => {
                 const isSelected = selectedProducts.some(p => p.id === product.id);
                 return (
                   <button
