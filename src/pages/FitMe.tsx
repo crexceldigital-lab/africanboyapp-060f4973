@@ -308,10 +308,9 @@ export default function FitMe() {
             <div className="relative aspect-[3/4] max-w-sm mx-auto rounded-3xl overflow-hidden border-2 border-primary shadow-2xl shadow-primary/20">
               <img src={resultImage} alt="Your fit" className="w-full h-full object-cover" />
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent">
-                <p className="text-xs font-black uppercase tracking-widest text-primary">{selectedProduct?.name}</p>
-                {selectedColor && (
-                  <p className="text-[10px] text-muted-foreground uppercase">{selectedColor}</p>
-                )}
+                <p className="text-xs font-black uppercase tracking-widest text-primary">
+                  {selectedProducts.map(p => p.name).join(' + ')}
+                </p>
               </div>
             </div>
 
