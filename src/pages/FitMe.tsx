@@ -13,6 +13,7 @@ export default function FitMe() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'upload' | 'select' | 'result'>('upload');
+  const [activeCategory, setActiveCategory] = useState<string>('All');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
