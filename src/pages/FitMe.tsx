@@ -86,7 +86,7 @@ export default function FitMe() {
   };
 
   const clothingProducts = MOCK_PRODUCTS.filter(p =>
-    ['T-Shirt', 'Hoods', 'Jeans'].includes(p.category)
+    ['T-Shirt', 'Hoods', 'Jeans', 'Boxer', 'Tracksuits', 'Footwear', 'Caps'].includes(p.category)
   );
 
   return (
@@ -129,7 +129,6 @@ export default function FitMe() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         onChange={handleImageUpload}
         className="hidden"
       />
