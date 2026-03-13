@@ -216,7 +216,7 @@ export default function VIP() {
                   </div>
                   <div className="text-center">
                     <span className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                      15% Discount Applied
+                      10% Discount Applied
                     </span>
                   </div>
                   <button
