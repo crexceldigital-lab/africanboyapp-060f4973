@@ -108,8 +108,9 @@ export default function FitMe() {
     setStep('upload');
   };
 
-  // Show all products for Fit Me selection
-  const clothingProducts = products;
+  // Derive unique categories
+  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
+  const filteredProducts = activeCategory === 'All' ? products : products.filter(p => p.category === activeCategory);
 
   return (
     <div className="pb-24 pt-20 px-6 max-w-2xl mx-auto">
