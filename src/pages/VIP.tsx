@@ -37,7 +37,7 @@ export default function VIP() {
   const bottoms = products.filter(p => p.category === 'Jeans');
 
   const comboPrice = selectedTop && selectedBottom 
-    ? (selectedTop.price + selectedBottom.price) * 0.85
+    ? (selectedTop.price + selectedBottom.price) * 0.90
     : 0;
 
   const handleAddComboToCart = () => {
