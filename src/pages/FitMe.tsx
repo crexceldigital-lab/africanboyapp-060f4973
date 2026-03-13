@@ -15,6 +15,24 @@ export default function FitMe() {
   const [step, setStep] = useState<'upload' | 'select' | 'result'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setProducts(data.map((p: any) => ({
+          ...p,
+          price: Number(p.price),
+          colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
+        })));
+      }
+    };
+    fetchProducts();
+  }, []);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
