@@ -1,13 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Sparkles, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { MOCK_PRODUCTS } from '../data/mockData';
 import { Product } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export default function FitMe() {
   const [userImage, setUserImage] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [resultImage, setResultImage] = useState<string | null>(null);
