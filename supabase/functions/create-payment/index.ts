@@ -42,15 +42,15 @@ Deno.serve(async (req) => {
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         status: "pending",
         total_amount: grandTotal,
         delivery_fee: deliveryFee,
         currency: currency || "TZS",
         delivery_zone: deliveryZone,
         items: items,
-        customer_name: customerName || user.user_metadata?.full_name || "",
-        customer_email: customerEmail || user.email || "",
+        customer_name: customerName || "",
+        customer_email: customerEmail || userEmail || "",
         customer_phone: customerPhone || "",
       })
       .select()
