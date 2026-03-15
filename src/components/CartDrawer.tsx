@@ -1,31 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Plus, Trash2, ShoppingBag, Smartphone, CheckCircle2, ArrowLeft, Loader2, Landmark, Wallet, LogIn } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, CheckCircle2, ArrowLeft, Loader2, LogIn } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCountry } from '../context/CountryContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type CheckoutStep = 'cart' | 'auth' | 'payment' | 'processing' | 'success';
-
-const PAYMENT_METHODS_TZ = [
-  { id: 'vodacom', name: 'VODACOM M-PESA', icon: Smartphone, color: 'text-red-600' },
-  { id: 'yas', name: 'TIGO PESA / YAS', icon: Smartphone, color: 'text-blue-600' },
-  { id: 'airtel', name: 'AIRTEL MONEY', icon: Smartphone, color: 'text-red-500' },
-  { id: 'halotel', name: 'HALOPESA', icon: Smartphone, color: 'text-orange-500' },
-  { id: 'bank_tz', name: 'LOCAL BANK TRANSFER', icon: Landmark, color: 'text-primary' },
-];
-
-const PAYMENT_METHODS_NG = [
-  { id: 'nibss', name: 'BANK TRANSFER (NIBSS)', icon: Landmark, color: 'text-emerald-600' },
-  { id: 'opay', name: 'OPAY', icon: Wallet, color: 'text-emerald-500' },
-  { id: 'palmpay', name: 'PALMPAY', icon: Wallet, color: 'text-purple-500' },
-  { id: 'kuda', name: 'KUDA BANK', icon: Smartphone, color: 'text-indigo-500' },
-  { id: 'moniepoint', name: 'MONIEPOINT', icon: Landmark, color: 'text-blue-500' },
-];
+type CheckoutStep = 'cart' | 'auth' | 'processing' | 'success';
 
 function getCartKey(id: string, size?: string, color?: string) {
   return `${id}-${size || ''}-${color || ''}`;
@@ -35,9 +21,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal } = useCart();
   const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
   // Auth form state
   const [isSignup, setIsSignup] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
@@ -48,13 +33,65 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  const paymentMethods = selectedCountry?.code === 'NG' ? PAYMENT_METHODS_NG : PAYMENT_METHODS_TZ;
+  // Check for payment success redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      setStep('success');
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const handleCheckout = async () => {
+    setCheckoutLoading(true);
+    setStep('processing');
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
+          })),
+          totalAmount: cartTotal,
+          deliveryFee,
+          grandTotal,
+          deliveryZone,
+          currency: selectedCountry?.currency_code || 'TZS',
+          customerName: user?.full_name || '',
+          customerEmail: user?.email || '',
+          customerPhone: user?.phone_number || '',
+          redirectUrl: window.location.origin + '/?payment=success',
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Payment creation failed');
+
+      clearCart();
+      window.location.href = data.checkout_url;
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      setStep('cart');
+      toast({
+        title: 'Payment Error',
+        description: err.message || 'Failed to initialize payment. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
 
   const handleCheckoutClick = () => {
     if (!user) {
       setStep('auth');
     } else {
-      setStep('payment');
+      handleCheckout();
     }
   };
 
@@ -64,7 +101,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     setAuthError('');
     const success = await login(authEmail, authPassword);
     if (success) {
-      setStep('payment');
+      handleCheckout();
     } else {
       setAuthError('Invalid credentials');
     }
@@ -77,26 +114,17 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     setAuthError('');
     const success = await signup({ full_name: authName, email: authEmail, phone_number: authPhone, password: authPassword, country_id: authCountryId });
     if (success) {
-      setStep('payment');
+      handleCheckout();
     } else {
       setAuthError('Signup failed. Please try again.');
     }
     setAuthLoading(false);
   };
 
-  const handleCheckout = async () => {
-    setStep('processing');
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    setStep('success');
-    clearCart();
-  };
-
   const resetAndClose = () => {
     onClose();
     setTimeout(() => {
       setStep('cart');
-      setSelectedMethod(null);
-      setPhoneNumber('');
       setAuthError('');
       setIsSignup(false);
     }, 300);
@@ -123,7 +151,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           >
             <div className="p-6 border-b border-foreground/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {(step === 'payment' || step === 'auth') ? (
+                {step === 'auth' ? (
                   <button onClick={() => setStep('cart')} className="p-1 hover:text-primary transition-colors">
                     <ArrowLeft size={20} />
                   </button>
@@ -131,9 +159,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   <ShoppingBag className="text-primary" size={24} />
                 )}
                 <h2 className="text-xl font-black italic tracking-tight uppercase">
-                  {step === 'cart' ? 'Your ' : step === 'auth' ? 'Sign ' : step === 'payment' ? 'Payment ' : step === 'success' ? 'Order ' : 'Processing '}
+                  {step === 'cart' ? 'Your ' : step === 'auth' ? 'Sign ' : step === 'success' ? 'Order ' : 'Processing '}
                   <span className="text-primary">
-                    {step === 'cart' ? 'Cart' : step === 'auth' ? 'In' : step === 'payment' ? 'Method' : step === 'success' ? 'Success' : '...'}
+                    {step === 'cart' ? 'Cart' : step === 'auth' ? 'In' : step === 'success' ? 'Confirmed' : '...'}
                   </span>
                 </h2>
               </div>
@@ -237,52 +265,21 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   </motion.div>
                 )}
 
-                {step === 'payment' && (
-                  <motion.div key="payment-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                    <div className="space-y-3">
-                      {paymentMethods.map(method => {
-                        const Icon = method.icon;
-                        return (
-                          <button
-                            key={method.id}
-                            onClick={() => setSelectedMethod(method.id)}
-                            className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                              selectedMethod === method.id ? 'border-primary bg-primary/10' : 'border-foreground/5 bg-card hover:border-foreground/20'
-                            }`}
-                          >
-                            <Icon size={24} className={method.color} />
-                            <span className="text-xs font-black uppercase tracking-widest">{method.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {selectedMethod && selectedMethod !== 'card' && (
-                      <input
-                        type="tel"
-                        placeholder="Enter phone number"
-                        value={phoneNumber}
-                        onChange={e => setPhoneNumber(e.target.value)}
-                        className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none"
-                      />
-                    )}
-                  </motion.div>
-                )}
-
                 {step === 'processing' && (
                   <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
                     <Loader2 className="text-primary animate-spin" size={48} />
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Processing your order...</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Setting up your payment...</p>
                   </motion.div>
                 )}
 
                 {step === 'success' && (
                   <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
-                    <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
-                      <CheckCircle2 size={40} className="text-emerald-500" />
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
+                      <CheckCircle2 size={40} className="text-primary" />
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-2xl font-black italic uppercase">Order Confirmed!</h3>
-                      <p className="text-muted-foreground text-sm">Your items are on their way.</p>
+                      <h3 className="text-2xl font-black italic uppercase">Payment Successful!</h3>
+                      <p className="text-muted-foreground text-sm">Thank you for your order. You'll receive a confirmation shortly.</p>
                     </div>
                     <button onClick={resetAndClose} className="btn-primary text-sm uppercase tracking-widest">
                       Continue Shopping
@@ -294,7 +291,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
             {step === 'cart' && cart.length > 0 && (
               <div className="p-6 border-t border-foreground/5 space-y-4">
-                {/* Delivery zone selector */}
                 <div className="space-y-2">
                   <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery Zone</span>
                   <div className="flex gap-2">
@@ -335,20 +331,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <span className="text-xl font-black text-primary">{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
-                <button onClick={handleCheckoutClick} className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
-                  CHECKOUT
-                </button>
-              </div>
-            )}
-
-            {step === 'payment' && (
-              <div className="p-6 border-t border-foreground/5">
                 <button
-                  disabled={!selectedMethod || (selectedMethod !== 'card' && !phoneNumber)}
-                  onClick={handleCheckout}
-                  className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-50 disabled:hover:scale-100"
+                  onClick={handleCheckoutClick}
+                  disabled={checkoutLoading}
+                  className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-50"
                 >
-                  PAY NOW
+                  {checkoutLoading ? 'PROCESSING...' : 'CHECKOUT'}
                 </button>
               </div>
             )}

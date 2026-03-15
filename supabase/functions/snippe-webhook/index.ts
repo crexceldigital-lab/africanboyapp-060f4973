@@ -1,0 +1,79 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const body = await req.json();
+    console.log("Snippe webhook received:", JSON.stringify(body));
+
+    const event = body.event || body.type;
+    const paymentData = body.data || body;
+
+    // Extract order_id from metadata
+    const orderId = paymentData?.metadata?.order_id;
+    const reference = paymentData?.reference;
+
+    if (!orderId && !reference) {
+      console.log("No order_id or reference in webhook payload");
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let newStatus = "pending";
+    if (event === "payment.completed" || paymentData?.status === "completed") {
+      newStatus = "completed";
+    } else if (event === "payment.failed" || paymentData?.status === "failed") {
+      newStatus = "failed";
+    } else if (paymentData?.status === "voided" || paymentData?.status === "expired") {
+      newStatus = "cancelled";
+    }
+
+    // Update order by order_id or payment_reference
+    const updateData: Record<string, any> = {
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (paymentData?.channel?.type) {
+      updateData.payment_method = paymentData.channel.type;
+    }
+
+    let query = supabase.from("orders").update(updateData);
+    if (orderId) {
+      query = query.eq("id", orderId);
+    } else {
+      query = query.eq("payment_reference", reference);
+    }
+
+    const { error } = await query;
+    if (error) {
+      console.error("Failed to update order:", error);
+    }
+
+    return new Response(JSON.stringify({ received: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Webhook error:", error);
+    return new Response(JSON.stringify({ received: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
