@@ -3,6 +3,8 @@ import { X, Minus, Plus, Trash2, ShoppingBag, Smartphone, CheckCircle2, ArrowLef
 import { useCart } from '../context/CartContext';
 import { useState } from 'react';
 import { useCountry } from '../context/CountryContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface CartDrawerProps {
   isOpen: boolean;
