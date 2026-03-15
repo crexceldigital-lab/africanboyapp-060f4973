@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Plus, Trash2, ShoppingBag, Smartphone, CheckCircle2, ArrowLeft, Loader2, Landmark, Wallet, LogIn } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, CheckCircle2, ArrowLeft, Loader2, LogIn } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useState } from 'react';
 import { useCountry } from '../context/CountryContext';
