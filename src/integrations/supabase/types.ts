@@ -32,6 +32,63 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          created_at: string | null
+          currency: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_fee: number
+          delivery_zone: string | null
+          id: string
+          items: Json
+          payment_method: string | null
+          payment_reference: string | null
+          snippe_checkout_url: string | null
+          status: string
+          total_amount: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_fee?: number
+          delivery_zone?: string | null
+          id?: string
+          items?: Json
+          payment_method?: string | null
+          payment_reference?: string | null
+          snippe_checkout_url?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_fee?: number
+          delivery_zone?: string | null
+          id?: string
+          items?: Json
+          payment_method?: string | null
+          payment_reference?: string | null
+          snippe_checkout_url?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string
