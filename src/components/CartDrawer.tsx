@@ -56,7 +56,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     if (!user) {
       setStep('auth');
     } else {
-      setStep('payment');
+      handleCheckout();
     }
   };
 
