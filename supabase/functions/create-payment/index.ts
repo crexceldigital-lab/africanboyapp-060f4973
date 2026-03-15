@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
         customer: {
           name: customerName || "",
           phone: customerPhone || "",
-          email: customerEmail || user.email || "",
+          email: customerEmail || userEmail || "",
         },
         redirect_url: redirectUrl || "",
         webhook_url: webhookUrl,
