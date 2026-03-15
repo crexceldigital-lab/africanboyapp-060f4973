@@ -86,11 +86,51 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     setAuthLoading(false);
   };
 
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
   const handleCheckout = async () => {
+    setCheckoutLoading(true);
     setStep('processing');
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    setStep('success');
-    clearCart();
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
+          })),
+          totalAmount: cartTotal,
+          deliveryFee,
+          grandTotal,
+          deliveryZone,
+          currency: selectedCountry?.currency_code || 'TZS',
+          customerName: user?.full_name || '',
+          customerEmail: user?.email || '',
+          customerPhone: user?.phone_number || '',
+          redirectUrl: window.location.origin + '/?payment=success',
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Payment creation failed');
+
+      // Redirect to Snippe hosted checkout
+      clearCart();
+      window.location.href = data.checkout_url;
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      setStep('cart');
+      toast({
+        title: 'Payment Error',
+        description: err.message || 'Failed to initialize payment. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   const resetAndClose = () => {
