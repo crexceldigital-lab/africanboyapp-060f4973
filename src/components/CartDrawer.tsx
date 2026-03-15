@@ -279,36 +279,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   </motion.div>
                 )}
 
-                {step === 'payment' && (
-                  <motion.div key="payment-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                    <div className="space-y-3">
-                      {paymentMethods.map(method => {
-                        const Icon = method.icon;
-                        return (
-                          <button
-                            key={method.id}
-                            onClick={() => setSelectedMethod(method.id)}
-                            className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                              selectedMethod === method.id ? 'border-primary bg-primary/10' : 'border-foreground/5 bg-card hover:border-foreground/20'
-                            }`}
-                          >
-                            <Icon size={24} className={method.color} />
-                            <span className="text-xs font-black uppercase tracking-widest">{method.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {selectedMethod && selectedMethod !== 'card' && (
-                      <input
-                        type="tel"
-                        placeholder="Enter phone number"
-                        value={phoneNumber}
-                        onChange={e => setPhoneNumber(e.target.value)}
-                        className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none"
-                      />
-                    )}
-                  </motion.div>
-                )}
 
                 {step === 'processing' && (
                   <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
