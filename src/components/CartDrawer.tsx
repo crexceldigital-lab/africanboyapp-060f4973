@@ -66,7 +66,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     setAuthError('');
     const success = await login(authEmail, authPassword);
     if (success) {
-      setStep('payment');
+      handleCheckout();
     } else {
       setAuthError('Invalid credentials');
     }
