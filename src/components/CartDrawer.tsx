@@ -79,7 +79,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     setAuthError('');
     const success = await signup({ full_name: authName, email: authEmail, phone_number: authPhone, password: authPassword, country_id: authCountryId });
     if (success) {
-      setStep('payment');
+      handleCheckout();
     } else {
       setAuthError('Signup failed. Please try again.');
     }
