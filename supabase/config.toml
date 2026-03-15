@@ -2,3 +2,9 @@ project_id = "xvsemaahrkymlmqserrf"
 
 [functions.fit-me-ai]
 verify_jwt = false
+
+[functions.create-payment]
+verify_jwt = false
+
+[functions.snippe-webhook]
+verify_jwt = false
