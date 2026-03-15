@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
         description: `African Boy Order #${order.id.slice(0, 8)}`,
         metadata: {
           order_id: order.id,
-          user_id: user.id,
+          user_id: userId,
         },
         expires_in: 3600,
         line_items: items.map((item: any) => ({
