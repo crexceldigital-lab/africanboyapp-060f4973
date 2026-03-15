@@ -11,46 +11,11 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-type CheckoutStep = 'cart' | 'auth' | 'payment' | 'processing' | 'success';
-
-const PAYMENT_METHODS_TZ = [
-  { id: 'vodacom', name: 'VODACOM M-PESA', icon: Smartphone, color: 'text-red-600' },
-  { id: 'yas', name: 'TIGO PESA / YAS', icon: Smartphone, color: 'text-blue-600' },
-  { id: 'airtel', name: 'AIRTEL MONEY', icon: Smartphone, color: 'text-red-500' },
-  { id: 'halotel', name: 'HALOPESA', icon: Smartphone, color: 'text-orange-500' },
-  { id: 'bank_tz', name: 'LOCAL BANK TRANSFER', icon: Landmark, color: 'text-primary' },
-];
-
-const PAYMENT_METHODS_NG = [
-  { id: 'nibss', name: 'BANK TRANSFER (NIBSS)', icon: Landmark, color: 'text-emerald-600' },
-  { id: 'opay', name: 'OPAY', icon: Wallet, color: 'text-emerald-500' },
-  { id: 'palmpay', name: 'PALMPAY', icon: Wallet, color: 'text-purple-500' },
-  { id: 'kuda', name: 'KUDA BANK', icon: Smartphone, color: 'text-indigo-500' },
-  { id: 'moniepoint', name: 'MONIEPOINT', icon: Landmark, color: 'text-blue-500' },
-];
+type CheckoutStep = 'cart' | 'auth' | 'processing' | 'success';
 
 function getCartKey(id: string, size?: string, color?: string) {
   return `${id}-${size || ''}-${color || ''}`;
 }
-
-export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal } = useCart();
-  const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
-  const [step, setStep] = useState<CheckoutStep>('cart');
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  
-  // Auth form state
-  const [isSignup, setIsSignup] = useState(false);
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authName, setAuthName] = useState('');
-  const [authPhone, setAuthPhone] = useState('');
-  const [authCountryId, setAuthCountryId] = useState(1);
-  const [authError, setAuthError] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
-
-  const paymentMethods = selectedCountry?.code === 'NG' ? PAYMENT_METHODS_NG : PAYMENT_METHODS_TZ;
 
   const handleCheckoutClick = () => {
     if (!user) {
