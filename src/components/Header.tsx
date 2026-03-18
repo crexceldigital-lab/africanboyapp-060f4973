@@ -3,18 +3,29 @@ import { useCart } from '../context/CartContext';
 import { useState } from 'react';
 import CartDrawer from './CartDrawer';
 import { useCountry } from '../context/CountryContext';
+import SidebarMenu from './SidebarMenu';
+import { NavTab } from '../types';
 
-export default function Header() {
+interface HeaderProps {
+  activeTab: NavTab;
+  setActiveTab: (tab: NavTab) => void;
+}
+
+export default function Header({ activeTab, setActiveTab }: HeaderProps) {
   const { cartCount } = useCart();
   const { selectedCountry } = useCountry();
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/50 backdrop-blur-md border-b border-foreground/5">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button className="p-2 hover:bg-foreground/10 rounded-full transition-colors">
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="p-2 hover:bg-foreground/10 rounded-full transition-colors"
+            >
               <Menu size={24} />
             </button>
             {selectedCountry && (
@@ -48,6 +59,12 @@ export default function Header() {
         </div>
       </header>
 
+      <SidebarMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   );
