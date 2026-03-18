@@ -234,7 +234,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                           <span>Facebook</span>
                         </a>
                         <a
-                          href="https://instagram.com/africanboy"
+                          href="https://www.instagram.com/africanboy_brand?igsh=MWl4dG1ka3BwamszMA=="
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-pink-500 hover:bg-pink-500/10 transition-colors"
