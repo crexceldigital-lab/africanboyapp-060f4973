@@ -317,9 +317,9 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
               {/* Social icons */}
               <div className="flex items-center justify-center gap-4">
                 {[
-                  { Icon: InstagramIcon, href: 'https://instagram.com/africanboy' },
-                  { Icon: FacebookIcon, href: 'https://facebook.com/africanboy' },
-                  { Icon: WhatsAppIcon, href: 'https://wa.me/255712345678' },
+                  { Icon: InstagramIcon, href: 'https://www.instagram.com/africanboy_brand?igsh=MWl4dG1ka3BwamszMA==' },
+                  { Icon: FacebookIcon, href: 'https://www.facebook.com/groups/233041184933729/?ref=share&mibextid=NSMWBT' },
+                  { Icon: WhatsAppIcon, href: 'https://wa.me/255627997928' },
                 ].map(({ Icon, href }, i) => (
                   <a
                     key={i}

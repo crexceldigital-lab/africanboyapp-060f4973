@@ -293,29 +293,33 @@ export default function FitMe() {
               </div>
             ))}
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setStep('upload')}
-                className="flex-1 py-4 bg-card border border-foreground/10 text-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2"
-              >
-                <ChevronLeft size={16} /> Back
-              </button>
-              <button
-                onClick={handleGenerate}
-                disabled={selectedProducts.length === 0 || loading}
-                className="flex-1 py-4 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} /> Try It On
-                  </>
-                )}
-              </button>
+            <div className="h-24" />
+
+            <div className="fixed bottom-20 left-0 right-0 z-40 px-6">
+              <div className="max-w-2xl mx-auto flex gap-3">
+                <button
+                  onClick={() => setStep('upload')}
+                  className="flex-1 py-4 bg-card border border-foreground/10 text-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2"
+                >
+                  <ChevronLeft size={16} /> Back
+                </button>
+                <button
+                  onClick={handleGenerate}
+                  disabled={selectedProducts.length === 0 || loading}
+                  className="flex-1 py-4 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} /> Try It On
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
