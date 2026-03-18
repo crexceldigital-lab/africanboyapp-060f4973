@@ -225,7 +225,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                           <span>WhatsApp</span>
                         </a>
                         <a
-                          href="https://facebook.com/africanboy"
+                          href="https://www.facebook.com/groups/233041184933729/?ref=share&mibextid=NSMWBT"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
