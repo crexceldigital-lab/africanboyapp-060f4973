@@ -243,7 +243,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                           <span>Instagram</span>
                         </a>
                         <a
-                          href="tel:+255712345678"
+                          href="tel:+255627997928"
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
                         >
                           <Phone size={16} />
