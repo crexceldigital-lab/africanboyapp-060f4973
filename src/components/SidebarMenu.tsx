@@ -216,7 +216,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                     >
                       <div className="pl-12 pr-3 space-y-1 pb-2">
                         <a
-                          href="https://wa.me/255712345678"
+                          href="https://wa.me/255627997928"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-green-500 hover:bg-green-500/10 transition-colors"
