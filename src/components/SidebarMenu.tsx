@@ -216,7 +216,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                     >
                       <div className="pl-12 pr-3 space-y-1 pb-2">
                         <a
-                          href="https://wa.me/255712345678"
+                          href="https://wa.me/255627997928"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-green-500 hover:bg-green-500/10 transition-colors"
@@ -225,7 +225,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                           <span>WhatsApp</span>
                         </a>
                         <a
-                          href="https://facebook.com/africanboy"
+                          href="https://www.facebook.com/groups/233041184933729/?ref=share&mibextid=NSMWBT"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
@@ -234,7 +234,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                           <span>Facebook</span>
                         </a>
                         <a
-                          href="https://instagram.com/africanboy"
+                          href="https://www.instagram.com/africanboy_brand?igsh=MWl4dG1ka3BwamszMA=="
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-pink-500 hover:bg-pink-500/10 transition-colors"
@@ -243,7 +243,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                           <span>Instagram</span>
                         </a>
                         <a
-                          href="tel:+255712345678"
+                          href="tel:+255627997928"
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
                         >
                           <Phone size={16} />
@@ -317,9 +317,9 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
               {/* Social icons */}
               <div className="flex items-center justify-center gap-4">
                 {[
-                  { Icon: InstagramIcon, href: 'https://instagram.com/africanboy' },
-                  { Icon: FacebookIcon, href: 'https://facebook.com/africanboy' },
-                  { Icon: WhatsAppIcon, href: 'https://wa.me/255712345678' },
+                  { Icon: InstagramIcon, href: 'https://www.instagram.com/africanboy_brand?igsh=MWl4dG1ka3BwamszMA==' },
+                  { Icon: FacebookIcon, href: 'https://www.facebook.com/groups/233041184933729/?ref=share&mibextid=NSMWBT' },
+                  { Icon: WhatsAppIcon, href: 'https://wa.me/255627997928' },
                 ].map(({ Icon, href }, i) => (
                   <a
                     key={i}
