@@ -75,7 +75,7 @@ function AppContent() {
   return (
     <CartProvider>
       <div className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
-        <Header />
+        <Header activeTab={activeTab} setActiveTab={setActiveTab} />
         <main className="max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
