@@ -197,41 +197,27 @@ export default function FitMe() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            {/* User photo + action buttons side by side */}
-            <div className="flex items-center justify-center gap-4">
-              <div className="relative w-28 h-36 rounded-2xl overflow-hidden border-2 border-primary flex-shrink-0">
+            {/* Small photo preview with back button */}
+            <div className="flex items-center gap-3">
+              <div className="relative w-16 h-20 rounded-xl overflow-hidden border-2 border-primary flex-shrink-0">
                 <img src={userImage!} alt="Your photo" className="w-full h-full object-cover" />
                 <button
                   onClick={handleReset}
-                  className="absolute top-1 right-1 w-6 h-6 bg-background/80 rounded-full flex items-center justify-center"
+                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-background/80 rounded-full flex items-center justify-center"
                 >
-                  <X size={12} />
+                  <X size={10} />
                 </button>
               </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={handleGenerate}
-                  disabled={selectedProducts.length === 0 || loading}
-                  className="py-3 px-6 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={16} /> Try It On
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => setStep('upload')}
-                  className="py-3 px-6 bg-card border border-foreground/10 text-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2"
-                >
-                  <ChevronLeft size={16} /> Back
-                </button>
+              <div className="flex-1">
+                <p className="text-sm font-black uppercase tracking-wider">Pick Your Outfit</p>
+                <p className="text-[10px] text-muted-foreground">Select up to 5 items, then try it on</p>
               </div>
+              <button
+                onClick={() => setStep('upload')}
+                className="py-2 px-4 bg-card border border-foreground/10 text-foreground font-black tracking-widest text-[10px] rounded-xl flex items-center gap-1"
+              >
+                <ChevronLeft size={14} /> Back
+              </button>
             </div>
 
             {/* Category Tabs */}
@@ -288,11 +274,30 @@ export default function FitMe() {
               })}
             </div>
 
-            {selectedProducts.length > 0 && (
-              <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest">
-                {selectedProducts.length}/5 items selected
-              </p>
-            )}
+            {/* Selection count + Try It On button at bottom */}
+            <div className="space-y-3 pb-4">
+              {selectedProducts.length > 0 && (
+                <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {selectedProducts.length}/5 items selected
+                </p>
+              )}
+              <button
+                onClick={handleGenerate}
+                disabled={selectedProducts.length === 0 || loading}
+                className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} /> Try It On
+                  </>
+                )}
+              </button>
+            </div>
           </motion.div>
         )}
 
