@@ -227,6 +227,66 @@ export default function FitMe() {
                 </button>
               </div>
             </div>
+
+            {/* Category Tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                    activeCategory === cat
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-card border border-foreground/10 text-muted-foreground hover:border-foreground/20'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Product Grid */}
+            <div className="grid grid-cols-3 gap-3">
+              {filteredProducts.map(product => {
+                const isSelected = selectedProducts.some(p => p.id === product.id);
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
+                      } else if (selectedProducts.length < 5) {
+                        setSelectedProducts(prev => [...prev, product]);
+                      } else {
+                        toast.error('Max 5 items at a time');
+                      }
+                    }}
+                    className={`relative rounded-2xl overflow-hidden border-2 transition-all ${
+                      isSelected ? 'border-primary scale-[0.97]' : 'border-foreground/5 hover:border-foreground/20'
+                    }`}
+                  >
+                    <div className="aspect-[3/4]">
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <span className="text-primary-foreground text-[10px] font-black">✓</span>
+                      </div>
+                    )}
+                    <div className="p-2">
+                      <p className="text-[10px] font-bold truncate">{product.name}</p>
+                      <p className="text-[9px] text-muted-foreground">{product.category}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedProducts.length > 0 && (
+              <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest">
+                {selectedProducts.length}/5 items selected
+              </p>
+            )}
           </motion.div>
         )}
 
