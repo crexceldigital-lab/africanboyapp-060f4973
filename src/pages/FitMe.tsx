@@ -191,122 +191,22 @@ export default function FitMe() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            {/* User photo preview */}
-            <div className="relative w-32 h-40 mx-auto rounded-2xl overflow-hidden border-2 border-primary">
-              <img src={userImage!} alt="Your photo" className="w-full h-full object-cover" />
-              <button
-                onClick={handleReset}
-                className="absolute top-1 right-1 w-6 h-6 bg-background/80 rounded-full flex items-center justify-center"
-              >
-                <X size={12} />
-              </button>
-            </div>
-
-            <div className="text-center">
-              <h2 className="text-lg font-black uppercase tracking-tight">Choose your outfit</h2>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-                Select up to 5 items ({selectedProducts.length}/5)
-              </p>
-            </div>
-
-            {/* Category Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {categories.map(cat => (
+            {/* User photo + action buttons side by side */}
+            <div className="flex items-center justify-center gap-4">
+              <div className="relative w-28 h-36 rounded-2xl overflow-hidden border-2 border-primary flex-shrink-0">
+                <img src={userImage!} alt="Your photo" className="w-full h-full object-cover" />
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-                    activeCategory === cat
-                      ? 'bg-primary text-primary-foreground scale-105'
-                      : 'bg-card border border-foreground/10 text-muted-foreground hover:border-foreground/20'
-                  }`}
+                  onClick={handleReset}
+                  className="absolute top-1 right-1 w-6 h-6 bg-background/80 rounded-full flex items-center justify-center"
                 >
-                  {cat}
-                  {cat !== 'All' && (
-                    <span className="ml-1 opacity-60">
-                      ({products.filter(p => p.category === cat).length})
-                    </span>
-                  )}
+                  <X size={12} />
                 </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {filteredProducts.map(product => {
-                const isSelected = selectedProducts.some(p => p.id === product.id);
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
-                        setSelectedColors(prev => { const n = { ...prev }; delete n[product.id]; return n; });
-                      } else if (selectedProducts.length < 5) {
-                        setSelectedProducts(prev => [...prev, product]);
-                        if (product.colors[0]?.name) {
-                          setSelectedColors(prev => ({ ...prev, [product.id]: product.colors[0].name }));
-                        }
-                      } else {
-                        toast.error('You can select up to 5 items');
-                      }
-                    }}
-                    className={`relative rounded-2xl overflow-hidden border-2 transition-all ${
-                      isSelected
-                        ? 'border-primary scale-[1.02] shadow-lg shadow-primary/20'
-                        : 'border-foreground/5 hover:border-foreground/20'
-                    }`}
-                  >
-                    <div className="aspect-square">
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="p-3 bg-card">
-                      <p className="text-xs font-bold truncate">{product.name}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase">{product.category}</p>
-                    </div>
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                        <span className="text-primary-foreground text-xs">✓</span>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Color selection for selected products */}
-            {selectedProducts.filter(p => p.colors.length > 0).map(product => (
-              <div key={product.id} className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-center">{product.name} — Color</p>
-                <div className="flex justify-center gap-3">
-                  {product.colors.map(color => (
-                    <button
-                      key={color.name}
-                      onClick={() => setSelectedColors(prev => ({ ...prev, [product.id]: color.name }))}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        selectedColors[product.id] === color.name ? 'border-primary scale-125' : 'border-foreground/10'
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
               </div>
-            ))}
-
-            <div className="h-24" />
-
-            <div className="fixed bottom-20 left-0 right-0 z-40 px-6">
-              <div className="max-w-2xl mx-auto flex gap-3">
-                <button
-                  onClick={() => setStep('upload')}
-                  className="flex-1 py-4 bg-card border border-foreground/10 text-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2"
-                >
-                  <ChevronLeft size={16} /> Back
-                </button>
+              <div className="flex flex-col gap-2">
                 <button
                   onClick={handleGenerate}
                   disabled={selectedProducts.length === 0 || loading}
-                  className="flex-1 py-4 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="py-3 px-6 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
                   {loading ? (
                     <>
@@ -318,6 +218,12 @@ export default function FitMe() {
                       <Sparkles size={16} /> Try It On
                     </>
                   )}
+                </button>
+                <button
+                  onClick={() => setStep('upload')}
+                  className="py-3 px-6 bg-card border border-foreground/10 text-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2"
+                >
+                  <ChevronLeft size={16} /> Back
                 </button>
               </div>
             </div>
