@@ -92,12 +92,31 @@ export default function FitMe() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!resultImage) return;
-    const link = document.createElement('a');
-    link.href = resultImage;
-    link.download = `fit-me-outfit.png`;
-    link.click();
+    try {
+      let blob: Blob;
+      if (resultImage.startsWith('data:')) {
+        const res = await fetch(resultImage);
+        blob = await res.blob();
+      } else {
+        const res = await fetch(resultImage);
+        blob = await res.blob();
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'fit-me-outfit.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Image saved!');
+    } catch {
+      // Fallback: open in new tab so user can long-press to save
+      window.open(resultImage, '_blank');
+      toast('Long-press the image to save it to your gallery');
+    }
   };
 
   const handleReset = () => {
