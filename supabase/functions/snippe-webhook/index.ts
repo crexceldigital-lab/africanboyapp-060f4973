@@ -14,9 +14,38 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const WEBHOOK_SECRET = Deno.env.get("SNIPPE_WEBHOOK_SECRET");
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const body = await req.json();
+    const rawBody = await req.text();
+
+    // Verify webhook signature if secret is configured
+    if (WEBHOOK_SECRET) {
+      const signature = req.headers.get("x-webhook-signature") || req.headers.get("x-snippe-signature");
+      if (signature) {
+        const encoder = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+          "raw",
+          encoder.encode(WEBHOOK_SECRET),
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"]
+        );
+        const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody));
+        const expectedSig = Array.from(new Uint8Array(sig))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        if (signature !== expectedSig) {
+          console.error("Invalid webhook signature");
+          return new Response(JSON.stringify({ error: "Invalid signature" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
+    const body = JSON.parse(rawBody);
     console.log("Snippe webhook received:", JSON.stringify(body));
 
     const event = body.event || body.type;
