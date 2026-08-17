@@ -30,45 +30,56 @@ export default function ProductCard({ product }: ProductCardProps) {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className={`group relative bg-card rounded-2xl overflow-hidden border border-foreground/5 ${isOutOfStock ? 'opacity-60' : ''}`}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className={`group relative bg-card rounded-2xl overflow-hidden border border-foreground/10 shadow-lg hover:shadow-2xl transition-all duration-300 ${
+        isOutOfStock ? 'opacity-60' : ''
+      }`}
     >
-      <div className="aspect-[3/4] overflow-hidden relative">
+      <div className="aspect-[3/4] overflow-hidden relative bg-black/40">
         <img
           src={product.image_url || undefined}
           alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           referrerPolicy="no-referrer"
         />
+        {/* Subtle dark gradient overlay on hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
         {isOutOfStock && (
-          <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-            <span className="bg-destructive text-destructive-foreground text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-xs flex items-center justify-center">
+            <span className="bg-destructive text-destructive-foreground text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-md">
               Out of Stock
             </span>
           </div>
         )}
       </div>
-      
+
       <div className="p-4">
-        <div className="flex justify-between items-start mb-1">
-          <h3 className="font-bold text-sm text-foreground/90">{product.name}</h3>
-          <span className="text-primary font-bold text-sm">
+        <div className="flex justify-between items-start mb-1 gap-2">
+          <h3 className="font-extrabold text-sm text-foreground/90 leading-tight group-hover:text-primary transition-colors">
+            {product.name}
+          </h3>
+          <span className="text-primary font-black text-sm whitespace-nowrap">
             {formatPrice(product.price)}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground mb-3">{product.category}</p>
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          {product.category}
+        </p>
 
         {/* Colors */}
         {product.colors.length > 0 && (
           <div className="flex items-center gap-1.5 mb-3">
-            {product.colors.map(color => (
+            {product.colors.map((color) => (
               <button
                 key={color.name}
                 onClick={() => setSelectedColor(color.name)}
                 title={color.name}
-                className={`w-6 h-6 rounded-full border-2 transition-all ${
+                className={`w-5 h-5 rounded-full border-2 transition-all ${
                   selectedColor === color.name
-                    ? 'border-primary scale-110'
-                    : 'border-foreground/10 hover:border-foreground/30'
+                    ? 'border-primary scale-110 shadow-[0_0_8px_hsl(43,96%,49%,0.6)]'
+                    : 'border-foreground/20 hover:border-foreground/40'
                 }`}
                 style={{ backgroundColor: color.hex }}
               />
@@ -79,14 +90,14 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Sizes */}
         {product.sizes.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {product.sizes.map(size => (
+            {product.sizes.map((size) => (
               <button
                 key={size}
                 onClick={() => setSelectedSize(size)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${
+                className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border transition-all ${
                   selectedSize === size
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:border-foreground/20'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:border-foreground/30'
                 }`}
               >
                 {size}
@@ -94,16 +105,16 @@ export default function ProductCard({ product }: ProductCardProps) {
             ))}
           </div>
         )}
-        
-        <button 
+
+        <button
           onClick={handleAdd}
           disabled={isOutOfStock}
-          className={`w-full py-2 transition-all rounded-lg flex items-center justify-center gap-2 text-xs font-bold border ${
+          className={`w-full py-2.5 transition-all rounded-xl flex items-center justify-center gap-2 text-xs font-black tracking-wider uppercase border active:scale-95 ${
             isOutOfStock
               ? 'bg-secondary text-muted-foreground border-foreground/5 cursor-not-allowed'
-              : added 
-                ? 'bg-emerald-500 text-foreground border-emerald-500' 
-                : 'bg-foreground/5 hover:bg-primary hover:text-primary-foreground border-foreground/10 hover:border-primary'
+              : added
+              ? 'bg-emerald-500 text-foreground border-emerald-500 shadow-md'
+              : 'bg-foreground/5 hover:bg-primary hover:text-primary-foreground border-foreground/10 hover:border-primary shadow-sm hover:shadow-[0_0_15px_hsl(43,96%,49%,0.3)]'
           }`}
         >
           {isOutOfStock ? (
@@ -122,3 +133,4 @@ export default function ProductCard({ product }: ProductCardProps) {
     </motion.div>
   );
 }
+

@@ -18,32 +18,10 @@ import SplashScreen from './components/SplashScreen';
 
 
 function AppContent() {
-  const { user, loading } = useCountry();
+  const { loading } = useCountry();
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [showSplash, setShowSplash] = useState(true);
-  const [splashDone, setSplashDone] = useState(false);
-
-  useEffect(() => {
-    if (showSplash) {
-      const timer = setTimeout(() => {
-        setShowSplash(false);
-        setSplashDone(true);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSplash]);
-
-  if (!splashDone) {
-    return (
-      <SplashScreen
-        show={showSplash}
-        onComplete={() => {
-          setShowSplash(false);
-          setSplashDone(true);
-        }}
-      />
-    );
-  }
+  const [splashMounted, setSplashMounted] = useState(true);
 
   if (loading) {
     return (
@@ -56,14 +34,11 @@ function AppContent() {
     );
   }
 
-  // No login gate - users can browse freely. Auth is required only at checkout.
-
   const renderPage = () => {
     switch (activeTab) {
       case 'home': return <Home onNavigate={setActiveTab} />;
       case 'shop': return <Shop />;
       case 'video': return <Media />;
-      
       case 'vip': return <VIP />;
       case 'fitme': return <FitMe />;
       case 'profile': return <Profile />;
@@ -74,23 +49,32 @@ function AppContent() {
 
   return (
     <CartProvider>
+      {splashMounted && (
+        <SplashScreen
+          show={showSplash}
+          onComplete={() => {
+            setShowSplash(false);
+            // Allow exit animation to complete before unmounting splash component
+            setTimeout(() => setSplashMounted(false), 600);
+          }}
+        />
+      )}
       <div className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
         <Header activeTab={activeTab} setActiveTab={setActiveTab} />
         <main className="max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, scale: 0.985, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.985, y: -6 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             >
               {renderPage()}
             </motion.div>
           </AnimatePresence>
         </main>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-        
       </div>
     </CartProvider>
   );

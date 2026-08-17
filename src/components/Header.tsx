@@ -1,6 +1,6 @@
 import { Search, ShoppingCart, Menu } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CartDrawer from './CartDrawer';
 import { useCountry } from '../context/CountryContext';
 import SidebarMenu from './SidebarMenu';
@@ -16,41 +16,70 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
   const { selectedCountry } = useCountry();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/50 backdrop-blur-md border-b border-foreground/5">
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? 'bg-background/85 backdrop-blur-xl border-b border-foreground/10 shadow-2xl py-0.5'
+            : 'bg-background/40 backdrop-blur-md border-b border-transparent py-1'
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMenuOpen(true)}
-              className="p-2 hover:bg-foreground/10 rounded-full transition-colors"
+              className="p-2 hover:bg-foreground/10 rounded-full transition-colors active:scale-95"
+              aria-label="Open menu"
             >
               <Menu size={24} />
             </button>
             {selectedCountry && (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-card rounded-full border border-foreground/5">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-card/80 rounded-full border border-foreground/10 shadow-sm">
                 <span className="text-sm">{selectedCountry.flag_emoji}</span>
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{selectedCountry.code}</span>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                  {selectedCountry.code}
+                </span>
               </div>
             )}
           </div>
-          
-          <div className="flex flex-col items-center">
-            <span className="text-primary font-black text-xl tracking-tighter italic">AFRICAN BOY</span>
+
+          <div
+            onClick={() => setActiveTab('home')}
+            className="flex flex-col items-center cursor-pointer group"
+          >
+            <span className="text-primary font-black text-xl md:text-2xl tracking-tighter italic group-hover:scale-105 transition-transform">
+              AFRICAN BOY
+            </span>
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <button className="p-2 hover:bg-foreground/10 rounded-full transition-colors">
+            <button
+              onClick={() => setActiveTab('shop')}
+              className="p-2 hover:bg-foreground/10 rounded-full transition-colors active:scale-95"
+              aria-label="Search"
+            >
               <Search size={22} />
             </button>
-            <button 
+            <button
               onClick={() => setIsCartOpen(true)}
-              className="p-2 hover:bg-foreground/10 rounded-full transition-colors relative"
+              className="p-2 hover:bg-foreground/10 rounded-full transition-colors relative active:scale-95 group"
+              aria-label="Cart"
             >
-              <ShoppingCart size={22} />
+              <ShoppingCart size={22} className="group-hover:text-primary transition-colors" />
               {cartCount > 0 && (
-                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-primary text-primary-foreground text-[10px] font-black flex items-center justify-center rounded-full">
+                <span className="absolute top-1 right-1 min-w-[18px] h-4 px-1 bg-primary text-primary-foreground text-[10px] font-black flex items-center justify-center rounded-full shadow-md animate-in zoom-in-50">
                   {cartCount}
                 </span>
               )}
@@ -69,3 +98,4 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
     </>
   );
 }
+

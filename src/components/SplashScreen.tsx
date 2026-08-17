@@ -1,4 +1,5 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 
 interface SplashScreenProps {
@@ -7,205 +8,166 @@ interface SplashScreenProps {
 }
 
 export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isMobile || shouldReduceMotion) return;
+    const { clientX, clientY } = e;
+    const { innerWidth, innerHeight } = window;
+    const x = (clientX / innerWidth - 0.5) * 2; // -1 to 1
+    const y = (clientY / innerHeight - 0.5) * 2; // -1 to 1
+    setMousePos({ x, y });
+  };
+
   return (
     <AnimatePresence>
       {show && (
         <motion.div
-          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden"
-          style={{ background: '#000' }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.8, ease: 'easeInOut' }}
+          onMouseMove={handleMouseMove}
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black select-none pointer-events-auto"
+          initial={{ opacity: 1, scale: 1 }}
+          exit={
+            shouldReduceMotion
+              ? { opacity: 0 }
+              : {
+                  opacity: 0,
+                  scale: 1.04,
+                  transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+                }
+          }
         >
-          {/* Cinematic letterbox bars */}
+          {/* Ambient Center Gold Glow - Scene 1 */}
           <motion.div
-            className="absolute top-0 left-0 right-0 bg-black z-50"
-            initial={{ height: '50%' }}
-            animate={{ height: ['50%', '12%'] }}
-            transition={{ delay: 0.3, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-          />
-          <motion.div
-            className="absolute bottom-0 left-0 right-0 bg-black z-50"
-            initial={{ height: '50%' }}
-            animate={{ height: ['50%', '12%'] }}
-            transition={{ delay: 0.3, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-          />
-
-          {/* Volumetric light rays */}
-          {[...Array(8)].map((_, i) => {
-            const angle = (i / 8) * 360;
-            return (
-              <motion.div
-                key={`ray-${i}`}
-                className="absolute origin-center"
-                style={{
-                  width: '2px',
-                  height: '600px',
-                  background: `linear-gradient(to top, hsl(43 96% 49% / 0.15), transparent)`,
-                  transform: `rotate(${angle}deg)`,
-                  top: '50%',
-                  left: '50%',
-                  marginLeft: '-1px',
-                  marginTop: '-300px',
-                }}
-                initial={{ scaleY: 0, opacity: 0 }}
-                animate={{
-                  scaleY: [0, 1.5, 0.8],
-                  opacity: [0, 0.6, 0.15],
-                }}
-                transition={{ delay: 0.8, duration: 2, ease: 'easeOut' }}
-              />
-            );
-          })}
-
-          {/* Deep atmospheric fog */}
-          <motion.div
-            className="absolute inset-0"
+            className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'radial-gradient(ellipse at center, hsl(43 96% 49% / 0.08) 0%, transparent 60%)',
+              background: 'radial-gradient(circle at center, hsl(43 96% 49% / 0.12) 0%, transparent 60%)',
             }}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: [0, 4], opacity: [0, 1] }}
-            transition={{ delay: 0.5, duration: 2.5, ease: 'easeOut' }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: [0, 1, 0.8], scale: [0.8, 1.2, 1] }}
+            transition={{ duration: 2.6, ease: 'easeOut' }}
           />
 
-          {/* Flash impact */}
-          <motion.div
-            className="absolute inset-0 bg-primary z-40 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0, 0.7, 0] }}
-            transition={{ duration: 1.5, times: [0, 0.45, 0.5, 0.7], ease: 'easeOut' }}
-          />
+          {/* Vignette border framing */}
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_transparent_40%,_black_100%)] opacity-80" />
 
-          {/* Shockwave rings */}
-          {[0, 1, 2].map((i) => (
+          {/* Central Composition (Logo + Light Sweep) */}
+          <div className="relative flex flex-col items-center justify-center z-10 px-4">
+            {/* Logo Container - Scene 2 */}
             <motion.div
-              key={`shock-${i}`}
-              className="absolute rounded-full border border-primary/20"
-              initial={{ width: 0, height: 0, opacity: 0 }}
-              animate={{
-                width: [0, 600 + i * 300],
-                height: [0, 600 + i * 300],
-                opacity: [0.6, 0],
+              style={{
+                rotateX: isMobile || shouldReduceMotion ? 0 : mousePos.y * -2,
+                rotateY: isMobile || shouldReduceMotion ? 0 : mousePos.x * 2,
+                x: isMobile || shouldReduceMotion ? 0 : mousePos.x * 3,
+                y: isMobile || shouldReduceMotion ? 0 : mousePos.y * 3,
               }}
-              transition={{ delay: 0.8 + i * 0.15, duration: 1.5, ease: 'easeOut' }}
-            />
-          ))}
-
-          {/* Ember particles */}
-          {[...Array(20)].map((_, i) => {
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 150 + Math.random() * 250;
-            const size = 1 + Math.random() * 3;
-            return (
-              <motion.div
-                key={`ember-${i}`}
-                className="absolute rounded-full"
-                style={{
-                  width: size,
-                  height: size,
-                  background: `hsl(${40 + Math.random() * 10} 96% ${50 + Math.random() * 30}%)`,
-                  boxShadow: `0 0 ${size * 3}px hsl(43 96% 49% / 0.6)`,
-                }}
-                initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
-                animate={{
-                  x: [0, Math.cos(angle) * dist * 0.4, Math.cos(angle) * dist],
-                  y: [0, Math.sin(angle) * dist * 0.4 - 30, Math.sin(angle) * dist - 80],
-                  opacity: [0, 1, 0],
-                  scale: [0, 1.5, 0],
-                }}
-                transition={{
-                  delay: 0.7 + Math.random() * 0.3,
-                  duration: 1.5 + Math.random() * 0.5,
-                  ease: 'easeOut',
-                }}
-              />
-            );
-          })}
-
-          {/* Logo — cinematic zoom-slam from deep */}
-          <motion.div
-            className="relative z-30"
-            initial={{ scale: 5, opacity: 0, filter: 'blur(30px)' }}
-            animate={{
-              scale: [5, 1.2, 0.9, 1.05, 1],
-              opacity: [0, 1, 1, 1, 1],
-              filter: ['blur(30px)', 'blur(2px)', 'blur(0px)', 'blur(0px)', 'blur(0px)'],
-            }}
-            transition={{
-              duration: 2,
-              times: [0, 0.35, 0.55, 0.8, 1],
-              ease: [0.22, 1, 0.36, 1],
-            }}
-            onAnimationComplete={onComplete}
-          >
-            <motion.div
-              className="w-52 h-52 md:w-72 md:h-72 rounded-full overflow-hidden bg-black"
-              animate={{
-                boxShadow: [
-                  '0 0 0px hsl(43 96% 49% / 0), 0 0 0px hsl(43 96% 49% / 0)',
-                  '0 0 100px hsl(43 96% 49% / 0.6), 0 0 200px hsl(43 96% 49% / 0.3)',
-                  '0 0 60px hsl(43 96% 49% / 0.4), 0 0 120px hsl(43 96% 49% / 0.15)',
-                ],
-              }}
-              transition={{ duration: 2.5, times: [0, 0.4, 1], ease: 'easeOut' }}
+              className="relative transition-transform duration-200 ease-out"
             >
-              <img
-                src={africanBoyLogo}
-                alt="African Boy"
-                className="w-full h-full object-cover pointer-events-none"
-              />
-
-              {/* Anamorphic lens flare sweep */}
               <motion.div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: 'linear-gradient(105deg, transparent 30%, hsl(43 96% 85% / 0.5) 48%, hsl(43 96% 95% / 0.3) 52%, transparent 70%)',
+                className="relative w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72 rounded-full overflow-hidden bg-black shadow-[0_0_50px_hsl(43_96%_49%_/_0.25)] border border-primary/20"
+                initial={
+                  shouldReduceMotion
+                    ? { opacity: 0 }
+                    : { opacity: 0, scale: 0.88, filter: 'blur(15px)' }
+                }
+                animate={
+                  shouldReduceMotion
+                    ? { opacity: 1 }
+                    : { opacity: 1, scale: 1, filter: 'blur(0px)' }
+                }
+                transition={{
+                  delay: 0.4,
+                  duration: 1.0,
+                  ease: [0.16, 1, 0.3, 1],
                 }}
-                initial={{ x: '-150%' }}
-                animate={{ x: ['−150%', '250%'] }}
-                transition={{ delay: 1.8, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              />
+              >
+                {/* Logo Image */}
+                <img
+                  src={africanBoyLogo}
+                  alt="African Boy"
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+
+                {/* Elegant Light Sweep - Scene 3 */}
+                {!shouldReduceMotion && (
+                  <motion.div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background:
+                        'linear-gradient(110deg, transparent 35%, hsl(43 96% 80% / 0.5) 50%, transparent 65%)',
+                    }}
+                    initial={{ x: '-120%' }}
+                    animate={{ x: '160%' }}
+                    transition={{
+                      delay: 1.4,
+                      duration: 0.8,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                  />
+                )}
+              </motion.div>
             </motion.div>
-          </motion.div>
 
-          {/* Brand text — typewriter reveal */}
-          <motion.div
-            className="absolute bottom-[18%] flex flex-col items-center gap-3 z-30"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.6, duration: 0.5 }}
-          >
-            <div className="overflow-hidden">
-              <motion.span
-                className="block text-primary font-black text-3xl md:text-5xl tracking-tighter italic"
-                initial={{ y: '120%' }}
-                animate={{ y: '0%' }}
-                transition={{ delay: 1.7, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              >
-                AFRICAN BOY
-              </motion.span>
+            {/* Typography Reveal - Scene 4 */}
+            <div className="mt-8 flex flex-col items-center text-center">
+              {/* Brand Name Mask Reveal */}
+              <div className="overflow-hidden py-1">
+                <motion.h1
+                  className="text-primary font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter italic"
+                  initial={shouldReduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+                  animate={shouldReduceMotion ? { opacity: 1 } : { y: '0%', opacity: 1 }}
+                  transition={{
+                    delay: 1.8,
+                    duration: 0.6,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                >
+                  AFRICAN BOY
+                </motion.h1>
+              </div>
+
+              {/* Gold Divider Line */}
+              <motion.div
+                className="h-[1px] bg-gradient-to-r from-transparent via-primary/80 to-transparent my-2"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 140, opacity: 1 }}
+                transition={{ delay: 2.1, duration: 0.4, ease: 'easeOut' }}
+              />
+
+              {/* Subtitle Mask Reveal */}
+              <div className="overflow-hidden py-0.5">
+                <motion.p
+                  className="text-muted-foreground text-[10px] sm:text-xs font-bold tracking-[0.4em] uppercase"
+                  initial={shouldReduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+                  animate={shouldReduceMotion ? { opacity: 1 } : { y: '0%', opacity: 1 }}
+                  transition={{
+                    delay: 2.2,
+                    duration: 0.5,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  onAnimationComplete={() => {
+                    // Trigger completion after the typography sequence completes naturally
+                    setTimeout(onComplete, 200);
+                  }}
+                >
+                  THE MOVEMENT
+                </motion.p>
+              </div>
             </div>
-
-            <motion.div
-              className="h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 200, opacity: 1 }}
-              transition={{ delay: 2.2, duration: 0.4, ease: 'easeOut' }}
-            />
-
-            <div className="overflow-hidden">
-              <motion.span
-                className="block text-muted-foreground text-[10px] font-bold tracking-[0.5em] uppercase"
-                initial={{ y: '120%' }}
-                animate={{ y: '0%' }}
-                transition={{ delay: 2.4, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              >
-                The Movement
-              </motion.span>
-            </div>
-          </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 }
+
