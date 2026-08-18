@@ -181,10 +181,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      handle_new_user_setup: {
-        Args: { p_full_name?: string }
-        Returns: undefined
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
