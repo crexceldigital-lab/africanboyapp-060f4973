@@ -172,21 +172,14 @@ export function CountryProvider({ children }: { children: ReactNode }) {
         return false;
       }
       
-      // Setup profile and roles via security definer function
       if (signupData.user) {
-        await supabase.rpc('handle_new_user_setup', {
-          p_user_id: signupData.user.id,
-          p_email: data.email,
-          p_full_name: data.full_name || '',
+        // Create own profile (allowed by row-level access rules for the signed-in user)
+        await supabase.from('profiles').upsert({
+          id: signupData.user.id,
+          full_name: data.full_name || '',
+          phone_number: data.phone_number || '',
+          country_id: data.country_id || 1,
         });
-
-        // Update profile with extra fields
-        if (data.phone_number || data.country_id) {
-          await supabase.from('profiles').update({
-            phone_number: data.phone_number || '',
-            country_id: data.country_id || 1,
-          }).eq('id', signupData.user.id);
-        }
       }
       return true;
     } catch {
