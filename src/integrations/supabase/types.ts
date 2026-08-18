@@ -182,7 +182,7 @@ export type Database = {
     }
     Functions: {
       handle_new_user_setup: {
-        Args: { p_email: string; p_full_name?: string; p_user_id: string }
+        Args: { p_full_name?: string }
         Returns: undefined
       }
       has_role: {
