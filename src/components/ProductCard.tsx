@@ -76,6 +76,8 @@ export default function ProductCard({ product }: ProductCardProps) {
                 key={color.name}
                 onClick={() => setSelectedColor(color.name)}
                 title={color.name}
+                aria-label={`Select colour ${color.name}`}
+                aria-pressed={selectedColor === color.name}
                 className={`w-5 h-5 rounded-full border-2 transition-all ${
                   selectedColor === color.name
                     ? 'border-primary scale-110 shadow-[0_0_8px_hsl(43,96%,49%,0.6)]'
