@@ -1,6 +1,5 @@
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 import { useSplashAudio } from '@/hooks/useSplashAudio';
 
