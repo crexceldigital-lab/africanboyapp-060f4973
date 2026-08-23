@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * Cinematic launch audio, synthesized live with the Web Audio API.
@@ -14,6 +14,7 @@ export function useSplashAudio(active: boolean, durationMs: number) {
   const masterRef = useRef<GainNode | null>(null);
   const startedRef = useRef(false);
   const nodesRef = useRef<Stoppable[]>([]);
+  const [audioStarted, setAudioStarted] = useState(false);
 
   const teardown = useCallback(() => {
     nodesRef.current.forEach((n) => {
@@ -28,6 +29,7 @@ export function useSplashAudio(active: boolean, durationMs: number) {
     ctxRef.current = null;
     masterRef.current = null;
     startedRef.current = false;
+    setAudioStarted(false);
     if (ctx) {
       setTimeout(() => ctx.close().catch(() => {}), 200);
     }
@@ -46,6 +48,7 @@ export function useSplashAudio(active: boolean, durationMs: number) {
     comp.ratio.value = 6;
     master.connect(comp).connect(ctx.destination);
     masterRef.current = master;
+    setAudioStarted(true);
 
     const t0 = ctx.currentTime + 0.05;
     const end = t0 + durationMs / 1000;
@@ -272,6 +275,6 @@ export function useSplashAudio(active: boolean, durationMs: number) {
     };
   }, [active, schedule, teardown]);
 
-  return { tick, stop: teardown, hasSound: () => startedRef.current };
+  return { tick, stop: teardown, audioStarted };
 }
 
