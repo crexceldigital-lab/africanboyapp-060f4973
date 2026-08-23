@@ -137,8 +137,8 @@ export default function Home({ onNavigate }: HomeProps) {
               }}
             />
           </motion.div>
-          {/* Static 20% darkness overlay */}
-          <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+          {/* Static 30% darkness overlay */}
+          <div className="absolute inset-0 bg-black/30 pointer-events-none" />
         </div>
 
         {/* Hero Content */}
