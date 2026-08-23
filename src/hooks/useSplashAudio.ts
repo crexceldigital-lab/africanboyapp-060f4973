@@ -272,6 +272,6 @@ export function useSplashAudio(active: boolean, durationMs: number) {
     };
   }, [active, schedule, teardown]);
 
-  return { tick, stop: teardown };
+  return { tick, stop: teardown, hasSound: () => startedRef.current };
 }
 
