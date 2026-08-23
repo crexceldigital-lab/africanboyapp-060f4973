@@ -34,6 +34,17 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
   const [done, setDone] = useState(false);
 
   const { tick, stop: stopAudio, audioStarted } = useSplashAudio(show, T.total);
+  const [graceElapsed, setGraceElapsed] = useState(false);
+
+  // Never let blocked audio hold the visuals hostage: wait a brief moment for
+  // the audio context, then run the launch regardless.
+  useEffect(() => {
+    if (!show) return;
+    const t = window.setTimeout(() => setGraceElapsed(true), 900);
+    return () => clearTimeout(t);
+  }, [show]);
+
+  const ready = audioStarted || graceElapsed;
 
   const finish = useCallback(() => {
     setDone((d) => {
