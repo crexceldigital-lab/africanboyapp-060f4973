@@ -34,8 +34,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
   const [impact, setImpact] = useState(false);
   const [done, setDone] = useState(false);
 
-  const { muted, toggleMuted, blocked, tick, unlock, stop: stopAudio } =
-    useSplashAudio(show && !shouldReduceMotion, T.total);
+  const { tick, stop: stopAudio } = useSplashAudio(show, T.total);
 
   const finish = useCallback(() => {
     setDone((d) => {
