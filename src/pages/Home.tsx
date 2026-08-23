@@ -181,7 +181,7 @@ export default function Home({ onNavigate }: HomeProps) {
               >
                 <img
                   src={africanBoyLogo}
-                  alt="African Boy Logo"
+                  alt="AFRICAN BOY brand emblem"
                   className="w-full h-full object-cover pointer-events-none"
                 />
               </motion.div>
@@ -198,28 +198,31 @@ export default function Home({ onNavigate }: HomeProps) {
             transition={{ type: 'spring', stiffness: 120, damping: 25 }}
           >
             {/* Headline Phase 3: Two Stage Mask Reveal */}
-            <div className="mb-4 text-center">
-              <div className="overflow-hidden py-1">
-                <motion.h1
-                  className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-none italic"
-                  initial={shouldReduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
-                  animate={shouldReduceMotion ? { opacity: 1 } : { y: '0%', opacity: 1 }}
-                  transition={{ delay: 0.6, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  THE <span className="text-primary">LEGACY</span>
-                </motion.h1>
-              </div>
-              <div className="overflow-hidden py-1">
-                <motion.h1
-                  className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-none italic"
-                  initial={shouldReduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
-                  animate={shouldReduceMotion ? { opacity: 1 } : { y: '0%', opacity: 1 }}
-                  transition={{ delay: 0.85, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  CONTINUES
-                </motion.h1>
-              </div>
-            </div>
+            <h1 className="mb-4 text-center text-4xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-none italic">
+              <span className="sr-only">AFRICAN BOY — The Legacy Continues</span>
+              <span aria-hidden="true">
+                <span className="block overflow-hidden py-1">
+                  <motion.span
+                    className="block"
+                    initial={shouldReduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+                    animate={shouldReduceMotion ? { opacity: 1 } : { y: '0%', opacity: 1 }}
+                    transition={{ delay: 0.6, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    THE <span className="text-primary">LEGACY</span>
+                  </motion.span>
+                </span>
+                <span className="block overflow-hidden py-1">
+                  <motion.span
+                    className="block"
+                    initial={shouldReduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+                    animate={shouldReduceMotion ? { opacity: 1 } : { y: '0%', opacity: 1 }}
+                    transition={{ delay: 0.85, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    CONTINUES
+                  </motion.span>
+                </span>
+              </span>
+            </h1>
 
             {/* Supporting Text - Phase 4 */}
             <motion.p
@@ -368,6 +371,8 @@ export default function Home({ onNavigate }: HomeProps) {
                       e.stopPropagation();
                       setUpdatesIndex(i);
                     }}
+                    aria-label={`Show updates slide ${i + 1}`}
+                    aria-current={updatesIndex === i}
                     className={`h-1.5 rounded-full transition-all ${
                       updatesIndex === i ? 'w-8 bg-primary' : 'w-2 bg-white/30'
                     }`}
@@ -412,6 +417,8 @@ export default function Home({ onNavigate }: HomeProps) {
                       e.stopPropagation();
                       setLifestyleIndex(i);
                     }}
+                    aria-label={`Show lifestyle slide ${i + 1}`}
+                    aria-current={lifestyleIndex === i}
                     className={`h-1.5 rounded-full transition-all ${
                       lifestyleIndex === i ? 'w-8 bg-primary' : 'w-2 bg-white/30'
                     }`}
