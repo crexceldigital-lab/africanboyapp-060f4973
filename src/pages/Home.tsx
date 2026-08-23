@@ -371,6 +371,8 @@ export default function Home({ onNavigate }: HomeProps) {
                       e.stopPropagation();
                       setUpdatesIndex(i);
                     }}
+                    aria-label={`Show updates slide ${i + 1}`}
+                    aria-current={updatesIndex === i}
                     className={`h-1.5 rounded-full transition-all ${
                       updatesIndex === i ? 'w-8 bg-primary' : 'w-2 bg-white/30'
                     }`}
@@ -415,6 +417,8 @@ export default function Home({ onNavigate }: HomeProps) {
                       e.stopPropagation();
                       setLifestyleIndex(i);
                     }}
+                    aria-label={`Show lifestyle slide ${i + 1}`}
+                    aria-current={lifestyleIndex === i}
                     className={`h-1.5 rounded-full transition-all ${
                       lifestyleIndex === i ? 'w-8 bg-primary' : 'w-2 bg-white/30'
                     }`}
