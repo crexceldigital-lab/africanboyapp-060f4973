@@ -34,12 +34,27 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
   const [impact, setImpact] = useState(false);
   const [done, setDone] = useState(false);
 
+  const { muted, toggleMuted, blocked, tick, unlock, stop: stopAudio } =
+    useSplashAudio(show && !shouldReduceMotion, T.total);
+
   const finish = useCallback(() => {
     setDone((d) => {
-      if (!d) onComplete();
+      if (!d) {
+        stopAudio();
+        onComplete();
+      }
       return true;
     });
-  }, [onComplete]);
+  }, [onComplete, stopAudio]);
+
+  // Typewriter tick SFX
+  useEffect(() => {
+    if (typed > 0) tick();
+  }, [typed, tick]);
+  useEffect(() => {
+    if (taglineTyped > 0) tick();
+  }, [taglineTyped, tick]);
+
 
   useEffect(() => {
     const checkMobile = () =>
