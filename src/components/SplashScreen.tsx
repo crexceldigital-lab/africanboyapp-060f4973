@@ -90,7 +90,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
 
   /* Sequencer */
   useEffect(() => {
-    if (!show || !audioStarted) return;
+    if (!show || !ready) return;
 
     if (shouldReduceMotion) {
       setTyped(BRAND.length);
@@ -123,7 +123,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
     timers.push(window.setTimeout(finish, T.total));
 
     return () => timers.forEach(clearTimeout);
-  }, [show, audioStarted, shouldReduceMotion, finish]);
+  }, [show, ready, shouldReduceMotion, finish]);
 
   const brandDone = typed >= BRAND.length;
 
@@ -152,7 +152,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
                 }
           }
         >
-          {audioStarted && (
+          {ready && (
           <motion.div
             key="cinematic-sequence"
             className="absolute inset-0 flex items-center justify-center overflow-hidden"
