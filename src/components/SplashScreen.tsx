@@ -1,6 +1,5 @@
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 import { useSplashAudio } from '@/hooks/useSplashAudio';
 
@@ -34,8 +33,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
   const [impact, setImpact] = useState(false);
   const [done, setDone] = useState(false);
 
-  const { muted, toggleMuted, blocked, tick, unlock, stop: stopAudio } =
-    useSplashAudio(show && !shouldReduceMotion, T.total);
+  const { tick, stop: stopAudio } = useSplashAudio(show, T.total);
 
   const finish = useCallback(() => {
     setDone((d) => {
@@ -478,46 +476,6 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
                 transition={{ delay: 2.4, duration: 0.8 }}
               >
                 Tap to enter
-              </motion.button>
-            </div>
-          )}
-
-          {/* Sound controls */}
-          {!shouldReduceMotion && (
-            <div className="absolute top-[3vh] right-[4vw] z-40 flex items-center gap-3">
-              {!muted && blocked && (
-                <motion.button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    unlock();
-                  }}
-                  className="rounded-full border border-primary/40 bg-black/50 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.25em] text-primary backdrop-blur-sm"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.5 }}
-                >
-                  Tap for sound
-                </motion.button>
-              )}
-              <motion.button
-                type="button"
-                aria-label={muted ? 'Unmute launch sound' : 'Mute launch sound'}
-                aria-pressed={muted}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleMuted();
-                }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-foreground/15 bg-black/50 text-foreground/60 backdrop-blur-sm transition-colors hover:border-primary/50 hover:text-primary"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-              >
-                {muted ? (
-                  <VolumeX className="h-4 w-4" />
-                ) : (
-                  <Volume2 className="h-4 w-4" />
-                )}
               </motion.button>
             </div>
           )}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * Cinematic launch audio, synthesized live with the Web Audio API.
@@ -6,19 +6,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * a rising whoosh, a sub-bass impact boom and typewriter ticks.
  */
 
-const STORAGE_KEY = 'ab_splash_muted';
-
 type Stoppable = { stop: () => void };
 
 export function useSplashAudio(active: boolean, durationMs: number) {
-  const [muted, setMuted] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-  const [blocked, setBlocked] = useState(false);
 
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
@@ -202,11 +192,7 @@ export function useSplashAudio(active: boolean, durationMs: number) {
     });
 
     if (ctx.state === 'suspended') {
-      ctx.resume().then(
-        () => setBlocked(false),
-        () => setBlocked(true)
-      );
-      setBlocked(ctx.state === 'suspended');
+      ctx.resume().catch(() => {});
     }
 
     return true;
@@ -229,38 +215,29 @@ export function useSplashAudio(active: boolean, durationMs: number) {
     o.stop(at + 0.06);
   }, []);
 
-  /* Start / stop with the splash */
+  /* Start with the splash — always on, no mute option */
   useEffect(() => {
-    if (!active || muted) return;
+    if (!active) return;
     start();
-    return teardown;
-  }, [active, muted, start, teardown]);
 
-  const toggleMuted = useCallback(() => {
-    setMuted((m) => {
-      const next = !m;
-      try {
-        localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-      } catch {
-        /* ignore */
-      }
-      if (next) teardown();
-      return next;
-    });
-  }, [teardown]);
+    // Some browsers block autoplay until a gesture; resume on the first one.
+    const resume = () => {
+      const ctx = ctxRef.current;
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    };
+    const events: (keyof WindowEventMap)[] = [
+      'pointerdown',
+      'touchstart',
+      'keydown',
+      'click',
+    ];
+    events.forEach((e) => window.addEventListener(e, resume, { passive: true }));
 
-  /** Called from a real user gesture to satisfy autoplay policies. */
-  const unlock = useCallback(() => {
-    if (muted) return;
-    const ctx = ctxRef.current;
-    if (!ctx) {
-      start();
-      return;
-    }
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(() => setBlocked(false), () => {});
-    }
-  }, [muted, start]);
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, resume));
+      teardown();
+    };
+  }, [active, start, teardown]);
 
-  return { muted, toggleMuted, blocked, tick, unlock, stop: teardown };
+  return { tick, stop: teardown };
 }
