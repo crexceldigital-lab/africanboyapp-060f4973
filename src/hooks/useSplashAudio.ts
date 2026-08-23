@@ -178,10 +178,6 @@ export function useSplashAudio(active: boolean, durationMs: number) {
       track({ stop: () => o.stop() });
     });
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
-
     return true;
   }, [durationMs]);
 
@@ -205,26 +201,77 @@ export function useSplashAudio(active: boolean, durationMs: number) {
   /* Start with the splash — always on, no mute option */
   useEffect(() => {
     if (!active) return;
-    start();
 
-    // Some browsers block autoplay until a gesture; resume on the first one.
-    const resume = () => {
-      const ctx = ctxRef.current;
-      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    let cancelled = false;
+
+    const AC: typeof AudioContext | undefined =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AC) return;
+
+    let ctx: AudioContext;
+    try {
+      ctx = new AC();
+    } catch {
+      return;
+    }
+    ctxRef.current = ctx;
+
+    /* Only build the score once the context is actually running — a suspended
+       context (autoplay blocked outside the editor) would swallow the whole
+       timeline. */
+    const attempt = () => {
+      if (cancelled || startedRef.current) return;
+      if (ctx.state === 'running') {
+        schedule(ctx);
+        cleanupListeners();
+        window.clearInterval(poll);
+        return;
+      }
+      ctx.resume().then(() => {
+        if (!cancelled && ctx.state === 'running' && !startedRef.current) {
+          schedule(ctx);
+          cleanupListeners();
+          window.clearInterval(poll);
+        }
+      }).catch(() => {});
     };
+
     const events: (keyof WindowEventMap)[] = [
       'pointerdown',
+      'pointerup',
       'touchstart',
+      'touchend',
+      'mousedown',
       'keydown',
       'click',
+      'scroll',
+      'wheel',
     ];
-    events.forEach((e) => window.addEventListener(e, resume, { passive: true }));
+    const cleanupListeners = () => {
+      events.forEach((e) => window.removeEventListener(e, attempt, true));
+      document.removeEventListener('visibilitychange', attempt);
+    };
+    // Capture phase so the very first tap unlocks audio even if the splash
+    // handles that same click.
+    events.forEach((e) =>
+      window.addEventListener(e, attempt, { capture: true, passive: true })
+    );
+    document.addEventListener('visibilitychange', attempt);
+
+    // Some browsers flip the context to running slightly after creation.
+    const poll = window.setInterval(attempt, 250);
+    attempt();
 
     return () => {
-      events.forEach((e) => window.removeEventListener(e, resume));
+      cancelled = true;
+      cleanupListeners();
+      window.clearInterval(poll);
       teardown();
     };
-  }, [active, start, teardown]);
+  }, [active, schedule, teardown]);
 
   return { tick, stop: teardown };
 }
+
