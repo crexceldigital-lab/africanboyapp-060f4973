@@ -33,24 +33,11 @@ export function useSplashAudio(active: boolean, durationMs: number) {
     }
   }, []);
 
-  /** Build the score. Returns false if the browser blocked playback. */
-  const start = useCallback(() => {
+  /** Build the score on an already-running context. */
+  const schedule = useCallback((ctx: AudioContext) => {
     if (startedRef.current) return true;
-    const AC: typeof AudioContext | undefined =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
-    if (!AC) return false;
-
-    let ctx: AudioContext;
-    try {
-      ctx = new AC();
-    } catch {
-      return false;
-    }
-
     startedRef.current = true;
-    ctxRef.current = ctx;
+
 
     const master = ctx.createGain();
     master.gain.value = 0.0001;
