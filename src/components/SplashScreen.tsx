@@ -34,6 +34,17 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
   const [done, setDone] = useState(false);
 
   const { tick, stop: stopAudio, audioStarted } = useSplashAudio(show, T.total);
+  const [graceElapsed, setGraceElapsed] = useState(false);
+
+  // Never let blocked audio hold the visuals hostage: wait a brief moment for
+  // the audio context, then run the launch regardless.
+  useEffect(() => {
+    if (!show) return;
+    const t = window.setTimeout(() => setGraceElapsed(true), 900);
+    return () => clearTimeout(t);
+  }, [show]);
+
+  const ready = audioStarted || graceElapsed;
 
   const finish = useCallback(() => {
     setDone((d) => {
@@ -79,7 +90,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
 
   /* Sequencer */
   useEffect(() => {
-    if (!show || !audioStarted) return;
+    if (!show || !ready) return;
 
     if (shouldReduceMotion) {
       setTyped(BRAND.length);
@@ -112,7 +123,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
     timers.push(window.setTimeout(finish, T.total));
 
     return () => timers.forEach(clearTimeout);
-  }, [show, audioStarted, shouldReduceMotion, finish]);
+  }, [show, ready, shouldReduceMotion, finish]);
 
   const brandDone = typed >= BRAND.length;
 
@@ -141,7 +152,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
                 }
           }
         >
-          {audioStarted && (
+          {ready && (
           <motion.div
             key="cinematic-sequence"
             className="absolute inset-0 flex items-center justify-center overflow-hidden"
