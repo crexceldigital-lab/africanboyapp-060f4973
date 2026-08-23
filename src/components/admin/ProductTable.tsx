@@ -1,4 +1,4 @@
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, AlertCircle } from 'lucide-react';
 import { Product } from '../../types';
 
 interface ProductTableProps {
@@ -10,6 +10,16 @@ interface ProductTableProps {
 }
 
 export default function ProductTable({ products, activeTab, onEdit, onDelete, onUpdateStock }: ProductTableProps) {
+  const getStatusBadge = (status?: string, stockQty?: number) => {
+    if (status === 'inactive') {
+      return 'bg-muted text-muted-foreground border-foreground/10';
+    }
+    if (status === 'stock_out' || (stockQty !== undefined && stockQty <= 0)) {
+      return 'bg-destructive/10 text-destructive border-destructive/20';
+    }
+    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+  };
+
   return (
     <div className="bg-card border border-foreground/5 rounded-[32px] overflow-hidden">
       <div className="overflow-x-auto">
@@ -17,52 +27,81 @@ export default function ProductTable({ products, activeTab, onEdit, onDelete, on
           <thead>
             <tr className="border-b border-foreground/5 bg-foreground/5">
               <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Product</th>
-              <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</th>
+              <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Code / SKU</th>
+              <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category / Sub</th>
               <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Price</th>
               <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Stock</th>
+              <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
               <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-foreground/5">
             {products.map((product) => (
               <tr key={product.id} className="hover:bg-foreground/[0.02] transition-colors group">
+                {/* Product Name & Image */}
                 <td className="px-8 py-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-secondary border border-foreground/10">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-secondary border border-foreground/10 flex-shrink-0">
                       <img src={product.image_url} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div>
                       <p className="text-sm font-black italic uppercase tracking-tight">{product.name}</p>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[200px]">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[180px]">
                         {product.description}
                       </p>
                     </div>
                   </div>
                 </td>
-                <td className="px-8 py-6">
-                  <span className="px-3 py-1 bg-foreground/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                    {product.category}
-                  </span>
+
+                {/* SKU Code */}
+                <td className="px-8 py-6 font-mono text-xs font-bold text-muted-foreground">
+                  {product.sku || `AFB-${product.id.substring(0, 5).toUpperCase()}`}
                 </td>
-                <td className="px-8 py-6 font-mono text-sm">
-                  {product.price.toLocaleString()} TZS
-                </td>
+
+                {/* Category & Subcategory */}
                 <td className="px-8 py-6">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${product.stock_quantity < 10 ? 'bg-destructive animate-pulse' : 'bg-emerald-500'}`} />
-                    {activeTab === 'inventory' ? (
-                      <div className="flex items-center bg-background/40 rounded-xl border border-foreground/10 overflow-hidden">
-                        <button onClick={() => onUpdateStock(product.id, product.stock_quantity - 1)} className="px-3 py-1 hover:bg-foreground/10 text-muted-foreground transition-colors">-</button>
-                        <span className="px-3 py-1 text-sm font-black italic min-w-[40px] text-center">{product.stock_quantity}</span>
-                        <button onClick={() => onUpdateStock(product.id, product.stock_quantity + 1)} className="px-3 py-1 hover:bg-foreground/10 text-muted-foreground transition-colors">+</button>
-                      </div>
-                    ) : (
-                      <span className={`text-sm font-black italic ${product.stock_quantity < 10 ? 'text-destructive' : ''}`}>
-                        {product.stock_quantity}
-                      </span>
+                  <div className="space-y-1">
+                    <span className="px-3 py-1 bg-foreground/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted-foreground inline-block">
+                      {product.category}
+                    </span>
+                    {product.subcategory && (
+                      <p className="text-[10px] font-mono text-muted-foreground/80 pl-1">{product.subcategory}</p>
                     )}
                   </div>
                 </td>
+
+                {/* Price (Price & optional sale price) */}
+                <td className="px-8 py-6 font-mono text-sm">
+                  {product.sale_price ? (
+                    <div>
+                      <span className="font-bold text-primary">{Number(product.sale_price).toLocaleString()} TZS</span>
+                      <span className="text-xs text-muted-foreground line-through ml-2">{Number(product.price).toLocaleString()}</span>
+                    </div>
+                  ) : (
+                    <span className="font-bold">{Number(product.price).toLocaleString()} TZS</span>
+                  )}
+                </td>
+
+                {/* Stock Quantity */}
+                <td className="px-8 py-6">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${product.stock_quantity < 10 ? 'bg-destructive animate-pulse' : 'bg-emerald-500'}`} />
+                    <div className="flex items-center bg-background/40 rounded-xl border border-foreground/10 overflow-hidden">
+                      <button onClick={() => onUpdateStock(product.id, product.stock_quantity - 1)} className="px-3 py-1 hover:bg-foreground/10 text-muted-foreground transition-colors">-</button>
+                      <span className="px-3 py-1 text-sm font-black italic min-w-[40px] text-center">{product.stock_quantity}</span>
+                      <button onClick={() => onUpdateStock(product.id, product.stock_quantity + 1)} className="px-3 py-1 hover:bg-foreground/10 text-muted-foreground transition-colors">+</button>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Status Badge */}
+                <td className="px-8 py-6">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusBadge(product.status, product.stock_quantity)}`}>
+                    {product.status ? product.status.replace('_', ' ') : (product.stock_quantity > 0 ? 'Active' : 'Stock Out')}
+                  </span>
+                </td>
+
+                {/* Actions */}
                 <td className="px-8 py-6 text-right">
                   <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => onEdit(product)} className="p-2 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-all">

@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
@@ -92,6 +90,7 @@ export type Database = {
       products: {
         Row: {
           category: string
+          subcategory: string | null
           colors: Json
           created_at: string | null
           description: string
@@ -99,12 +98,17 @@ export type Database = {
           image_url: string
           name: string
           price: number
+          sale_price: number | null
+          sku: string | null
           sizes: string[]
           stock_quantity: number
+          stock: Json | null
+          status: string
           updated_at: string | null
         }
         Insert: {
           category?: string
+          subcategory?: string | null
           colors?: Json
           created_at?: string | null
           description?: string
@@ -112,12 +116,17 @@ export type Database = {
           image_url?: string
           name: string
           price?: number
+          sale_price?: number | null
+          sku?: string | null
           sizes?: string[]
           stock_quantity?: number
+          stock?: Json | null
+          status?: string
           updated_at?: string | null
         }
         Update: {
           category?: string
+          subcategory?: string | null
           colors?: Json
           created_at?: string | null
           description?: string
@@ -125,9 +134,106 @@ export type Database = {
           image_url?: string
           name?: string
           price?: number
+          sale_price?: number | null
+          sku?: string | null
           sizes?: string[]
           stock_quantity?: number
+          stock?: Json | null
+          status?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      product_categories: {
+        Row: {
+          id: string
+          name: string
+          status: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          status?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          status?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      product_subcategories: {
+        Row: {
+          id: string
+          category_id: string
+          name: string
+          status: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          category_id: string
+          name: string
+          status?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          category_id?: string
+          name?: string
+          status?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      product_sizes: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number | null
+          status: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number | null
+          status?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number | null
+          status?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      product_colors: {
+        Row: {
+          id: string
+          name: string
+          hex: string
+          status: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          hex: string
+          status?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          hex?: string
+          status?: string
+          created_at?: string | null
         }
         Relationships: []
       }
