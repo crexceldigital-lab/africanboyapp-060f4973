@@ -33,7 +33,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
   const [impact, setImpact] = useState(false);
   const [done, setDone] = useState(false);
 
-  const { tick, stop: stopAudio, hasSound } = useSplashAudio(show, T.total);
+  const { tick, stop: stopAudio, audioStarted } = useSplashAudio(show, T.total);
 
   const finish = useCallback(() => {
     setDone((d) => {
@@ -44,14 +44,6 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
       return true;
     });
   }, [onComplete, stopAudio]);
-
-  // If the browser blocked autoplay (common outside the editor), the first tap
-  // unlocks the sound instead of skipping the intro.
-  const handleSurfaceClick = useCallback(() => {
-    if (!hasSound()) return;
-    finish();
-  }, [finish, hasSound]);
-
 
   // Typewriter tick SFX
   useEffect(() => {
@@ -87,7 +79,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
 
   /* Sequencer */
   useEffect(() => {
-    if (!show) return;
+    if (!show || !audioStarted) return;
 
     if (shouldReduceMotion) {
       setTyped(BRAND.length);
@@ -120,7 +112,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
     timers.push(window.setTimeout(finish, T.total));
 
     return () => timers.forEach(clearTimeout);
-  }, [show, shouldReduceMotion, finish]);
+  }, [show, audioStarted, shouldReduceMotion, finish]);
 
   const brandDone = typed >= BRAND.length;
 
@@ -137,7 +129,6 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
             });
           }}
           className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black select-none pointer-events-auto cursor-pointer"
-          onClick={handleSurfaceClick}
           initial={{ opacity: 1 }}
           exit={
             shouldReduceMotion
@@ -150,6 +141,11 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
                 }
           }
         >
+          {audioStarted && (
+          <motion.div
+            key="cinematic-sequence"
+            className="absolute inset-0 flex items-center justify-center overflow-hidden"
+          >
           {/* Deep base wash — cold night into warm gold */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -486,6 +482,8 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
                 Tap to enter
               </motion.button>
             </div>
+          )}
+          </motion.div>
           )}
 
         </motion.div>
