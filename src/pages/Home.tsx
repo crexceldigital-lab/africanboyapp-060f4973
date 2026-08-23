@@ -117,16 +117,16 @@ export default function Home({ onNavigate }: HomeProps) {
             <motion.img
               src={heroBg}
               alt="African Boy Collection"
-              className="w-full h-full object-cover opacity-60 pointer-events-none"
-              initial={shouldReduceMotion ? { opacity: 0.6 } : { scale: 1, opacity: 0 }}
+              className="w-full h-full object-cover opacity-90 pointer-events-none"
+              initial={shouldReduceMotion ? { opacity: 0.9 } : { scale: 1, opacity: 0 }}
               animate={
                 shouldReduceMotion
-                  ? { opacity: 0.6 }
+                  ? { opacity: 0.9 }
                   : {
                       scale: [1, 1.06, 1],
                       x: ['0%', '-1%', '1%', '0%'],
                       y: ['0%', '-1%', '0%'],
-                      opacity: 0.65,
+                      opacity: 0.9,
                     }
               }
               transition={{
@@ -139,8 +139,8 @@ export default function Home({ onNavigate }: HomeProps) {
           </motion.div>
 
           {/* Cinematic Dark Gradient Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/30 to-background z-10 pointer-events-none" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_30%,_black_90%)] z-10 pointer-events-none opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-background/80 z-10 pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_60%,_black_90%)] z-10 pointer-events-none opacity-20" />
         </div>
 
         {/* Hero Content */}
