@@ -33,7 +33,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
   const [impact, setImpact] = useState(false);
   const [done, setDone] = useState(false);
 
-  const { tick, stop: stopAudio } = useSplashAudio(show, T.total);
+  const { tick, stop: stopAudio, hasSound } = useSplashAudio(show, T.total);
 
   const finish = useCallback(() => {
     setDone((d) => {
@@ -44,6 +44,14 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
       return true;
     });
   }, [onComplete, stopAudio]);
+
+  // If the browser blocked autoplay (common outside the editor), the first tap
+  // unlocks the sound instead of skipping the intro.
+  const handleSurfaceClick = useCallback(() => {
+    if (!hasSound()) return;
+    finish();
+  }, [finish, hasSound]);
+
 
   // Typewriter tick SFX
   useEffect(() => {
@@ -129,7 +137,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
             });
           }}
           className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black select-none pointer-events-auto cursor-pointer"
-          onClick={finish}
+          onClick={handleSurfaceClick}
           initial={{ opacity: 1 }}
           exit={
             shouldReduceMotion
