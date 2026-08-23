@@ -137,7 +137,7 @@ export default function SplashScreen({ onComplete, show }: SplashScreenProps) {
             });
           }}
           className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black select-none pointer-events-auto cursor-pointer"
-          onClick={finish}
+          onClick={handleSurfaceClick}
           initial={{ opacity: 1 }}
           exit={
             shouldReduceMotion
