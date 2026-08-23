@@ -181,7 +181,7 @@ export default function Home({ onNavigate }: HomeProps) {
               >
                 <img
                   src={africanBoyLogo}
-                  alt="African Boy Logo"
+                  alt="AFRICAN BOY brand emblem"
                   className="w-full h-full object-cover pointer-events-none"
                 />
               </motion.div>
