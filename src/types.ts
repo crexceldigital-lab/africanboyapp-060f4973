@@ -2,7 +2,7 @@ import { LucideIcon } from 'lucide-react';
 
 export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin';
 
-export type AdminTab = 'dashboard' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery';
+export type AdminTab = 'dashboard' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery' | 'reports';
 
 export interface ProductColor {
   id?: string;

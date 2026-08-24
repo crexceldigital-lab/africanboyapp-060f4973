@@ -9,6 +9,7 @@ import DashboardOverview from '../components/admin/DashboardOverview';
 import OrdersManager from '../components/admin/OrdersManager';
 import CustomersManager from '../components/admin/CustomersManager';
 import AttributesManager from '../components/admin/AttributesManager';
+import ReportsPanel from '../components/admin/ReportsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -176,6 +177,7 @@ export default function Admin() {
     customers: 'Customers',
     attributes: 'Attributes',
     gallery: 'Gallery',
+    reports: 'Reports',
   };
 
   return (
@@ -190,7 +192,7 @@ export default function Admin() {
 
       {/* Main Navigation Pill Bar */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar p-1.5 bg-card border border-foreground/5 rounded-full">
-        {(['dashboard', 'products', 'orders', 'customers', 'attributes', 'gallery'] as AdminTab[]).map(tab => (
+        {(['dashboard', 'products', 'orders', 'customers', 'attributes', 'gallery', 'reports'] as AdminTab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -284,6 +286,8 @@ export default function Admin() {
       {activeTab === 'attributes' && <AttributesManager />}
 
       {activeTab === 'gallery' && <GalleryManager />}
+
+      {activeTab === 'reports' && <ReportsPanel />}
     </div>
   );
 }
