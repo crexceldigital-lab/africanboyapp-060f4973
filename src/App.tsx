@@ -42,7 +42,7 @@ function AppContent() {
       case 'vip': return <VIP />;
       case 'fitme': return <FitMe />;
       case 'profile': return <Profile />;
-      case 'admin': return <Admin />;
+      case 'admin': return <Admin onNavigate={setActiveTab} />;
       default: return <Home onNavigate={setActiveTab} />;
     }
   };
