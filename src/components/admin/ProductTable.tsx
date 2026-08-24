@@ -1,4 +1,4 @@
-import { Edit2, Trash2, AlertCircle } from 'lucide-react';
+import { Edit2, Trash2, Eye } from 'lucide-react';
 import { Product } from '../../types';
 
 interface ProductTableProps {
@@ -7,9 +7,10 @@ interface ProductTableProps {
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
   onUpdateStock: (id: string, newStock: number) => void;
+  onQuickView?: (product: Product) => void;
 }
 
-export default function ProductTable({ products, activeTab, onEdit, onDelete, onUpdateStock }: ProductTableProps) {
+export default function ProductTable({ products, activeTab, onEdit, onDelete, onUpdateStock, onQuickView }: ProductTableProps) {
   const getStatusBadge = (status?: string, stockQty?: number) => {
     if (status === 'inactive') {
       return 'bg-muted text-muted-foreground border-foreground/10';
@@ -38,14 +39,19 @@ export default function ProductTable({ products, activeTab, onEdit, onDelete, on
           <tbody className="divide-y divide-foreground/5">
             {products.map((product) => (
               <tr key={product.id} className="hover:bg-foreground/[0.02] transition-colors group">
-                {/* Product Name & Image */}
-                <td className="px-8 py-6">
+                {/* Product Name & Image - Clickable for Quick View */}
+                <td
+                  onClick={() => onQuickView?.(product)}
+                  className="px-8 py-6 cursor-pointer"
+                >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-secondary border border-foreground/10 flex-shrink-0">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-secondary border border-foreground/10 flex-shrink-0 group-hover:border-primary transition-colors">
                       <img src={product.image_url} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div>
-                      <p className="text-sm font-black italic uppercase tracking-tight">{product.name}</p>
+                      <p className="text-sm font-black italic uppercase tracking-tight group-hover:text-primary transition-colors">
+                        {product.name}
+                      </p>
                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[180px]">
                         {product.description}
                       </p>
@@ -54,12 +60,18 @@ export default function ProductTable({ products, activeTab, onEdit, onDelete, on
                 </td>
 
                 {/* SKU Code */}
-                <td className="px-8 py-6 font-mono text-xs font-bold text-muted-foreground">
+                <td
+                  onClick={() => onQuickView?.(product)}
+                  className="px-8 py-6 font-mono text-xs font-bold text-muted-foreground cursor-pointer"
+                >
                   {product.sku || `AFB-${product.id.substring(0, 5).toUpperCase()}`}
                 </td>
 
                 {/* Category & Subcategory */}
-                <td className="px-8 py-6">
+                <td
+                  onClick={() => onQuickView?.(product)}
+                  className="px-8 py-6 cursor-pointer"
+                >
                   <div className="space-y-1">
                     <span className="px-3 py-1 bg-foreground/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted-foreground inline-block">
                       {product.category}
@@ -103,11 +115,26 @@ export default function ProductTable({ products, activeTab, onEdit, onDelete, on
 
                 {/* Actions */}
                 <td className="px-8 py-6 text-right">
-                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onEdit(product)} className="p-2 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-all">
+                  <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => onQuickView?.(product)}
+                      title="Quick View"
+                      className="p-2 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => onEdit(product)}
+                      title="Edit Product"
+                      className="p-2 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                    >
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => onDelete(product.id)} className="p-2 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive transition-all">
+                    <button
+                      onClick={() => onDelete(product.id)}
+                      title="Delete Product"
+                      className="p-2 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive transition-all"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>

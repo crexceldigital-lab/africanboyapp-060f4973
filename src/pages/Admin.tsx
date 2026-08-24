@@ -4,6 +4,7 @@ import { Product, ProductColor, AdminTab } from '../types';
 import { PRODUCT_CATEGORIES } from '../constants';
 import ProductTable from '../components/admin/ProductTable';
 import ProductModal, { ProductFormData } from '../components/admin/ProductModal';
+import ProductQuickView from '../components/admin/ProductQuickView';
 import GalleryManager from '../components/admin/GalleryManager';
 import DashboardOverview from '../components/admin/DashboardOverview';
 import OrdersManager from '../components/admin/OrdersManager';
@@ -20,6 +21,7 @@ export default function Admin() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
@@ -265,6 +267,13 @@ export default function Admin() {
             onEdit={handleOpenModal}
             onDelete={handleDelete}
             onUpdateStock={handleUpdateStock}
+            onQuickView={setQuickViewProduct}
+          />
+
+          <ProductQuickView
+            product={quickViewProduct}
+            onClose={() => setQuickViewProduct(null)}
+            onEdit={handleOpenModal}
           />
 
           <ProductModal
