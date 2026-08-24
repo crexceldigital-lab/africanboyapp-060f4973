@@ -1,31 +1,48 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '../../types';
-import { ShoppingBag, DollarSign, Users, Clock, AlertTriangle, Eye, ArrowUpRight, CheckCircle, RefreshCw } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
+import { ShoppingBag, DollarSign, Users, Clock, Eye, ArrowUpRight, CheckCircle, RefreshCw, TrendingUp } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import OrderDetailsModal from './OrderDetailsModal';
 import ProductOfTheDayPicker from './ProductOfTheDayPicker';
+import RankedBarList, { RankedItem } from './RankedBarList';
+import RadialStatPair from './RadialStatPair';
 
 interface StatMetrics {
   totalOrders: number;
   totalRevenue: number;
   activeCustomers: number;
   pendingOrders: number;
+  inProgressOrders: number;
   cancelledOrders: number;
   completedOrders: number;
+  repeatPurchaseRate: number;
+  newCustomersCount: number;
+  returningCustomersCount: number;
 }
 
-export default function DashboardOverview() {
+interface DashboardOverviewProps {
+  onNavigateTab?: (tab: string) => void;
+}
+
+export default function DashboardOverview({ onNavigateTab }: DashboardOverviewProps) {
   const [metrics, setMetrics] = useState<StatMetrics>({
     totalOrders: 0,
     totalRevenue: 0,
     activeCustomers: 0,
     pendingOrders: 0,
+    inProgressOrders: 0,
     cancelledOrders: 0,
     completedOrders: 0,
+    repeatPurchaseRate: 0,
+    newCustomersCount: 0,
+    returningCustomersCount: 0,
   });
+
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [statusChartData, setStatusChartData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [topCustomersData, setTopCustomersData] = useState<RankedItem[]>([]);
+  const [zoneBreakdownData, setZoneBreakdownData] = useState<RankedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -39,7 +56,7 @@ export default function DashboardOverview() {
         .order('created_at', { ascending: false });
 
       // 2. Fetch profiles count
-      const { count: customersCount, error: profilesError } = await supabase
+      const { count: customersCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
@@ -60,13 +77,86 @@ export default function DashboardOverview() {
         const completedOrders = orders.filter(o => o.status === 'completed').length;
         const cancelledOrders = orders.filter(o => o.status === 'cancelled' || o.status === 'refunded').length;
 
+        // Calculate Customer Insights
+        const customerOrderMap = new Map<string, { name: string; email: string; orderCount: number; totalSpent: number }>();
+        const zoneMap = new Map<string, { count: number; revenue: number }>();
+
+        orders.forEach((o) => {
+          const email = o.customer_email?.toLowerCase().trim() || o.customer_name || 'Guest User';
+          const name = o.customer_name || email;
+          const amt = Number(o.total_amount) || 0;
+
+          if (!customerOrderMap.has(email)) {
+            customerOrderMap.set(email, { name, email, orderCount: 0, totalSpent: 0 });
+          }
+          const c = customerOrderMap.get(email)!;
+          c.orderCount += 1;
+          if (o.status !== 'cancelled' && o.status !== 'refunded') {
+            c.totalSpent += amt;
+          }
+
+          // Delivery Zone breakdown
+          const rawZone = o.delivery_zone?.trim() || 'Standard Delivery Zone';
+          if (!zoneMap.has(rawZone)) {
+            zoneMap.set(rawZone, { count: 0, revenue: 0 });
+          }
+          const z = zoneMap.get(rawZone)!;
+          z.count += 1;
+          if (o.status !== 'cancelled' && o.status !== 'refunded') {
+            z.revenue += amt;
+          }
+        });
+
+        // Repeat purchase rate & New vs Returning
+        const totalUniqueCustomers = customerOrderMap.size;
+        let returningCount = 0;
+        let newCount = 0;
+
+        customerOrderMap.forEach((c) => {
+          if (c.orderCount > 1) {
+            returningCount += 1;
+          } else {
+            newCount += 1;
+          }
+        });
+
+        const repeatRate = totalUniqueCustomers > 0 ? Math.round((returningCount / totalUniqueCustomers) * 100) : 0;
+
+        // Top Customers ranked list
+        const sortedCustomers: RankedItem[] = Array.from(customerOrderMap.values())
+          .sort((a, b) => b.totalSpent - a.totalSpent)
+          .slice(0, 5)
+          .map((c) => ({
+            label: c.name,
+            sublabel: `${c.orderCount} order(s)`,
+            value: c.totalSpent,
+            formattedValue: `${c.totalSpent.toLocaleString()} TZS`,
+          }));
+
+        // Zone Breakdown ranked list
+        const sortedZones: RankedItem[] = Array.from(zoneMap.entries())
+          .map(([zoneName, zData]) => ({
+            label: zoneName,
+            sublabel: `${zData.revenue.toLocaleString()} TZS`,
+            value: zData.count,
+            formattedValue: `${zData.count} order(s)`,
+          }))
+          .sort((a, b) => b.value - a.value);
+
+        setTopCustomersData(sortedCustomers);
+        setZoneBreakdownData(sortedZones);
+
         setMetrics({
           totalOrders,
           totalRevenue,
           activeCustomers: customersCount || 0,
           pendingOrders,
+          inProgressOrders,
           cancelledOrders,
           completedOrders,
+          repeatPurchaseRate: repeatRate,
+          newCustomersCount: newCount,
+          returningCustomersCount: returningCount,
         });
 
         // Setup chart data
@@ -113,13 +203,17 @@ export default function DashboardOverview() {
     return firstName;
   };
 
+  const totalUnique = metrics.newCustomersCount + metrics.returningCustomersCount;
+  const newPct = totalUnique > 0 ? Math.round((metrics.newCustomersCount / totalUnique) * 100) : 0;
+  const returningPct = totalUnique > 0 ? 100 - newPct : 0;
+
   return (
     <div className="space-y-8">
       {/* Header Bar */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-black italic uppercase tracking-tight">STORE <span className="text-primary">OVERVIEW</span></h2>
-          <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Real-time performance metrics</p>
+          <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Real-time performance & customer insights</p>
         </div>
         <button
           onClick={fetchDashboardData}
@@ -133,13 +227,29 @@ export default function DashboardOverview() {
       {/* Product of the Day Picker */}
       <ProductOfTheDayPicker />
 
-      {/* 4 Stat Cards Grid */}
+      {/* 4 Stat Cards Grid with Radial/Bubble Polish for Headline Numbers */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Sales */}
-        <div className="bg-card border border-foreground/5 rounded-[32px] p-6 relative overflow-hidden group hover:border-primary/30 transition-all">
+        {/* Total Revenue */}
+        <div className="bg-card border border-foreground/5 rounded-[32px] p-6 relative overflow-hidden group hover:border-primary/30 transition-all shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Revenue</span>
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+              <DollarSign size={18} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-3xl font-black italic tracking-tight font-mono text-primary">
+              {metrics.totalRevenue.toLocaleString()} <span className="text-xs font-normal">TZS</span>
+            </h3>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Gross revenue from sales</p>
+          </div>
+        </div>
+
+        {/* Total Orders */}
+        <div className="bg-card border border-foreground/5 rounded-[32px] p-6 relative overflow-hidden group hover:border-primary/30 transition-all shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Orders</span>
-            <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <ShoppingBag size={18} />
             </div>
           </div>
@@ -151,22 +261,8 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Total Revenue */}
-        <div className="bg-card border border-foreground/5 rounded-[32px] p-6 relative overflow-hidden group hover:border-primary/30 transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Revenue</span>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <DollarSign size={18} />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-3xl font-black italic tracking-tight font-mono text-primary">{metrics.totalRevenue.toLocaleString()} <span className="text-xs font-normal">TZS</span></h3>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Gross revenue from sales</p>
-          </div>
-        </div>
-
-        {/* Active Customers */}
-        <div className="bg-card border border-foreground/5 rounded-[32px] p-6 relative overflow-hidden group hover:border-primary/30 transition-all">
+        {/* Registered Customers */}
+        <div className="bg-card border border-foreground/5 rounded-[32px] p-6 relative overflow-hidden group hover:border-primary/30 transition-all shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Registered Customers</span>
             <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
@@ -179,27 +275,81 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Pending & Requests */}
-        <div className="bg-card border border-foreground/5 rounded-[32px] p-6 relative overflow-hidden group hover:border-primary/30 transition-all">
+        {/* Repeat Purchase Rate Card */}
+        <div className="bg-card border border-foreground/5 rounded-[32px] p-6 relative overflow-hidden group hover:border-primary/30 transition-all shadow-lg">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pending / Cancelled</span>
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Clock size={18} />
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Repeat Purchase Rate</span>
+            <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+              <TrendingUp size={18} />
             </div>
           </div>
           <div className="space-y-1">
-            <h3 className="text-3xl font-black italic tracking-tight font-mono">{metrics.pendingOrders + metrics.cancelledOrders}</h3>
+            <h3 className="text-3xl font-black italic tracking-tight font-mono text-foreground">
+              {metrics.repeatPurchaseRate}%
+            </h3>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
-              <span className="text-amber-400">{metrics.pendingOrders} pending</span> • <span className="text-destructive">{metrics.cancelledOrders} cancelled</span>
+              <span className="text-emerald-400 font-mono font-bold flex items-center">
+                <ArrowUpRight size={12} /> {metrics.repeatPurchaseRate > 0 ? '+Repeat' : '0%'}
+              </span>
+              <span>of customer base</span>
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* CUSTOMER INSIGHTS SECTION */}
+      <div className="space-y-4">
+        <div>
+          <span className="text-primary text-xs font-bold tracking-widest uppercase">Analytics & Demographics</span>
+          <h3 className="text-2xl font-black italic uppercase tracking-tight">CUSTOMER INSIGHTS</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* 1. New vs Returning (Radial Pair) */}
+          <RadialStatPair
+            title="New vs Returning Customers"
+            subtitle="Customer Acquisition Split"
+            primary={{
+              label: 'New Customers',
+              value: metrics.newCustomersCount,
+              percentage: newPct,
+              subtext: 'First-time buyers',
+            }}
+            secondary={{
+              label: 'Returning',
+              value: metrics.returningCustomersCount,
+              percentage: returningPct,
+              subtext: 'Repeat buyers',
+            }}
+          />
+
+          {/* 2. Top Customers Ranked Bar List */}
+          <RankedBarList
+            title="Top Customers by Spend"
+            subtitle="Highest Value Purchasers"
+            items={topCustomersData}
+            maxItems={5}
+            actionLabel="View All"
+            onAction={() => onNavigateTab?.('customers')}
+            emptyMessage="No customer spend recorded yet"
+          />
+
+          {/* 3. Delivery Zone Breakdown Ranked Bar List */}
+          <RankedBarList
+            title="Delivery Zone Activity"
+            subtitle="Most Active Regions"
+            items={zoneBreakdownData}
+            maxItems={5}
+            barColorClass="bg-emerald-400"
+            emptyMessage="No delivery zone data recorded"
+          />
         </div>
       </div>
 
       {/* Main Content Grid: Recent Orders + Order Status Breakdown Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Orders Table (2 Cols) */}
-        <div className="lg:col-span-2 bg-card border border-foreground/5 rounded-[32px] p-8 space-y-6">
+        <div className="lg:col-span-2 bg-card border border-foreground/5 rounded-[32px] p-8 space-y-6 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-black italic uppercase tracking-tight">Recent Orders</h3>
@@ -252,14 +402,14 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Order Status Breakdown Chart (1 Col) */}
-        <div className="bg-card border border-foreground/5 rounded-[32px] p-8 flex flex-col justify-between space-y-6">
+        {/* Order Status Segmented Hybrid Breakdown Panel */}
+        <div className="bg-card border border-foreground/5 rounded-[32px] p-8 flex flex-col justify-between space-y-6 shadow-xl">
           <div>
             <h3 className="text-lg font-black italic uppercase tracking-tight">Order Status Breakdown</h3>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Distribution by order state</p>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Fulfillment state distribution</p>
           </div>
 
-          <div className="h-64 w-full flex items-center justify-center">
+          <div className="h-44 w-full flex items-center justify-center">
             {metrics.totalOrders === 0 ? (
               <div className="text-center text-xs font-bold text-muted-foreground">No orders to display</div>
             ) : (
@@ -269,8 +419,8 @@ export default function DashboardOverview() {
                     data={statusChartData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
+                    innerRadius={50}
+                    outerRadius={75}
                     paddingAngle={4}
                     dataKey="value"
                   >
@@ -282,21 +432,42 @@ export default function DashboardOverview() {
                     contentStyle={{ backgroundColor: '#18181b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '16px', color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                     itemStyle={{ color: '#fbbf24' }}
                   />
-                  <Legend
-                    formatter={(value) => <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">{value}</span>}
-                  />
                 </PieChart>
               </ResponsiveContainer>
             )}
           </div>
 
-          <div className="pt-4 border-t border-foreground/5 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-muted-foreground font-bold">Fulfillment Rate</span>
-              <span className="font-mono font-black text-emerald-400">
-                {metrics.totalOrders > 0 ? `${Math.round((metrics.completedOrders / metrics.totalOrders) * 100)}%` : '0%'}
-              </span>
-            </div>
+          {/* Segmented Horizontal Bar List */}
+          <div className="space-y-3 pt-2 border-t border-foreground/5">
+            {statusChartData.map((item) => {
+              const pct = metrics.totalOrders > 0 ? Math.round((item.value / metrics.totalOrders) * 100) : 0;
+              return (
+                <div key={item.name} className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-extrabold text-foreground flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      {item.name}
+                    </span>
+                    <span className="font-mono font-bold text-muted-foreground">
+                      {item.value} ({pct}%)
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, backgroundColor: item.color }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="pt-3 border-t border-foreground/5 flex justify-between items-center text-xs">
+            <span className="text-muted-foreground font-bold">Fulfillment Rate</span>
+            <span className="font-mono font-black text-emerald-400">
+              {metrics.totalOrders > 0 ? `${Math.round((metrics.completedOrders / metrics.totalOrders) * 100)}%` : '0%'}
+            </span>
           </div>
         </div>
       </div>
