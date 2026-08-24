@@ -32,6 +32,9 @@ interface ProductModalProps {
   categories: string[];
 }
 
+const PRESET_SIZES_CLOTHING = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
+const PRESET_SIZES_JEANS = ['28', '30', '32', '34', '36', '38'];
+
 export default function ProductModal({ isOpen, onClose, editingProduct, formData, setFormData, onSubmit }: ProductModalProps) {
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
   const [dbSubcategories, setDbSubcategories] = useState<Subcategory[]>([]);
@@ -68,7 +71,7 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
 
   const availableSizes = dbSizes.length > 0 
     ? dbSizes.map(s => s.name)
-    : (formData.category === 'Jeans' ? ['28', '30', '32', '34', '36', '38'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+    : (formData.category === 'Jeans' ? PRESET_SIZES_JEANS : PRESET_SIZES_CLOTHING);
 
   const availableColors = dbColors.length > 0
     ? dbColors.map(c => ({ name: c.name, hex: c.hex }))
