@@ -49,7 +49,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const { cartCount } = useCart();
-  const { user, selectedCountry, updateUserCountry } = useCountry();
+  const { user, countries, selectedCountry, updateUserCountry } = useCountry();
   const { theme, toggleTheme } = useTheme();
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
@@ -294,7 +294,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                       exit={{ opacity: 0, y: 8 }}
                       className="absolute bottom-full mb-2 left-0 right-0 bg-card border border-border rounded-xl overflow-hidden shadow-xl max-h-48 overflow-y-auto no-scrollbar"
                     >
-                      {MOCK_COUNTRIES.filter(c => c.is_active).map(country => (
+                      {countries.filter(c => c.is_active).map(country => (
                         <button
                           key={country.id}
                           onClick={() => {

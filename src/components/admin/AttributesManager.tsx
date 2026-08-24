@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Category, Subcategory, AttributeSize, AttributeColor, Product } from '../../types';
-import { Plus, Trash2, Edit2, Tag, Layers, Maximize2, Palette, X, Save, Check } from 'lucide-react';
+import StaffManager from './StaffManager';
+import { Plus, Trash2, Edit2, Tag, Layers, Maximize2, Palette, X, Save, Check, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
-type AttributeSubTab = 'categories' | 'subcategories' | 'sizes' | 'colors';
+type AttributeSubTab = 'categories' | 'subcategories' | 'sizes' | 'colors' | 'staff';
 
 export default function AttributesManager() {
   const [subTab, setSubTab] = useState<AttributeSubTab>('categories');
@@ -221,6 +222,7 @@ export default function AttributesManager() {
             { id: 'subcategories', label: 'Subcategories', icon: Layers },
             { id: 'sizes', label: 'Sizes', icon: Maximize2 },
             { id: 'colors', label: 'Colors', icon: Palette },
+            { id: 'staff', label: 'Store Staff', icon: UserCheck },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = subTab === tab.id;
@@ -240,16 +242,21 @@ export default function AttributesManager() {
           })}
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-        >
-          <Plus size={16} /> Add {subTab.slice(0, -1)}
-        </button>
+        {subTab !== 'staff' && (
+          <button
+            onClick={openAddModal}
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            <Plus size={16} /> Add {subTab.slice(0, -1)}
+          </button>
+        )}
       </div>
 
-      {/* Main Table for current sub-tab */}
-      <div className="bg-card border border-foreground/5 rounded-[32px] overflow-hidden">
+      {subTab === 'staff' ? (
+        <StaffManager />
+      ) : (
+        /* Main Table for current sub-tab */
+        <div className="bg-card border border-foreground/5 rounded-[32px] overflow-hidden">
         <div className="overflow-x-auto">
           {loading ? (
             <div className="p-16 text-center text-xs font-bold text-muted-foreground">Loading attribute list...</div>
@@ -381,6 +388,7 @@ export default function AttributesManager() {
           )}
         </div>
       </div>
+      )}
 
       {/* Add / Edit Attribute Modal */}
       {isModalOpen && (

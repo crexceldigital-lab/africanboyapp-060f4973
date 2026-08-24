@@ -2,33 +2,73 @@ import { useState, useEffect } from 'react';
 import { Product } from '../types';
 import ProductCard from '../components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
+import { useCountry } from '../context/CountryContext';
 import { motion } from 'framer-motion';
 
 export default function Shop() {
+  const { selectedCountry } = useCountry();
   const [category, setCategory] = useState('All');
   const [products, setProducts] = useState<Product[]>([]);
+  const [availabilityMap, setAvailabilityMap] = useState<Record<string, { is_available: boolean; stock_quantity: number }> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
+    const fetchProductsAndAvailability = async () => {
+      setLoading(true);
+      try {
+        // 1. Fetch products
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        setProducts(
-          data.map((p: any) => ({
-            ...p,
-            price: Number(p.price),
-            colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
-          }))
-        );
+        // 2. Fetch matching store for visitor's country
+        const countryCode = selectedCountry?.code || 'TZ';
+        const { data: store } = await supabase
+          .from('stores')
+          .select('id')
+          .eq('country_code', countryCode)
+          .maybeSingle();
+
+        const storeId = store?.id || 1;
+
+        // 3. Fetch product_store_availability for store
+        const { data: availData } = await supabase
+          .from('product_store_availability')
+          .select('product_id, is_available, stock_quantity')
+          .eq('store_id', storeId);
+
+        if (availData && availData.length > 0) {
+          const map: Record<string, { is_available: boolean; stock_quantity: number }> = {};
+          availData.forEach((a: any) => {
+            map[a.product_id] = {
+              is_available: a.is_available,
+              stock_quantity: Number(a.stock_quantity),
+            };
+          });
+          setAvailabilityMap(map);
+        } else {
+          setAvailabilityMap(null);
+        }
+
+        if (!error && data) {
+          setProducts(
+            data.map((p: any) => ({
+              ...p,
+              price: Number(p.price),
+              colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Error fetching shop products:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchProducts();
-  }, []);
+
+    fetchProductsAndAvailability();
+  }, [selectedCountry]);
 
   const categories = [
     'All',
@@ -42,12 +82,31 @@ export default function Shop() {
     'Accessories',
     'Tracksuits',
   ];
+
+  // Filter products by availability in the current store
+  const availableProducts = products
+    .filter((p) => {
+      if (!availabilityMap) return true; // Default fallback if no per-store rows defined
+      const storeAvail = availabilityMap[p.id];
+      if (!storeAvail) return true;
+      return storeAvail.is_available === true;
+    })
+    .map((p) => {
+      if (availabilityMap && availabilityMap[p.id]) {
+        return {
+          ...p,
+          stock_quantity: availabilityMap[p.id].stock_quantity,
+        };
+      }
+      return p;
+    });
+
   const filteredProducts =
     category === 'Sale'
-      ? products.filter((p) => p.on_sale)
+      ? availableProducts.filter((p) => p.on_sale)
       : category === 'All'
-      ? products
-      : products.filter((p) => p.category === category);
+      ? availableProducts
+      : availableProducts.filter((p) => p.category === category);
 
   return (
     <div className="pb-28 pt-24 px-4 sm:px-6 max-w-7xl mx-auto">

@@ -60,6 +60,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   user_id?: string | null;
+  store_id?: number | null;
   customer_name?: string | null;
   customer_email?: string | null;
   customer_phone?: string | null;
@@ -74,6 +75,30 @@ export interface Order {
   items: OrderItem[];
   created_at: string;
   updated_at?: string | null;
+}
+
+export interface Store {
+  id: number;
+  name: string;
+  country_code: string;
+  currency_code: string;
+  is_active: boolean;
+}
+
+export interface ProductStoreAvailability {
+  id: string;
+  product_id: string;
+  store_id: number;
+  is_available: boolean;
+  stock_quantity: number;
+}
+
+export interface StoreStaff {
+  id: string;
+  user_id: string;
+  store_id: number;
+  staff_role: 'sales_rep' | 'store_manager';
+  store?: Store;
 }
 
 export interface Customer {

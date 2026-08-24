@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, Country, ExchangeRate } from '../types';
 import { MOCK_COUNTRIES, MOCK_EXCHANGE_RATES } from '../data/mockData';
 import { supabase } from '@/integrations/supabase/client';
+import { detectCountryCode } from '../lib/detectCountry';
 
 interface CountryContextType {
   user: User | null;
@@ -22,10 +23,82 @@ const CountryContext = createContext<CountryContextType | undefined>(undefined);
 
 export function CountryProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [countries] = useState<Country[]>(MOCK_COUNTRIES);
-  const [exchangeRates] = useState<ExchangeRate[]>(MOCK_EXCHANGE_RATES);
+  const [countries, setCountries] = useState<Country[]>(MOCK_COUNTRIES);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>(MOCK_EXCHANGE_RATES);
+  const [guestCountry, setGuestCountry] = useState<Country | null>(MOCK_COUNTRIES[0]);
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
+
+  // 1. Fetch countries and exchange_rates from DB
+  useEffect(() => {
+    let active = true;
+
+    const fetchDatabaseData = async () => {
+      try {
+        const { data: dbCountries } = await supabase
+          .from('countries')
+          .select('*')
+          .eq('is_active', true);
+
+        const { data: dbRates } = await supabase
+          .from('exchange_rates')
+          .select('*');
+
+        if (active) {
+          if (dbCountries && dbCountries.length > 0) {
+            setCountries(dbCountries as Country[]);
+          }
+          if (dbRates && dbRates.length > 0) {
+            setExchangeRates(dbRates as ExchangeRate[]);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch countries/rates from Supabase, using mock fallback:', err);
+      }
+    };
+
+    fetchDatabaseData();
+    return () => { active = false; };
+  }, []);
+
+  // 2. Geolocation / Manual Persistence Logic
+  useEffect(() => {
+    let active = true;
+
+    const resolveGuestCountry = async () => {
+      const source = localStorage.getItem('country_source');
+      const savedGuestId = localStorage.getItem('guest_country_id');
+
+      if (source === 'manual' && savedGuestId) {
+        const matched = countries.find(c => String(c.id) === savedGuestId);
+        if (matched && active) setGuestCountry(matched);
+        return;
+      }
+
+      // If user logged in and has explicit non-default country
+      if (user && user.country_id && user.country_id !== 1) {
+        localStorage.setItem('country_source', 'manual');
+        const matched = countries.find(c => c.id === user.country_id);
+        if (matched && active) setGuestCountry(matched);
+        return;
+      }
+
+      // Auto-detect IP location if not manually set
+      if (source !== 'manual') {
+        const code = await detectCountryCode();
+        if (code && active) {
+          const matched = countries.find(c => c.code.toUpperCase() === code.toUpperCase());
+          if (matched) {
+            setGuestCountry(matched);
+            localStorage.setItem('country_source', 'auto');
+          }
+        }
+      }
+    };
+
+    resolveGuestCountry();
+    return () => { active = false; };
+  }, [countries, user]);
 
   const buildUserFromSession = async (session: any): Promise<User | null> => {
     if (!session?.user) return null;
@@ -65,11 +138,9 @@ export function CountryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth listener FIRST (best practice)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       if (event === 'SIGNED_IN' && session) {
-        // Use setTimeout to avoid Supabase deadlock
         setTimeout(async () => {
           if (!mounted) return;
           try {
@@ -84,7 +155,6 @@ export function CountryProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Then check existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
       if (session) {
@@ -101,7 +171,6 @@ export function CountryProvider({ children }: { children: ReactNode }) {
       if (mounted) setLoading(false);
     });
 
-    // Safety timeout - never hang more than 5 seconds
     const timeout = setTimeout(() => {
       if (mounted) setLoading(false);
     }, 5000);
@@ -114,8 +183,8 @@ export function CountryProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectedCountry = user && countries.length > 0
-    ? (countries.find(c => c.id === user.country_id) || countries[0])
-    : (countries[0] || null);
+    ? (countries.find(c => c.id === user.country_id) || guestCountry || countries[0])
+    : (guestCountry || countries[0] || null);
 
   const formatPrice = (priceInTZS: number) => {
     if (!selectedCountry) return `${priceInTZS.toLocaleString()} TZS`;
@@ -124,10 +193,18 @@ export function CountryProvider({ children }: { children: ReactNode }) {
     if (selectedCountry.code === 'NG') {
       return `${selectedCountry.currency_symbol}${Math.round(convertedPrice).toLocaleString()}`;
     }
+    if (selectedCountry.currency_symbol && selectedCountry.currency_symbol.length <= 3) {
+      return `${selectedCountry.currency_symbol} ${Math.round(convertedPrice).toLocaleString()}`;
+    }
     return `${Math.round(convertedPrice).toLocaleString()} ${selectedCountry.currency_code}`;
   };
 
   const updateUserCountry = (countryId: number) => {
+    localStorage.setItem('country_source', 'manual');
+    localStorage.setItem('guest_country_id', String(countryId));
+    const matched = countries.find(c => c.id === countryId);
+    if (matched) setGuestCountry(matched);
+
     if (user) {
       setUser({ ...user, country_id: countryId });
       supabase.from('profiles').update({ country_id: countryId }).eq('id', user.id);

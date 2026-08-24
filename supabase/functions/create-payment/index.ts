@@ -39,14 +39,24 @@ Deno.serve(async (req) => {
     // Create order in DB using service role
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    const orderCurrency = currency || "TZS";
+    const { data: store } = await supabaseAdmin
+      .from("stores")
+      .select("id")
+      .eq("currency_code", orderCurrency)
+      .maybeSingle();
+
+    const storeId = store?.id || 1; // Default to Tanzania store (id = 1) if unspecified
+
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
         user_id: userId,
+        store_id: storeId,
         status: "pending",
         total_amount: grandTotal,
         delivery_fee: deliveryFee,
-        currency: currency || "TZS",
+        currency: orderCurrency,
         delivery_zone: deliveryZone,
         items: items,
         customer_name: customerName || "",

@@ -1,9 +1,11 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { useCountry } from '../../context/CountryContext';
-import { NavTab } from '../../types';
+import { NavTab, StoreStaff, Store } from '../../types';
 import AdminLogin from '../../pages/AdminLogin';
+import StaffDashboard from '../../pages/StaffDashboard';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RequireAdminProps {
   children: ReactNode;
@@ -12,13 +14,49 @@ interface RequireAdminProps {
 
 export default function RequireAdmin({ children, onNavigate }: RequireAdminProps) {
   const { user, loading } = useCountry();
+  const [staffAssignment, setStaffAssignment] = useState<(StoreStaff & { store?: Store }) | null>(null);
+  const [checkingStaff, setCheckingStaff] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    let active = true;
+
+    const checkStaffRole = async () => {
+      if (!user || user.role === 'admin') {
+        if (active) setCheckingStaff(false);
+        return;
+      }
+
+      try {
+        const { data: staff } = await supabase
+          .from('store_staff')
+          .select('*, store:stores(*)')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (active) {
+          if (staff) {
+            setStaffAssignment(staff as any);
+          } else {
+            setStaffAssignment(null);
+          }
+          setCheckingStaff(false);
+        }
+      } catch (err) {
+        console.error('Error checking staff role:', err);
+        if (active) setCheckingStaff(false);
+      }
+    };
+
+    checkStaffRole();
+    return () => { active = false; };
+  }, [user]);
+
+  if (loading || checkingStaff) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          <p className="text-primary font-bold text-[10px] tracking-widest uppercase">Initializing Movement...</p>
+          <p className="text-primary font-bold text-[10px] tracking-widest uppercase">Initializing Portal Security...</p>
         </div>
       </div>
     );
@@ -29,6 +67,10 @@ export default function RequireAdmin({ children, onNavigate }: RequireAdminProps
   }
 
   if (user.role !== 'admin') {
+    if (staffAssignment) {
+      return <StaffDashboard staffAssignment={staffAssignment} onNavigateHome={() => onNavigate?.('home')} />;
+    }
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
         <motion.div
@@ -45,7 +87,7 @@ export default function RequireAdmin({ children, onNavigate }: RequireAdminProps
               ACCESS <span className="text-destructive">DENIED</span>
             </h1>
             <p className="text-muted-foreground text-sm font-medium pt-1">
-              Your account does not have permission to access the admin portal.
+              Your account does not have admin or staff permissions.
             </p>
           </div>
 
