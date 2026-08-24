@@ -2,7 +2,7 @@ import { LucideIcon } from 'lucide-react';
 
 export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin';
 
-export type AdminTab = 'dashboard' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery' | 'reports';
+export type AdminTab = 'dashboard' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery' | 'reports' | 'staff';
 
 export interface ProductColor {
   id?: string;
@@ -98,6 +98,7 @@ export interface StoreStaff {
   user_id: string;
   store_id: number;
   staff_role: 'sales_rep' | 'store_manager';
+  created_at?: string;
   store?: Store;
 }
 
