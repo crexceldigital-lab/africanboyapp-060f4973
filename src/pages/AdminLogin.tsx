@@ -1,53 +1,30 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck } from 'lucide-react';
 import { useCountry } from '../context/CountryContext';
-import { supabase } from '@/integrations/supabase/client';
 
-interface AdminLoginProps {
-  onSuccess?: () => void;
-}
-
-export default function AdminLogin({ onSuccess }: AdminLoginProps) {
-  const { login, logout, refreshUser } = useCountry();
-  const [email, setEmail] = useState('');
+export default function AdminLogin() {
+  const { user, login, logout } = useCountry();
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      logout();
+      setError('This account does not have admin access');
+    }
+  }, [user, logout]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const success = await login(email, password);
+    const success = await login(identifier, password);
     if (!success) {
       setError('Invalid credentials');
-      setLoading(false);
-      return;
-    }
-
-    // Verify admin role explicitly right after login
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id);
-
-      const isAdmin = roles?.some((r: any) => r.role === 'admin') || false;
-
-      if (!isAdmin) {
-        await logout();
-        setError('This account does not have admin access');
-        setLoading(false);
-        return;
-      }
-
-      await refreshUser();
-      if (onSuccess) onSuccess();
-    } else {
-      setError('Authentication failed');
     }
     setLoading(false);
   };
@@ -57,27 +34,29 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm space-y-8"
+        className="w-full max-w-sm space-y-8 text-center"
       >
-        <div className="text-center space-y-3">
-          <span className="text-primary text-xs font-bold tracking-widest uppercase">MANAGEMENT</span>
-          <h1 className="text-4xl font-black tracking-tighter italic uppercase text-foreground">
-            ADMIN <span className="text-primary">PANEL</span>
-          </h1>
-          <div className="flex items-center justify-center gap-2 pt-1">
-            <ShieldCheck className="text-primary w-5 h-5" />
-            <span className="text-muted-foreground text-[10px] font-extrabold uppercase tracking-[0.3em]">
-              AFRICAN BOY PORTAL
-            </span>
+        <div className="space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-card border border-foreground/10 flex items-center justify-center shadow-lg">
+            <ShieldCheck className="w-8 h-8 text-primary" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-primary text-xs font-bold tracking-widest uppercase">MANAGEMENT</p>
+            <h1 className="text-4xl font-black tracking-tighter italic uppercase text-foreground">
+              ADMIN <span className="text-primary">PORTAL</span>
+            </h1>
+            <p className="text-muted-foreground text-[10px] font-extrabold tracking-[0.2em] uppercase pt-1">
+              AUTHORIZED PERSONNEL ONLY
+            </p>
           </div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4 text-left">
           <input
             type="email"
-            placeholder="Admin Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
+            placeholder="Email"
+            value={identifier}
+            onChange={e => setIdentifier(e.target.value)}
             className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
             required
           />
@@ -95,9 +74,13 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
             disabled={loading}
             className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {loading ? 'AUTHENTICATING...' : 'SIGN IN TO PORTAL'}
+            {loading ? 'SIGNING IN...' : 'SIGN IN'}
           </button>
         </form>
+
+        <p className="text-center text-xs font-bold text-muted-foreground uppercase tracking-widest pt-2">
+          This portal is for AFRICAN BOY staff only.
+        </p>
       </motion.div>
     </div>
   );

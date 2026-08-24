@@ -9,6 +9,7 @@ import Media from './pages/Media';
 import VIP from './pages/VIP';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
+import RequireAdmin from './components/admin/RequireAdmin';
 import Login from './pages/Login';
 import FitMe from './pages/FitMe';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,7 +43,12 @@ function AppContent() {
       case 'vip': return <VIP />;
       case 'fitme': return <FitMe />;
       case 'profile': return <Profile />;
-      case 'admin': return <Admin onNavigate={setActiveTab} />;
+      case 'admin':
+        return (
+          <RequireAdmin onNavigate={setActiveTab}>
+            <Admin />
+          </RequireAdmin>
+        );
       default: return <Home onNavigate={setActiveTab} />;
     }
   };

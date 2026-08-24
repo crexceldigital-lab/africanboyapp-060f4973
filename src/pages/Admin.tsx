@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus } from 'lucide-react';
-import { Product, ProductColor, AdminTab, NavTab } from '../types';
+import { Product, ProductColor, AdminTab } from '../types';
 import ProductTable from '../components/admin/ProductTable';
 import ProductModal, { ProductFormData } from '../components/admin/ProductModal';
 import GalleryManager from '../components/admin/GalleryManager';
@@ -8,15 +8,10 @@ import DashboardOverview from '../components/admin/DashboardOverview';
 import OrdersManager from '../components/admin/OrdersManager';
 import CustomersManager from '../components/admin/CustomersManager';
 import AttributesManager from '../components/admin/AttributesManager';
-import RequireAdmin from '../components/admin/RequireAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface AdminProps {
-  onNavigate?: (tab: NavTab) => void;
-}
-
-export default function Admin({ onNavigate }: AdminProps) {
+export default function Admin() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -183,84 +178,82 @@ export default function Admin({ onNavigate }: AdminProps) {
   };
 
   return (
-    <RequireAdmin onNavigate={onNavigate}>
-      <div className="pb-24 pt-20 px-6 max-w-7xl mx-auto space-y-8">
-        {/* Header Banner */}
-        <div>
-          <span className="text-primary text-xs font-bold tracking-widest uppercase">Management Suite</span>
-          <h1 className="text-4xl font-black tracking-tighter italic uppercase">
-            ADMIN <span className="text-primary">PANEL</span>
-          </h1>
-        </div>
-
-        {/* Main Navigation Pill Bar */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar p-1.5 bg-card border border-foreground/5 rounded-full">
-          {(['dashboard', 'products', 'orders', 'customers', 'attributes', 'gallery'] as AdminTab[]).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all border whitespace-nowrap ${
-                activeTab === tab
-                  ? 'bg-primary text-primary-foreground border-primary shadow-lg scale-[1.02]'
-                  : 'bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-foreground/5'
-              }`}
-            >
-              {tabLabels[tab]}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Contents */}
-        {activeTab === 'dashboard' && <DashboardOverview />}
-
-        {activeTab === 'products' && (
-          <div className="space-y-6">
-            <div className="flex gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search products by name, category, or SKU..."
-                  className="w-full pl-12 pr-4 py-3 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
-                />
-              </div>
-              <button
-                onClick={() => handleOpenModal()}
-                className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                <Plus size={18} /> Add Product
-              </button>
-            </div>
-
-            <ProductTable
-              products={filteredProducts}
-              activeTab={activeTab}
-              onEdit={handleOpenModal}
-              onDelete={handleDelete}
-              onUpdateStock={handleUpdateStock}
-            />
-
-            <ProductModal
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              editingProduct={editingProduct}
-              formData={formData}
-              setFormData={setFormData}
-              onSubmit={handleSubmit}
-              categories={categories}
-            />
-          </div>
-        )}
-
-        {activeTab === 'orders' && <OrdersManager />}
-
-        {activeTab === 'customers' && <CustomersManager />}
-
-        {activeTab === 'attributes' && <AttributesManager />}
-
-        {activeTab === 'gallery' && <GalleryManager />}
+    <div className="pb-24 pt-20 px-6 max-w-7xl mx-auto space-y-8">
+      {/* Header Banner */}
+      <div>
+        <span className="text-primary text-xs font-bold tracking-widest uppercase">Management Suite</span>
+        <h1 className="text-4xl font-black tracking-tighter italic uppercase">
+          ADMIN <span className="text-primary">PANEL</span>
+        </h1>
       </div>
-    </RequireAdmin>
+
+      {/* Main Navigation Pill Bar */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar p-1.5 bg-card border border-foreground/5 rounded-full">
+        {(['dashboard', 'products', 'orders', 'customers', 'attributes', 'gallery'] as AdminTab[]).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all border whitespace-nowrap ${
+              activeTab === tab
+                ? 'bg-primary text-primary-foreground border-primary shadow-lg scale-[1.02]'
+                : 'bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-foreground/5'
+            }`}
+          >
+            {tabLabels[tab]}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Contents */}
+      {activeTab === 'dashboard' && <DashboardOverview />}
+
+      {activeTab === 'products' && (
+        <div className="space-y-6">
+          <div className="flex gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search products by name, category, or SKU..."
+                className="w-full pl-12 pr-4 py-3 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+              />
+            </div>
+            <button
+              onClick={() => handleOpenModal()}
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <Plus size={18} /> Add Product
+            </button>
+          </div>
+
+          <ProductTable
+            products={filteredProducts}
+            activeTab={activeTab}
+            onEdit={handleOpenModal}
+            onDelete={handleDelete}
+            onUpdateStock={handleUpdateStock}
+          />
+
+          <ProductModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            editingProduct={editingProduct}
+            formData={formData}
+            setFormData={setFormData}
+            onSubmit={handleSubmit}
+            categories={categories}
+          />
+        </div>
+      )}
+
+      {activeTab === 'orders' && <OrdersManager />}
+
+      {activeTab === 'customers' && <CustomersManager />}
+
+      {activeTab === 'attributes' && <AttributesManager />}
+
+      {activeTab === 'gallery' && <GalleryManager />}
+    </div>
   );
 }
