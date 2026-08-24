@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { Product, ProductColor, AdminTab } from '../types';
+import { PRODUCT_CATEGORIES } from '../constants';
 import ProductTable from '../components/admin/ProductTable';
 import ProductModal, { ProductFormData } from '../components/admin/ProductModal';
 import GalleryManager from '../components/admin/GalleryManager';
@@ -15,6 +16,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -33,8 +35,6 @@ export default function Admin() {
     colors: [],
     status: 'active',
   });
-
-  const categories = ['T-Shirt', 'Hoods', 'Jeans', 'Accessories', 'Footwear', 'Tracksuit', 'Caps'];
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
@@ -58,9 +58,10 @@ export default function Admin() {
   }, []);
 
   const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()))
+    (categoryFilter === 'All' || p.category === categoryFilter) &&
+    (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   const handleOpenModal = (product?: Product) => {
@@ -209,7 +210,7 @@ export default function Admin() {
 
       {activeTab === 'products' && (
         <div className="space-y-6">
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
               <input
@@ -221,10 +222,39 @@ export default function Admin() {
             </div>
             <button
               onClick={() => handleOpenModal()}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
               <Plus size={18} /> Add Product
             </button>
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {['All', ...PRODUCT_CATEGORIES].map((cat) => {
+              const isSelected = categoryFilter === cat;
+              const count = cat === 'All'
+                ? products.length
+                : products.filter(p => p.category === cat).length;
+
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap flex items-center gap-2 ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground border-primary shadow-md scale-[1.02]'
+                      : 'bg-card text-muted-foreground border-foreground/5 hover:text-foreground hover:bg-foreground/5'
+                  }`}
+                >
+                  <span>{cat}</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
+                    isSelected ? 'bg-black/20 text-primary-foreground' : 'bg-foreground/10 text-muted-foreground'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           <ProductTable
@@ -242,7 +272,7 @@ export default function Admin() {
             formData={formData}
             setFormData={setFormData}
             onSubmit={handleSubmit}
-            categories={categories}
+            categories={PRODUCT_CATEGORIES}
           />
         </div>
       )}
