@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ChevronLeft, ChevronRight, FileSpreadsheet, FileText,
-  DollarSign, ShoppingBag, Truck, Users, XCircle, TrendingUp
+  DollarSign, ShoppingBag, Truck, Users, XCircle, TrendingUp, Store as StoreIcon
 } from 'lucide-react';
 import {
   startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
@@ -15,16 +15,45 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
-import { Order, OrderItem } from '../../types';
+import { Order, OrderItem, Store } from '../../types';
 
 type PeriodMode = 'daily' | 'weekly' | 'monthly';
 
-export default function ReportsPanel() {
+interface ReportsPanelProps {
+  staffStoreId?: number | null;
+}
+
+export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
   const [periodMode, setPeriodMode] = useState<PeriodMode>('daily');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<'all' | number>(staffStoreId || 'all');
   const [orders, setOrders] = useState<Order[]>([]);
   const [priorEmails, setPriorEmails] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+
+  // Fetch active stores
+  useEffect(() => {
+    const fetchStores = async () => {
+      const { data } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('is_active', true)
+        .order('id');
+
+      if (data) {
+        setStores(data as Store[]);
+      }
+    };
+    fetchStores();
+  }, []);
+
+  // Lock to staff store if passed
+  useEffect(() => {
+    if (staffStoreId) {
+      setSelectedStoreId(staffStoreId);
+    }
+  }, [staffStoreId]);
 
   const getRange = (mode: PeriodMode, refDate: Date) => {
     if (mode === 'daily') {
@@ -34,6 +63,7 @@ export default function ReportsPanel() {
         start,
         end,
         label: format(refDate, 'EEE, dd MMM yyyy'),
+        slug: format(refDate, 'ddMMM').toLowerCase(),
       };
     }
     if (mode === 'weekly') {
@@ -43,6 +73,7 @@ export default function ReportsPanel() {
         start,
         end,
         label: `${format(start, 'dd MMM')} – ${format(end, 'dd MMM yyyy')}`,
+        slug: `${format(start, 'dd')}-${format(end, 'ddMMM')}`.toLowerCase(),
       };
     }
     const start = startOfMonth(refDate);
@@ -51,6 +82,7 @@ export default function ReportsPanel() {
       start,
       end,
       label: format(refDate, 'MMMM yyyy'),
+      slug: format(refDate, 'MMM-yyyy').toLowerCase(),
     };
   };
 
@@ -71,19 +103,31 @@ export default function ReportsPanel() {
       setLoading(true);
       const { start, end } = getRange(periodMode, selectedDate);
 
-      // Query range orders
-      const { data: rangeData } = await supabase
+      // 1. Build base query for range orders
+      let query = supabase
         .from('orders')
         .select('*')
         .gte('created_at', start.toISOString())
         .lte('created_at', end.toISOString())
         .order('created_at', { ascending: true });
 
-      // Query prior customer emails for new customer metric
-      const { data: priorData } = await supabase
+      if (selectedStoreId !== 'all') {
+        query = query.eq('store_id', selectedStoreId);
+      }
+
+      const { data: rangeData } = await query;
+
+      // 2. Query prior customer emails for new customer metric
+      let priorQuery = supabase
         .from('orders')
         .select('customer_email')
         .lt('created_at', start.toISOString());
+
+      if (selectedStoreId !== 'all') {
+        priorQuery = priorQuery.eq('store_id', selectedStoreId);
+      }
+
+      const { data: priorData } = await priorQuery;
 
       const emailSet = new Set<string>();
       priorData?.forEach(o => {
@@ -103,7 +147,7 @@ export default function ReportsPanel() {
     };
 
     fetchReportData();
-  }, [periodMode, selectedDate]);
+  }, [periodMode, selectedDate, selectedStoreId]);
 
   // Derived Metrics
   const totalOrders = orders.length;
@@ -116,6 +160,15 @@ export default function ReportsPanel() {
       .filter((e): e is string => !!e && !priorEmails.has(e))
   ).size;
   const cancelledCount = orders.filter(o => o.status === 'cancelled' || o.status === 'refunded').length;
+
+  const currentStore = stores.find(s => s.id === selectedStoreId);
+  const storeLabel = selectedStoreId === 'all'
+    ? 'All Stores'
+    : currentStore?.name || `Store #${selectedStoreId}`;
+
+  const storeSlug = selectedStoreId === 'all'
+    ? 'all-stores'
+    : (currentStore?.country_code?.toLowerCase() || `store-${selectedStoreId}`);
 
   // Chart Data
   const getTrendData = () => {
@@ -203,21 +256,26 @@ export default function ReportsPanel() {
 
   // Export handlers
   const exportCSV = () => {
-    const { label } = getRange(periodMode, selectedDate);
-    const filename = `african-boy-report-${periodMode}-${format(selectedDate, 'yyyy-MM-dd')}.csv`;
+    const { slug } = getRange(periodMode, selectedDate);
+    const filename = `african-boy-report-${storeSlug}-${periodMode}-${slug}.csv`;
 
-    const headers = ['Order ID', 'Date', 'Customer Name', 'Customer Email', 'Customer Phone', 'Items Count', 'Total Amount (TZS)', 'Delivery Fee (TZS)', 'Status'];
-    const rows = orders.map(o => [
-      o.id,
-      format(new Date(o.created_at), 'yyyy-MM-dd HH:mm:ss'),
-      `"${(o.customer_name || '').replace(/"/g, '""')}"`,
-      `"${(o.customer_email || '').replace(/"/g, '""')}"`,
-      `"${(o.customer_phone || '').replace(/"/g, '""')}"`,
-      (o.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 1), 0),
-      o.total_amount,
-      o.delivery_fee || 0,
-      o.status,
-    ]);
+    const headers = ['Order ID', 'Store', 'Date', 'Customer Name', 'Customer Email', 'Customer Phone', 'Items Count', 'Total Amount', 'Currency', 'Delivery Fee', 'Status'];
+    const rows = orders.map(o => {
+      const st = stores.find(s => s.id === o.store_id);
+      return [
+        o.id,
+        `"${(st?.name || 'Tanzania Store').replace(/"/g, '""')}"`,
+        format(new Date(o.created_at), 'yyyy-MM-dd HH:mm:ss'),
+        `"${(o.customer_name || '').replace(/"/g, '""')}"`,
+        `"${(o.customer_email || '').replace(/"/g, '""')}"`,
+        `"${(o.customer_phone || '').replace(/"/g, '""')}"`,
+        (o.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 1), 0),
+        o.total_amount,
+        o.currency || 'TZS',
+        o.delivery_fee || 0,
+        o.status,
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -231,7 +289,7 @@ export default function ReportsPanel() {
   };
 
   const exportPDF = () => {
-    const { label } = getRange(periodMode, selectedDate);
+    const { label, slug } = getRange(periodMode, selectedDate);
     const doc = new jsPDF();
     const topProducts = getTopProducts();
 
@@ -247,16 +305,20 @@ export default function ReportsPanel() {
     doc.setLineWidth(0.5);
     doc.line(14, 29, 196, 29);
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Period: ${label} (${periodMode.toUpperCase()})`, 14, 37);
+    doc.text(`Store Scope: ${storeLabel.toUpperCase()}`, 14, 37);
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Period: ${label} (${periodMode.toUpperCase()})`, 14, 43);
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Generated: ${format(new Date(), 'PPpp')}`, 14, 42);
+    doc.text(`Generated: ${format(new Date(), 'PPpp')}`, 14, 48);
 
     autoTable(doc, {
-      startY: 47,
+      startY: 53,
       head: [['Total Revenue', 'Total Orders', 'Avg Order Value', 'Delivery Fees', 'New Customers', 'Cancelled']],
       body: [[
         `${totalRevenue.toLocaleString()} TZS`,
@@ -302,7 +364,7 @@ export default function ReportsPanel() {
       format(new Date(o.created_at), 'dd MMM yyyy HH:mm'),
       o.customer_name || o.customer_email || 'Customer',
       String((o.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 1), 0)),
-      `${Number(o.total_amount).toLocaleString()} TZS`,
+      `${Number(o.total_amount).toLocaleString()} ${o.currency || 'TZS'}`,
       o.status.toUpperCase(),
     ]);
 
@@ -315,7 +377,7 @@ export default function ReportsPanel() {
       bodyStyles: { fontSize: 8 },
     });
 
-    const filename = `african-boy-report-${periodMode}-${format(selectedDate, 'yyyy-MM-dd')}.pdf`;
+    const filename = `african-boy-report-${storeSlug}-${periodMode}-${slug}.pdf`;
     doc.save(filename);
   };
 
@@ -326,8 +388,8 @@ export default function ReportsPanel() {
 
   return (
     <div className="space-y-8">
-      {/* Header Bar with Period Controls & Export Actions */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-card border border-foreground/5 p-6 rounded-[32px]">
+      {/* Header Bar with Period Controls, Store Selector & Export Actions */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-card border border-foreground/5 p-6 rounded-[32px]">
         {/* Left: Period Selector & Date Stepper */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -365,8 +427,40 @@ export default function ReportsPanel() {
           </div>
         </div>
 
+        {/* Center: Store Filter Pills (Hidden if staffStoreId is locked) */}
+        {!staffStoreId && (
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Store Scope</span>
+            <div className="flex items-center gap-2 p-1.5 bg-background/50 border border-foreground/10 rounded-2xl overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setSelectedStoreId('all')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  selectedStoreId === 'all'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
+                }`}
+              >
+                All Stores
+              </button>
+              {stores.map(st => (
+                <button
+                  key={st.id}
+                  onClick={() => setSelectedStoreId(st.id)}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                    selectedStoreId === st.id
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
+                  }`}
+                >
+                  {st.name.replace('AFRICAN BOY ', '')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Right: Export Buttons */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+        <div className="flex items-center gap-3 w-full lg:w-auto justify-end">
           <button
             onClick={exportCSV}
             className="px-5 py-3 bg-card border border-foreground/10 text-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-foreground/5 active:scale-95 transition-all"
@@ -389,6 +483,35 @@ export default function ReportsPanel() {
         </div>
       ) : (
         <>
+          {/* Per-Store Comparison Row (when "All Stores" is selected) */}
+          {selectedStoreId === 'all' && stores.length > 1 && (
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Market Comparison Overview</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {stores.map(st => {
+                  const stOrders = orders.filter(o => o.store_id === st.id);
+                  const stRevenue = stOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+                  return (
+                    <div key={st.id} className="p-5 bg-card border border-primary/20 rounded-[28px] flex items-center justify-between shadow-sm">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <StoreIcon size={14} className="text-primary" />
+                          <span className="text-xs font-black uppercase tracking-wider text-foreground">{st.name}</span>
+                        </div>
+                        <p className="text-lg font-black italic font-mono text-primary">
+                          {stRevenue.toLocaleString()} <span className="text-xs font-bold text-muted-foreground">{st.currency_code}</span>
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 bg-foreground/5 rounded-full text-[10px] font-mono font-extrabold text-muted-foreground border border-foreground/10">
+                        {stOrders.length} order(s)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Summary Stat Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="p-5 bg-card border border-foreground/5 rounded-3xl space-y-1">
@@ -454,7 +577,7 @@ export default function ReportsPanel() {
                 <div>
                   <span className="text-primary text-[10px] font-bold tracking-widest uppercase">Performance Trend</span>
                   <h3 className="text-lg font-black tracking-tight uppercase italic text-foreground">
-                    Revenue Breakdown
+                    Revenue Breakdown ({storeLabel})
                   </h3>
                 </div>
                 <span className="text-xs text-muted-foreground font-mono">{currentRange.label}</span>
@@ -578,6 +701,7 @@ export default function ReportsPanel() {
                 <thead>
                   <tr className="border-b border-foreground/5 bg-foreground/5">
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Order ID</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Store</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Customer</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Items</th>
@@ -587,38 +711,46 @@ export default function ReportsPanel() {
                 </thead>
                 <tbody className="divide-y divide-foreground/5">
                   {orders.length > 0 ? (
-                    orders.map(order => (
-                      <tr key={order.id} className="hover:bg-foreground/[0.02] transition-colors">
-                        <td className="px-6 py-4 font-mono text-xs font-bold text-muted-foreground">
-                          {order.id.substring(0, 8).toUpperCase()}
-                        </td>
-                        <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
-                          {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-foreground">{order.customer_name || 'Customer'}</p>
-                          <p className="text-[10px] font-mono text-muted-foreground">{order.customer_email || order.customer_phone || '-'}</p>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs text-foreground">
-                          {(order.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 1), 0)} items
-                        </td>
-                        <td className="px-6 py-4 font-mono text-sm font-bold text-primary">
-                          {Number(order.total_amount).toLocaleString()} TZS
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                            order.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                            order.status === 'cancelled' || order.status === 'refunded' ? 'bg-destructive/10 text-destructive border-destructive/20' :
-                            'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          }`}>
-                            {order.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                    orders.map(order => {
+                      const st = stores.find(s => s.id === order.store_id);
+                      return (
+                        <tr key={order.id} className="hover:bg-foreground/[0.02] transition-colors">
+                          <td className="px-6 py-4 font-mono text-xs font-bold text-muted-foreground">
+                            {order.id.substring(0, 8).toUpperCase()}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2.5 py-1 bg-foreground/5 rounded-lg text-[10px] font-black uppercase tracking-wider text-muted-foreground border border-foreground/10">
+                              {st?.name.replace('AFRICAN BOY ', '') || 'Tanzania'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
+                            {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-bold text-foreground">{order.customer_name || 'Customer'}</p>
+                            <p className="text-[10px] font-mono text-muted-foreground">{order.customer_email || order.customer_phone || '-'}</p>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-xs text-foreground">
+                            {(order.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 1), 0)} items
+                          </td>
+                          <td className="px-6 py-4 font-mono text-sm font-bold text-primary">
+                            {Number(order.total_amount).toLocaleString()} {order.currency || 'TZS'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                              order.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                              order.status === 'cancelled' || order.status === 'refunded' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                              'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-xs text-muted-foreground font-bold uppercase tracking-widest">
+                      <td colSpan={7} className="px-6 py-8 text-center text-xs text-muted-foreground font-bold uppercase tracking-widest">
                         No orders recorded in this period
                       </td>
                     </tr>
