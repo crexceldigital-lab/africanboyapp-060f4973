@@ -60,12 +60,18 @@ export default function Admin() {
     fetchProducts();
   }, []);
 
-  const filteredProducts = products.filter(p =>
-    (categoryFilter === 'All' || p.category === categoryFilter) &&
-    (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())))
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesCategory = categoryFilter === 'SALE'
+      ? p.on_sale === true
+      : (categoryFilter === 'All' || p.category === categoryFilter);
+
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesCategory && matchesSearch;
+  });
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -77,6 +83,8 @@ export default function Admin() {
         subcategory: product.subcategory || '',
         price: String(product.price),
         sale_price: product.sale_price ? String(product.sale_price) : '',
+        on_sale: product.on_sale || false,
+        discount_percent: String(product.discount_percent || 10),
         stock_quantity: String(product.stock_quantity),
         stock: product.stock || {},
         image_url: product.image_url,
@@ -94,6 +102,8 @@ export default function Admin() {
         subcategory: '',
         price: '',
         sale_price: '',
+        on_sale: false,
+        discount_percent: '10',
         stock_quantity: '',
         stock: {},
         image_url: '',
@@ -108,13 +118,19 @@ export default function Admin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const rawPrice = Number(formData.price) || 0;
+    const rawDiscount = Number(formData.discount_percent) || 10;
+    const derivedSalePrice = Math.round(rawPrice - (rawPrice * rawDiscount / 100));
+
     const productData = {
       name: formData.name,
       sku: formData.sku || null,
       category: formData.category,
       subcategory: formData.subcategory || null,
-      price: Number(formData.price),
-      sale_price: formData.sale_price ? Number(formData.sale_price) : null,
+      price: rawPrice,
+      on_sale: formData.on_sale,
+      discount_percent: rawDiscount,
+      sale_price: formData.on_sale ? derivedSalePrice : (formData.sale_price ? Number(formData.sale_price) : null),
       stock_quantity: Number(formData.stock_quantity),
       stock: formData.stock,
       image_url: formData.image_url,
@@ -234,10 +250,12 @@ export default function Admin() {
 
           {/* Category Filter Pills */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {['All', ...PRODUCT_CATEGORIES].map((cat) => {
+            {['All', 'SALE', ...PRODUCT_CATEGORIES].map((cat) => {
               const isSelected = categoryFilter === cat;
               const count = cat === 'All'
                 ? products.length
+                : cat === 'SALE'
+                ? products.filter(p => p.on_sale).length
                 : products.filter(p => p.category === cat).length;
 
               return (

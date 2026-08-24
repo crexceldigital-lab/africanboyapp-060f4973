@@ -99,6 +99,8 @@ export type Database = {
           name: string
           price: number
           sale_price: number | null
+          on_sale: boolean | null
+          discount_percent: number | null
           sku: string | null
           sizes: string[]
           stock_quantity: number
@@ -117,6 +119,8 @@ export type Database = {
           name: string
           price?: number
           sale_price?: number | null
+          on_sale?: boolean | null
+          discount_percent?: number | null
           sku?: string | null
           sizes?: string[]
           stock_quantity?: number
@@ -135,6 +139,8 @@ export type Database = {
           name?: string
           price?: number
           sale_price?: number | null
+          on_sale?: boolean | null
+          discount_percent?: number | null
           sku?: string | null
           sizes?: string[]
           stock_quantity?: number
@@ -143,6 +149,35 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      product_of_the_day: {
+        Row: {
+          created_at: string | null
+          id: string
+          product_id: string
+          set_for_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          product_id: string
+          set_for_date?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          product_id?: string
+          set_for_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_of_the_day_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       product_categories: {
         Row: {

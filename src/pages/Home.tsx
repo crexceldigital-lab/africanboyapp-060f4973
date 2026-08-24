@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Product, NavTab } from '../types';
-import { ArrowRight, ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown, Flame } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 import heroBg from '@/assets/hero-bg.png';
@@ -25,12 +25,37 @@ interface HomeProps {
 
 export default function Home({ onNavigate }: HomeProps) {
   const [, setFeaturedProducts] = useState<Product[]>([]);
+  const [productOfTheDay, setProductOfTheDay] = useState<Product | null>(null);
   const [updatesIndex, setUpdatesIndex] = useState(0);
   const [lifestyleIndex, setLifestyleIndex] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    const fetchProductOfTheDay = async () => {
+      const { data: potd } = await supabase
+        .from('product_of_the_day')
+        .select('product_id, set_for_date, products(*)')
+        .order('set_for_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (potd && potd.products) {
+        const p: any = potd.products;
+        setProductOfTheDay({
+          ...p,
+          price: Number(p.price),
+          sale_price: p.sale_price ? Number(p.sale_price) : null,
+          colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
+          sizes: Array.isArray(p.sizes) ? p.sizes : JSON.parse(p.sizes || '[]'),
+        });
+      }
+    };
+    fetchProductOfTheDay();
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -310,6 +335,89 @@ export default function Home({ onNavigate }: HomeProps) {
 
       {/* Transition Zone into Content */}
       <div className="h-12 w-full bg-gradient-to-b from-black via-background/80 to-background -mt-4 relative z-20 pointer-events-none" />
+
+      {/* Product of the Day Section */}
+      {productOfTheDay && (
+        <section className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="bg-gradient-to-r from-card via-card to-primary/10 border border-primary/20 rounded-[40px] p-6 sm:p-10 shadow-2xl relative overflow-hidden group"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+              {/* Image Showcase */}
+              <div className="md:col-span-5 aspect-square rounded-3xl overflow-hidden bg-black/40 border border-foreground/10 relative group-hover:border-primary/40 transition-colors">
+                <img
+                  src={productOfTheDay.image_url}
+                  alt={productOfTheDay.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground font-black text-xs px-3.5 py-1.5 rounded-full uppercase tracking-widest shadow-lg flex items-center gap-1.5 border border-primary-foreground/20">
+                    <Flame size={14} className="fill-current" /> PRODUCT OF THE DAY
+                  </span>
+                </div>
+                {productOfTheDay.on_sale && (
+                  <div className="absolute top-4 right-4 z-10">
+                    <span className="bg-destructive text-destructive-foreground font-black text-xs px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg">
+                      -{productOfTheDay.discount_percent || 10}% OFF
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Content & Details */}
+              <div className="md:col-span-7 space-y-6">
+                <div className="space-y-2">
+                  <span className="text-primary text-xs font-black tracking-widest uppercase block">
+                    FEATURED TODAY
+                  </span>
+                  <h2 className="text-3xl sm:text-5xl font-black italic uppercase tracking-tight text-foreground leading-none">
+                    {productOfTheDay.name}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium line-clamp-3 leading-relaxed">
+                    {productOfTheDay.description}
+                  </p>
+                </div>
+
+                {/* Pricing & Category */}
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="font-mono">
+                    {productOfTheDay.on_sale ? (
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-3xl sm:text-4xl font-black text-primary italic">
+                          {Math.round(productOfTheDay.price - (productOfTheDay.price * (productOfTheDay.discount_percent || 10) / 100)).toLocaleString()} TZS
+                        </span>
+                        <span className="text-sm text-muted-foreground line-through font-bold">
+                          {productOfTheDay.price.toLocaleString()} TZS
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-3xl sm:text-4xl font-black text-primary italic">
+                        {productOfTheDay.price.toLocaleString()} TZS
+                      </span>
+                    )}
+                  </div>
+                  <span className="px-3 py-1 bg-foreground/5 rounded-full text-xs font-black uppercase tracking-widest text-muted-foreground border border-foreground/10">
+                    {productOfTheDay.category}
+                  </span>
+                </div>
+
+                {/* CTA Button */}
+                <button
+                  onClick={() => onNavigate('shop')}
+                  className="px-8 py-4 bg-primary text-primary-foreground rounded-full font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_25px_hsl(43,96%,49%,0.4)]"
+                >
+                  <span>SHOP PRODUCT OF THE DAY</span>
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+      )}
 
       {/* Spotlight Section */}
       <section className="px-4 sm:px-6 py-10 max-w-7xl mx-auto">

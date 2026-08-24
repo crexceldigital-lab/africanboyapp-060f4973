@@ -11,6 +11,8 @@ export interface ProductFormData {
   subcategory: string;
   price: string;
   sale_price: string;
+  on_sale: boolean;
+  discount_percent: string;
   stock_quantity: string;
   stock: Record<string, number>;
   image_url: string;
@@ -208,9 +210,52 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Sale Price (Optional, TZS)</label>
-              <input type="number" value={formData.sale_price || ''} onChange={e => setFormData({ ...formData, sale_price: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold text-primary focus:border-primary outline-none transition-all" placeholder="Leave empty if not on sale" />
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Sale Price (Optional Override, TZS)</label>
+              <input type="number" value={formData.sale_price || ''} onChange={e => setFormData({ ...formData, sale_price: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold text-primary focus:border-primary outline-none transition-all" placeholder="Leave empty for auto-derived" />
             </div>
+          </div>
+
+          {/* On Sale Controls */}
+          <div className="bg-background/40 border border-foreground/5 rounded-3xl p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formData.on_sale || false}
+                  onChange={e => setFormData({ ...formData, on_sale: e.target.checked })}
+                  className="w-5 h-5 rounded-lg accent-primary border-foreground/20 cursor-pointer"
+                />
+                <span className="text-xs font-black uppercase tracking-widest text-foreground">
+                  ON SALE (APPLY DISCOUNT)
+                </span>
+              </label>
+
+              {formData.on_sale && Number(formData.price) > 0 && (
+                <div className="text-left sm:text-right">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Derived Sale Price</span>
+                  <span className="text-sm font-black italic font-mono text-primary">
+                    {Number(formData.price).toLocaleString()} → {Math.round(Number(formData.price) - (Number(formData.price) * (Number(formData.discount_percent) || 10) / 100)).toLocaleString()} TZS (-{formData.discount_percent || 10}%)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {formData.on_sale && (
+              <div className="pt-2">
+                <div className="space-y-2 max-w-xs">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Discount Percentage (%)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={formData.discount_percent || '10'}
+                    onChange={e => setFormData({ ...formData, discount_percent: e.target.value })}
+                    className="w-full px-6 py-3.5 bg-card border border-foreground/10 rounded-2xl text-sm font-mono font-bold focus:border-primary outline-none transition-all"
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Image & Description */}

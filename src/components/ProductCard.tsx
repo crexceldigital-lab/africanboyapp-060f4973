@@ -18,9 +18,17 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const isOutOfStock = product.stock_quantity <= 0;
 
+  const effectivePrice = product.on_sale
+    ? Math.round(product.price - (product.price * (product.discount_percent || 10) / 100))
+    : (product.sale_price ? Number(product.sale_price) : product.price);
+
   const handleAdd = () => {
     if (isOutOfStock || !selectedSize || !selectedColor) return;
-    addToCart(product, selectedSize, selectedColor);
+    const itemToAdd = {
+      ...product,
+      price: effectivePrice,
+    };
+    addToCart(itemToAdd, selectedSize, selectedColor);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -37,6 +45,14 @@ export default function ProductCard({ product }: ProductCardProps) {
       }`}
     >
       <div className="aspect-[3/4] overflow-hidden relative bg-black/40">
+        {product.on_sale && (
+          <div className="absolute top-3 left-3 z-10">
+            <span className="bg-primary text-primary-foreground font-black text-[10px] px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg border border-primary-foreground/20 flex items-center gap-1">
+              -{product.discount_percent || 10}%
+            </span>
+          </div>
+        )}
+
         <img
           src={product.image_url || undefined}
           alt={product.name}
@@ -60,9 +76,22 @@ export default function ProductCard({ product }: ProductCardProps) {
           <h3 className="font-extrabold text-sm text-foreground/90 leading-tight group-hover:text-primary transition-colors">
             {product.name}
           </h3>
-          <span className="text-primary font-black text-sm whitespace-nowrap">
-            {formatPrice(product.price)}
-          </span>
+          <div className="flex flex-col items-end whitespace-nowrap">
+            {product.on_sale || (product.sale_price && product.sale_price < product.price) ? (
+              <>
+                <span className="text-primary font-black text-sm">
+                  {formatPrice(effectivePrice)}
+                </span>
+                <span className="text-[10px] text-muted-foreground line-through font-mono">
+                  {formatPrice(product.price)}
+                </span>
+              </>
+            ) : (
+              <span className="text-primary font-black text-sm">
+                {formatPrice(product.price)}
+              </span>
+            )}
+          </div>
         </div>
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           {product.category}

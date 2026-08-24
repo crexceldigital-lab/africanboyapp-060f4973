@@ -37,62 +37,74 @@ export default function ProductTable({ products, activeTab, onEdit, onDelete, on
             </tr>
           </thead>
           <tbody className="divide-y divide-foreground/5">
-            {products.map((product) => (
-              <tr key={product.id} className="hover:bg-foreground/[0.02] transition-colors group">
-                {/* Product Name & Image - Clickable for Quick View */}
-                <td
-                  onClick={() => onQuickView?.(product)}
-                  className="px-8 py-6 cursor-pointer"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-secondary border border-foreground/10 flex-shrink-0 group-hover:border-primary transition-colors">
-                      <img src={product.image_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-black italic uppercase tracking-tight group-hover:text-primary transition-colors">
-                        {product.name}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[180px]">
-                        {product.description}
-                      </p>
-                    </div>
-                  </div>
-                </td>
+            {products.map((product) => {
+              const effectiveSalePrice = product.on_sale
+                ? Math.round(product.price - (product.price * (product.discount_percent || 10) / 100))
+                : (product.sale_price ? Number(product.sale_price) : null);
 
-                {/* SKU Code */}
-                <td
-                  onClick={() => onQuickView?.(product)}
-                  className="px-8 py-6 font-mono text-xs font-bold text-muted-foreground cursor-pointer"
-                >
-                  {product.sku || `AFB-${product.id.substring(0, 5).toUpperCase()}`}
-                </td>
+              return (
+                <tr key={product.id} className="hover:bg-foreground/[0.02] transition-colors group">
+                  {/* Product Name & Image - Clickable for Quick View */}
+                  <td
+                    onClick={() => onQuickView?.(product)}
+                    className="px-8 py-6 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-secondary border border-foreground/10 flex-shrink-0 group-hover:border-primary transition-colors">
+                        <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-black italic uppercase tracking-tight group-hover:text-primary transition-colors">
+                            {product.name}
+                          </p>
+                          {product.on_sale && (
+                            <span className="px-2 py-0.5 bg-primary/20 text-primary border border-primary/30 rounded-full text-[9px] font-black uppercase tracking-widest">
+                              SALE -{product.discount_percent || 10}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[180px]">
+                          {product.description}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
 
-                {/* Category & Subcategory */}
-                <td
-                  onClick={() => onQuickView?.(product)}
-                  className="px-8 py-6 cursor-pointer"
-                >
-                  <div className="space-y-1">
-                    <span className="px-3 py-1 bg-foreground/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted-foreground inline-block">
-                      {product.category}
-                    </span>
-                    {product.subcategory && (
-                      <p className="text-[10px] font-mono text-muted-foreground/80 pl-1">{product.subcategory}</p>
+                  {/* SKU Code */}
+                  <td
+                    onClick={() => onQuickView?.(product)}
+                    className="px-8 py-6 font-mono text-xs font-bold text-muted-foreground cursor-pointer"
+                  >
+                    {product.sku || `AFB-${product.id.substring(0, 5).toUpperCase()}`}
+                  </td>
+
+                  {/* Category & Subcategory */}
+                  <td
+                    onClick={() => onQuickView?.(product)}
+                    className="px-8 py-6 cursor-pointer"
+                  >
+                    <div className="space-y-1">
+                      <span className="px-3 py-1 bg-foreground/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted-foreground inline-block">
+                        {product.category}
+                      </span>
+                      {product.subcategory && (
+                        <p className="text-[10px] font-mono text-muted-foreground/80 pl-1">{product.subcategory}</p>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Price (Price & optional sale price) */}
+                  <td className="px-8 py-6 font-mono text-sm">
+                    {effectiveSalePrice ? (
+                      <div>
+                        <span className="font-bold text-primary">{effectiveSalePrice.toLocaleString()} TZS</span>
+                        <span className="text-xs text-muted-foreground line-through ml-2">{Number(product.price).toLocaleString()}</span>
+                      </div>
+                    ) : (
+                      <span className="font-bold">{Number(product.price).toLocaleString()} TZS</span>
                     )}
-                  </div>
-                </td>
-
-                {/* Price (Price & optional sale price) */}
-                <td className="px-8 py-6 font-mono text-sm">
-                  {product.sale_price ? (
-                    <div>
-                      <span className="font-bold text-primary">{Number(product.sale_price).toLocaleString()} TZS</span>
-                      <span className="text-xs text-muted-foreground line-through ml-2">{Number(product.price).toLocaleString()}</span>
-                    </div>
-                  ) : (
-                    <span className="font-bold">{Number(product.price).toLocaleString()} TZS</span>
-                  )}
-                </td>
+                  </td>
 
                 {/* Stock Quantity */}
                 <td className="px-8 py-6">
@@ -140,8 +152,9 @@ export default function ProductTable({ products, activeTab, onEdit, onDelete, on
                   </div>
                 </td>
               </tr>
-            ))}
-          </tbody>
+            );
+          })}
+        </tbody>
         </table>
       </div>
     </div>

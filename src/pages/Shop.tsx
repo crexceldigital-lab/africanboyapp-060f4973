@@ -32,6 +32,7 @@ export default function Shop() {
 
   const categories = [
     'All',
+    'Sale',
     'T-Shirt',
     'Jeans',
     'Caps',
@@ -42,7 +43,11 @@ export default function Shop() {
     'Tracksuits',
   ];
   const filteredProducts =
-    category === 'All' ? products : products.filter((p) => p.category === category);
+    category === 'Sale'
+      ? products.filter((p) => p.on_sale)
+      : category === 'All'
+      ? products
+      : products.filter((p) => p.category === category);
 
   return (
     <div className="pb-28 pt-24 px-4 sm:px-6 max-w-7xl mx-auto">

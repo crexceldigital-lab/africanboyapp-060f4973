@@ -4,6 +4,7 @@ import { Order } from '../../types';
 import { ShoppingBag, DollarSign, Users, Clock, AlertTriangle, Eye, ArrowUpRight, CheckCircle, RefreshCw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import OrderDetailsModal from './OrderDetailsModal';
+import ProductOfTheDayPicker from './ProductOfTheDayPicker';
 
 interface StatMetrics {
   totalOrders: number;
@@ -128,6 +129,9 @@ export default function DashboardOverview() {
           <RefreshCw size={14} className={loading ? 'animate-spin text-primary' : ''} /> Refresh
         </button>
       </div>
+
+      {/* Product of the Day Picker */}
+      <ProductOfTheDayPicker />
 
       {/* 4 Stat Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

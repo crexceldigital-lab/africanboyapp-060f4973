@@ -16,6 +16,8 @@ export interface Product {
   name: string;
   price: number;
   sale_price?: number | null;
+  on_sale?: boolean;
+  discount_percent?: number;
   sku?: string | null;
   category: string;
   subcategory?: string | null;
@@ -28,6 +30,14 @@ export interface Product {
   status?: 'active' | 'inactive' | 'stock_out' | string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface ProductOfTheDay {
+  id: string;
+  product_id: string;
+  set_for_date: string;
+  created_at: string;
+  product?: Product;
 }
 
 export interface CartItem extends Product {
