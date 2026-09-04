@@ -31,6 +31,8 @@ export default function Admin() {
     subcategory: '',
     price: '',
     sale_price: '',
+    on_sale: false,
+    discount_percent: '10',
     stock_quantity: '',
     stock: {},
     image_url: '',
