@@ -59,7 +59,4 @@ export const MOCK_GALLERY: GalleryItem[] = [
   { id: '8', image_url: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=400', created_at: '2025-12-01' },
 ];
 
-export const MOCK_PURCHASES: Purchase[] = [
-  { id: 1, user_id: 1, product_name: 'AFB Signature Tee', amount: 45000, currency_code: 'TZS', date: '2026-02-15' },
-  { id: 2, user_id: 1, product_name: 'Ticket: JUX LIVE IN DAR', amount: 50000, currency_code: 'TZS', date: '2026-02-10' },
-];
+export const MOCK_PURCHASES: Purchase[] = [];
