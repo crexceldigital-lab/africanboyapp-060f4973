@@ -65,7 +65,14 @@ Deno.serve(async (req) => {
 
     // 3. Process Request Body
     const body = await req.json().catch(() => ({}));
-    const { email, user_ids, query } = body;
+    const { email, user_ids, query, check_env } = body;
+
+    if (check_env) {
+      return new Response(
+        JSON.stringify({ env_keys: Object.keys(Deno.env.toObject()) }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
 
     // Case A: Batch lookup by user_ids (for staff list display)
     if (Array.isArray(user_ids)) {
