@@ -15,7 +15,6 @@ import {
   MapPin,
   Building2,
   Users,
-  CheckCircle2,
   Power
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -56,6 +55,7 @@ export default function StaffManager() {
   const [loading, setLoading] = useState(true);
   const [storesLoading, setStoresLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [schemaCacheNotice, setSchemaCacheNotice] = useState<string | null>(null);
 
   // User Search & Selection State
   const [userQuery, setUserQuery] = useState('');
@@ -126,11 +126,15 @@ export default function StaffManager() {
   // 1. Fetch stores dynamically from database & compute staff counts
   const fetchStores = async (currentStaff?: EnrichedStaff[]) => {
     setStoresLoading(true);
+    setSchemaCacheNotice(null);
     try {
       const { data: dbStores, error } = await fromAny('stores').select('*').order('id');
       if (error) {
         console.error('Error fetching stores:', error);
-        toast.error('Failed to load stores from database');
+        if (error.code === 'PGRST205' || error.message?.includes('schema cache') || error.message?.includes('Could not find')) {
+          setSchemaCacheNotice('The stores database table is being initialized in Supabase. Apply migrations to sync schema.');
+        }
+        setStores([]);
       } else if (dbStores && dbStores.length > 0) {
         const activeStaffList = currentStaff || staffList;
         
@@ -175,7 +179,11 @@ export default function StaffManager() {
 
       if (staffErr) {
         console.error('Error fetching store_staff:', staffErr);
-        toast.error('Failed to load store staff list');
+        if (staffErr.code === 'PGRST205' || staffErr.message?.includes('schema cache')) {
+          console.warn('store_staff table not found in Supabase schema cache yet.');
+        }
+        setStaffList([]);
+        fetchStores([]);
         setLoading(false);
         return;
       }
@@ -336,7 +344,21 @@ export default function StaffManager() {
 
       if (error) {
         console.error('Error creating store:', error);
-        setCreateStoreError(error.message || 'Failed to create store.');
+        if (error.code === 'PGRST205' || error.message?.includes('schema cache') || error.message?.includes('Could not find')) {
+          setCreateStoreError(
+            'Could not find the table "public.stores" in the schema cache. Please ensure Supabase database migrations are applied.'
+          );
+        } else if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique')) {
+          if (error.message?.includes('store_code')) {
+            setCreateStoreError('A store with this code already exists.');
+          } else {
+            setCreateStoreError(`A store named "${storeName}" already exists.`);
+          }
+        } else if (error.code === '42501' || error.message?.includes('policy') || error.message?.includes('permission')) {
+          setCreateStoreError('You do not have permission to create a store. Admin privilege required.');
+        } else {
+          setCreateStoreError(error.message || 'Unable to create store. Please try again.');
+        }
       } else {
         toast.success(`Store "${storeName}" created successfully!`);
         setIsCreateStoreOpen(false);
@@ -360,7 +382,7 @@ export default function StaffManager() {
       }
     } catch (err: any) {
       console.error('Unexpected error creating store:', err);
-      setCreateStoreError(err.message || 'An unexpected error occurred.');
+      setCreateStoreError(err.message || 'Unable to create store. Please try again.');
     } finally {
       setCreatingStore(false);
     }
@@ -674,6 +696,13 @@ export default function StaffManager() {
           </button>
         </div>
       </div>
+
+      {schemaCacheNotice && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold flex items-center gap-3">
+          <AlertCircle size={18} className="shrink-0" />
+          <span>{schemaCacheNotice}</span>
+        </div>
+      )}
 
       {/* SECTION 1: ASSIGN NEW STAFF FORM */}
       <div className="bg-card border border-foreground/5 rounded-[32px] p-6 sm:p-8 shadow-xl space-y-6">
@@ -1295,7 +1324,7 @@ export default function StaffManager() {
                     type="text"
                     value={newStoreForm.location_name}
                     onChange={(e) => setNewStoreForm({ ...newStoreForm, location_name: e.target.value })}
-                    placeholder="e.g. Tanzania Operations"
+                    placeholder="e.g. Sinza Africana Shop"
                     className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
                   />
                 </div>
