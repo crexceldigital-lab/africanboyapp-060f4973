@@ -105,9 +105,9 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
       setLoading(true);
       const { start, end } = getRange(periodMode, selectedDate);
 
-      // 1. Build base query for range orders
-      let query = supabase
-        .from('orders')
+      // 1. Build base query for range orders (use fromAny to avoid stale
+      // generated-types deep-instantiation errors)
+      let query = fromAny('orders')
         .select('*')
         .gte('created_at', start.toISOString())
         .lte('created_at', end.toISOString())

@@ -26,9 +26,9 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
   const fetchStaffData = async () => {
     setLoading(true);
     try {
-      // Fetch orders for staff store_id
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
+      // Fetch orders for staff store_id (use fromAny to avoid stale
+      // generated-types deep-instantiation errors)
+      const { data: ordersData, error: ordersError } = await fromAny('orders')
         .select('*')
         .eq('store_id', staffAssignment.store_id)
         .order('created_at', { ascending: false });
