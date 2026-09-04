@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Product, CartItem, AppEvent } from '../types';
+import { trackAddToCart } from '../lib/analytics';
 
 export type DeliveryZone = 'inside_dar' | 'outside_dar';
 
@@ -35,6 +36,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (product: Product, size?: string, color?: string) => {
     const key = getCartKey(product.id, size, color);
+    trackAddToCart(
+      { id: product.id, name: product.name, price: product.price, quantity: 1, category: product.category, selectedSize: size, selectedColor: color },
+      'TZS'
+    );
     setCart(prevCart => {
       const existingItem = prevCart.find(item => getCartKey(item.id, item.selectedSize, item.selectedColor) === key);
       if (existingItem) {

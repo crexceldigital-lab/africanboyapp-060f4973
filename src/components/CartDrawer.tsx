@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { useCountry } from '../context/CountryContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import AddressAutocomplete from './AddressAutocomplete';
+import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -22,6 +24,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryCoords, setDeliveryCoords] = useState<{ latitude: number | null; longitude: number | null }>({
+    latitude: null,
+    longitude: null,
+  });
 
   // Auth form state
   const [isSignup, setIsSignup] = useState(false);
@@ -38,6 +45,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
       setStep('success');
+      const lastOrder = sessionStorage.getItem('ab_last_order');
+      if (lastOrder) {
+        try {
+          const parsed = JSON.parse(lastOrder);
+          trackPurchase(parsed.orderId, parsed.items, parsed.value, parsed.currency, parsed.shipping);
+        } catch (e) {
+          console.error('Purchase tracking failed', e);
+        }
+        sessionStorage.removeItem('ab_last_order');
+      }
       // Clean URL
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -46,6 +63,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const handleCheckout = async () => {
     setCheckoutLoading(true);
     setStep('processing');
+    const currency = selectedCountry?.currency_code || 'TZS';
+    trackBeginCheckout(cart, grandTotal, currency);
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
@@ -61,10 +80,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           deliveryFee,
           grandTotal,
           deliveryZone,
-          currency: selectedCountry?.currency_code || 'TZS',
+          currency,
           customerName: user?.full_name || '',
           customerEmail: user?.email || '',
           customerPhone: user?.phone_number || '',
+          deliveryAddress,
+          deliveryLatitude: deliveryCoords.latitude,
+          deliveryLongitude: deliveryCoords.longitude,
           redirectUrl: window.location.origin + '/?payment=success',
         },
       });
@@ -72,6 +94,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Payment creation failed');
 
+      sessionStorage.setItem(
+        'ab_last_order',
+        JSON.stringify({
+          orderId: data.order_id,
+          items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, category: i.category, selectedSize: i.selectedSize, selectedColor: i.selectedColor })),
+          value: grandTotal,
+          currency,
+          shipping: deliveryFee,
+        })
+      );
       clearCart();
       window.location.href = data.checkout_url;
     } catch (err: any) {
@@ -291,6 +323,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
             {step === 'cart' && cart.length > 0 && (
               <div className="p-6 border-t border-foreground/5 space-y-4">
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery Address</span>
+                  <AddressAutocomplete
+                    value={deliveryAddress}
+                    onChange={setDeliveryAddress}
+                    onResolved={({ address, latitude, longitude }) => {
+                      setDeliveryAddress(address);
+                      setDeliveryCoords({ latitude, longitude });
+                    }}
+                    regionCode={selectedCountry?.code || 'TZ'}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery Zone</span>
                   <div className="flex gap-2">
