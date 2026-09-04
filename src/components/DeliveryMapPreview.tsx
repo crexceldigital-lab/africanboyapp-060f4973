@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, MapPin } from 'lucide-react';
-import { loadGoogleMaps, hasMapsBrowserKey } from '@/lib/googleMaps';
+import { loadGoogleMaps, hasMapsBrowserKey, onMapsAuthFailure, isMapsAuthFailed } from '@/lib/googleMaps';
 
 interface DeliveryMapPreviewProps {
   latitude: number | null;
@@ -27,6 +27,15 @@ export default function DeliveryMapPreview({
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
 
   const hasCoords = typeof latitude === 'number' && typeof longitude === 'number';
+
+  // Hide the widget if Google rejects this domain/key at any point.
+  useEffect(() => {
+    if (isMapsAuthFailed()) {
+      setStatus('unavailable');
+      return;
+    }
+    return onMapsAuthFailure(() => setStatus('unavailable'));
+  }, []);
 
   useEffect(() => {
     if (!hasCoords || !hasMapsBrowserKey || status === 'unavailable') return;

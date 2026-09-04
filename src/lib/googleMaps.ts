@@ -19,7 +19,39 @@ declare global {
   interface Window {
     google?: any;
     __abInitGoogleMaps?: () => void;
+    gm_authFailure?: () => void;
   }
+}
+
+/**
+ * Google reports key/referrer/billing problems asynchronously (a grey
+ * "Something went wrong" panel plus gm_authFailure). Subscribers use this to
+ * hide the map instead of showing Google's error panel.
+ */
+const authFailureListeners = new Set<() => void>();
+let authFailed = false;
+
+export function onMapsAuthFailure(cb: () => void) {
+  if (authFailed) {
+    cb();
+    return () => {};
+  }
+  authFailureListeners.add(cb);
+  return () => authFailureListeners.delete(cb);
+}
+
+export function isMapsAuthFailed() {
+  return authFailed;
+}
+
+function markAuthFailed() {
+  authFailed = true;
+  authFailureListeners.forEach((cb) => cb());
+  authFailureListeners.clear();
+}
+
+if (typeof window !== 'undefined') {
+  window.gm_authFailure = markAuthFailed;
 }
 
 let loadPromise: Promise<any> | null = null;
@@ -44,8 +76,9 @@ export function loadGoogleMaps(): Promise<any> {
     const originalError = console.error;
     console.error = (...args: unknown[]) => {
       const text = args.map(String).join(' ');
-      if (text.includes('RefererNotAllowedMapError') || text.includes('ApiNotActivatedMapError')) {
+      if (text.includes('Google Maps JavaScript API') || /MapError|Google Maps.*error/i.test(text)) {
         clearTimeout(timeout);
+        markAuthFailed();
         reject(new Error(text));
       }
       originalError(...args);

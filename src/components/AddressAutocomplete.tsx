@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { loadGoogleMaps, hasMapsBrowserKey } from '@/lib/googleMaps';
+import { loadGoogleMaps, hasMapsBrowserKey, isMapsAuthFailed } from '@/lib/googleMaps';
 
 interface Suggestion {
   placeId: string | null;
@@ -38,7 +38,7 @@ export default function AddressAutocomplete({
   // Richer, session-billed suggestions straight from Places (New) in the browser
   // when the connector browser key works on this domain.
   useEffect(() => {
-    if (!hasMapsBrowserKey || browserPlacesFailed) return;
+    if (!hasMapsBrowserKey || browserPlacesFailed || isMapsAuthFailed()) return;
     let cancelled = false;
     loadGoogleMaps()
       .then(async (maps) => {
