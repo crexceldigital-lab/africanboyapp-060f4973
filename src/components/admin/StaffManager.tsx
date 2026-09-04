@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny } from '@/lib/supabase-helpers';
 import { Store, StoreStaff } from '../../types';
 import { UserCheck, Plus, Trash2, Search, UserX, Shield, Store as StoreIcon, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,17 +31,16 @@ export default function StaffManager() {
     setLoading(true);
     try {
       // 1. Fetch stores
-      const { data: dbStores } = await supabase.from('stores').select('*').order('id');
+      const { data: dbStores } = await fromAny('stores').select('*').order('id');
       if (dbStores) {
-        setStores(dbStores as Store[]);
+        setStores(dbStores as unknown as Store[]);
         if (dbStores.length > 0 && !selectedStoreId) {
           setSelectedStoreId(dbStores[0].id);
         }
       }
 
       // 2. Fetch store staff rows with store object
-      const { data: dbStaff, error: staffErr } = await supabase
-        .from('store_staff')
+      const { data: dbStaff, error: staffErr } = await fromAny('store_staff')
         .select('*, store:stores(*)');
 
       if (staffErr) {
@@ -151,8 +151,7 @@ export default function StaffManager() {
       const targetUserId = lookupData.user_id;
 
       // 3. Attempt insert into store_staff via client (RLS enforces admin permission)
-      const { error: insertErr } = await supabase
-        .from('store_staff')
+      const { error: insertErr } = await fromAny('store_staff')
         .insert({
           user_id: targetUserId,
           store_id: selectedStoreId,
@@ -167,8 +166,7 @@ export default function StaffManager() {
           );
 
           if (updateConfirm) {
-            const { error: updateErr } = await supabase
-              .from('store_staff')
+            const { error: updateErr } = await fromAny('store_staff')
               .update({ staff_role: selectedRole })
               .eq('user_id', targetUserId)
               .eq('store_id', selectedStoreId);
@@ -207,7 +205,7 @@ export default function StaffManager() {
     if (!isConfirmed) return;
 
     try {
-      const { error } = await supabase.from('store_staff').delete().eq('id', id);
+      const { error } = await fromAny('store_staff').delete().eq('id', id);
       if (error) {
         toast.error(`Failed to remove staff assignment: ${error.message}`);
       } else {
