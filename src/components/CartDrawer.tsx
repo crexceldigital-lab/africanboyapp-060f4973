@@ -6,6 +6,7 @@ import { useCountry } from '../context/CountryContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import AddressAutocomplete from './AddressAutocomplete';
+import DeliveryMapPreview from './DeliveryMapPreview';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 
 interface CartDrawerProps {
@@ -333,6 +334,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       setDeliveryCoords({ latitude, longitude });
                     }}
                     regionCode={selectedCountry?.code || 'TZ'}
+                  />
+                  <DeliveryMapPreview
+                    latitude={deliveryCoords.latitude}
+                    longitude={deliveryCoords.longitude}
+                    address={deliveryAddress}
+                    onLocationChange={({ latitude, longitude }) => setDeliveryCoords({ latitude, longitude })}
                   />
                 </div>
 

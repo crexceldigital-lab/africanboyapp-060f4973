@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { loadGoogleMaps, hasMapsBrowserKey } from '@/lib/googleMaps';
 
 interface Suggestion {
   placeId: string | null;
@@ -30,6 +31,29 @@ export default function AddressAutocomplete({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const skipNextFetch = useRef(false);
+  const sessionTokenRef = useRef<any>(null);
+  const browserPlacesRef = useRef<any>(null);
+  const [browserPlacesFailed, setBrowserPlacesFailed] = useState(false);
+
+  // Richer, session-billed suggestions straight from Places (New) in the browser
+  // when the connector browser key works on this domain.
+  useEffect(() => {
+    if (!hasMapsBrowserKey || browserPlacesFailed) return;
+    let cancelled = false;
+    loadGoogleMaps()
+      .then(async (maps) => {
+        const places = await maps.importLibrary('places');
+        if (cancelled) return;
+        browserPlacesRef.current = places;
+        sessionTokenRef.current = new places.AutocompleteSessionToken();
+      })
+      .catch(() => {
+        if (!cancelled) setBrowserPlacesFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [browserPlacesFailed]);
 
   useEffect(() => {
     if (skipNextFetch.current) {
@@ -45,6 +69,34 @@ export default function AddressAutocomplete({
     // Debounced so typing does not fan out one request per keystroke.
     const timer = setTimeout(async () => {
       setLoading(true);
+
+      const places = browserPlacesRef.current;
+      if (places?.AutocompleteSuggestion) {
+        try {
+          const { suggestions: raw } = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: value,
+            sessionToken: sessionTokenRef.current,
+            includedRegionCodes: [regionCode],
+          });
+          if (cancelled) return;
+          setLoading(false);
+          setSuggestions(
+            (raw || [])
+              .slice(0, 5)
+              .map((s: any) => ({
+                placeId: s.placePrediction?.placeId ?? null,
+                description: s.placePrediction?.text?.toString?.() ?? '',
+              }))
+              .filter((s: Suggestion) => s.description)
+          );
+          setOpen(true);
+          return;
+        } catch (e) {
+          console.warn('[maps] browser autocomplete failed, using backend:', e);
+          browserPlacesRef.current = null;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('places-autocomplete', {
         body: { input: value, regionCode },
       });
