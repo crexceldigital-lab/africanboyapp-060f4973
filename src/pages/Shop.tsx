@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Product } from '../types';
 import ProductCard from '../components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny, castProducts } from '@/lib/supabase-helpers';
 import { useCountry } from '../context/CountryContext';
 import { motion } from 'framer-motion';
 
@@ -24,8 +25,7 @@ export default function Shop() {
 
         // 2. Fetch matching store for visitor's country
         const countryCode = selectedCountry?.code || 'TZ';
-        const { data: store } = await supabase
-          .from('stores')
+        const { data: store } = await fromAny('stores')
           .select('id')
           .eq('country_code', countryCode)
           .maybeSingle();
@@ -33,8 +33,7 @@ export default function Shop() {
         const storeId = store?.id || 1;
 
         // 3. Fetch product_store_availability for store
-        const { data: availData } = await supabase
-          .from('product_store_availability')
+        const { data: availData } = await fromAny('product_store_availability')
           .select('product_id, is_available, stock_quantity')
           .eq('store_id', storeId);
 
@@ -52,13 +51,7 @@ export default function Shop() {
         }
 
         if (!error && data) {
-          setProducts(
-            data.map((p: any) => ({
-              ...p,
-              price: Number(p.price),
-              colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
-            }))
-          );
+          setProducts(castProducts(data));
         }
       } catch (err) {
         console.error('Error fetching shop products:', err);

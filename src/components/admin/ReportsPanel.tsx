@@ -15,6 +15,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny, castOrders } from '@/lib/supabase-helpers';
 import { Order, OrderItem, Store } from '../../types';
 import RankedBarList, { RankedItem } from './RankedBarList';
 import RadialStatPair from './RadialStatPair';
@@ -37,14 +38,13 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
   // Fetch active stores
   useEffect(() => {
     const fetchStores = async () => {
-      const { data } = await supabase
-        .from('stores')
+      const { data } = await fromAny('stores')
         .select('*')
         .eq('is_active', true)
         .order('id');
 
       if (data) {
-        setStores(data as Store[]);
+        setStores(data as unknown as Store[]);
       }
     };
     fetchStores();
@@ -136,12 +136,7 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
         if (o.customer_email) emailSet.add(o.customer_email.toLowerCase().trim());
       });
 
-      const parsedOrders: Order[] = (rangeData || []).map((o: any) => ({
-        ...o,
-        total_amount: Number(o.total_amount) || 0,
-        delivery_fee: Number(o.delivery_fee) || 0,
-        items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
-      }));
+      const parsedOrders = castOrders(rangeData || []);
 
       setOrders(parsedOrders);
       setPriorEmails(emailSet);

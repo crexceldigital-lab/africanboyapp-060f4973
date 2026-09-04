@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, Country, ExchangeRate } from '../types';
 import { MOCK_COUNTRIES, MOCK_EXCHANGE_RATES } from '../data/mockData';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny } from '@/lib/supabase-helpers';
 import { detectCountryCode } from '../lib/detectCountry';
 
 interface CountryContextType {
@@ -35,21 +36,19 @@ export function CountryProvider({ children }: { children: ReactNode }) {
 
     const fetchDatabaseData = async () => {
       try {
-        const { data: dbCountries } = await supabase
-          .from('countries')
+        const { data: dbCountries } = await fromAny('countries')
           .select('*')
           .eq('is_active', true);
 
-        const { data: dbRates } = await supabase
-          .from('exchange_rates')
+        const { data: dbRates } = await fromAny('exchange_rates')
           .select('*');
 
         if (active) {
           if (dbCountries && dbCountries.length > 0) {
-            setCountries(dbCountries as Country[]);
+            setCountries(dbCountries as unknown as Country[]);
           }
           if (dbRates && dbRates.length > 0) {
-            setExchangeRates(dbRates as ExchangeRate[]);
+            setExchangeRates(dbRates as unknown as ExchangeRate[]);
           }
         }
       } catch (err) {
