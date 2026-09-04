@@ -10,13 +10,13 @@ import {
   AlertCircle,
   RefreshCw,
   Edit2,
-  CheckCircle2,
   X,
-  User,
+  Store as StoreIcon,
   MapPin,
-  Briefcase,
-  SlidersHorizontal,
-  ChevronDown
+  Building2,
+  Users,
+  CheckCircle2,
+  Power
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -33,6 +33,23 @@ interface UserSearchResult {
   full_name: string | null;
 }
 
+interface CountryMeta {
+  name: string;
+  code: string;
+  currency: string;
+  flag: string;
+}
+
+const SUPPORTED_COUNTRIES: CountryMeta[] = [
+  { name: 'Tanzania', code: 'TZ', currency: 'TZS', flag: '🇹🇿' },
+  { name: 'Nigeria', code: 'NG', currency: 'NGN', flag: '🇳🇬' },
+  { name: 'Kenya', code: 'KE', currency: 'KES', flag: '🇰🇪' },
+  { name: 'Uganda', code: 'UG', currency: 'UGX', flag: '🇺🇬' },
+  { name: 'Ghana', code: 'GH', currency: 'GHS', flag: '🇬🇭' },
+  { name: 'Rwanda', code: 'RW', currency: 'RWF', flag: '🇷🇼' },
+  { name: 'South Africa', code: 'ZA', currency: 'ZAR', flag: '🇿🇦' },
+];
+
 export default function StaffManager() {
   const [staffList, setStaffList] = useState<EnrichedStaff[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -47,19 +64,50 @@ export default function StaffManager() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
 
-  // Form State
+  // Form State for Assigning Staff
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<'sales_rep' | 'store_manager'>('sales_rep');
   const [inlineAlert, setInlineAlert] = useState<{ type: 'error' | 'warning' | 'success'; message: string } | null>(null);
 
-  // Edit Modal State
+  // Create Store Modal State
+  const [isCreateStoreOpen, setIsCreateStoreOpen] = useState(false);
+  const [creatingStore, setCreatingStore] = useState(false);
+  const [createStoreError, setCreateStoreError] = useState<string | null>(null);
+  const [newStoreForm, setNewStoreForm] = useState({
+    name: '',
+    country: 'Tanzania',
+    location_name: '',
+    store_code: '',
+    address: '',
+    city: '',
+    phone: '',
+    email: '',
+    status: 'active' as 'active' | 'inactive',
+  });
+
+  // Edit Store Modal State
+  const [editingStore, setEditingStore] = useState<Store | null>(null);
+  const [updatingStore, setUpdatingStore] = useState(false);
+  const [editStoreForm, setEditStoreForm] = useState({
+    name: '',
+    country: 'Tanzania',
+    location_name: '',
+    store_code: '',
+    address: '',
+    city: '',
+    phone: '',
+    email: '',
+    status: 'active' as 'active' | 'inactive',
+  });
+
+  // Edit Staff Modal State
   const [editingStaff, setEditingStaff] = useState<EnrichedStaff | null>(null);
   const [editStoreId, setEditStoreId] = useState<number>(1);
   const [editRole, setEditRole] = useState<'sales_rep' | 'store_manager'>('sales_rep');
   const [editStatus, setEditStatus] = useState<string>('active');
   const [updatingStaff, setUpdatingStaff] = useState(false);
 
-  // Filter State
+  // Filter State for Staff Table
   const [searchQuery, setSearchQuery] = useState('');
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -67,8 +115,16 @@ export default function StaffManager() {
 
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch stores dynamically from database
-  const fetchStores = async () => {
+  // Helper for country flags
+  const getCountryFlag = (countryCode?: string, countryName?: string) => {
+    const match = SUPPORTED_COUNTRIES.find(
+      (c) => c.code === countryCode || c.name.toLowerCase() === countryName?.toLowerCase()
+    );
+    return match ? match.flag : '🌍';
+  };
+
+  // 1. Fetch stores dynamically from database & compute staff counts
+  const fetchStores = async (currentStaff?: EnrichedStaff[]) => {
     setStoresLoading(true);
     try {
       const { data: dbStores, error } = await fromAny('stores').select('*').order('id');
@@ -76,11 +132,32 @@ export default function StaffManager() {
         console.error('Error fetching stores:', error);
         toast.error('Failed to load stores from database');
       } else if (dbStores && dbStores.length > 0) {
-        const castedStores = dbStores as unknown as Store[];
+        const activeStaffList = currentStaff || staffList;
+        
+        // Count assigned staff per store
+        const countMap = new Map<number, number>();
+        activeStaffList.forEach((s) => {
+          countMap.set(s.store_id, (countMap.get(s.store_id) || 0) + 1);
+        });
+
+        const castedStores: Store[] = (dbStores as any[]).map((st) => ({
+          ...st,
+          is_active: st.status ? st.status === 'active' : st.is_active ?? true,
+          staff_count: countMap.get(st.id) || 0,
+        }));
+
         setStores(castedStores);
-        setSelectedStoreId((prev) => (prev !== null ? prev : castedStores[0].id));
+
+        // Auto-select first active store if none selected
+        const activeStores = castedStores.filter((st) => st.status === 'active' || st.is_active);
+        if (activeStores.length > 0) {
+          setSelectedStoreId((prev) => (prev !== null && activeStores.some((s) => s.id === prev) ? prev : activeStores[0].id));
+        } else {
+          setSelectedStoreId(null);
+        }
       } else {
         setStores([]);
+        setSelectedStoreId(null);
       }
     } catch (err) {
       console.error('Error in fetchStores:', err);
@@ -105,6 +182,7 @@ export default function StaffManager() {
 
       if (!dbStaff || dbStaff.length === 0) {
         setStaffList([]);
+        fetchStores([]);
         setLoading(false);
         return;
       }
@@ -112,8 +190,9 @@ export default function StaffManager() {
       // Resolve user details via lookup-user-by-email Edge Function
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-
       const userIds = Array.from(new Set(dbStaff.map((s: any) => s.user_id)));
+
+      let enriched: EnrichedStaff[] = [];
 
       if (token && userIds.length > 0) {
         const res = await supabase.functions.invoke('lookup-user-by-email', {
@@ -126,7 +205,7 @@ export default function StaffManager() {
             res.data.users.map((u: any) => [u.user_id, { email: u.email, full_name: u.full_name }])
           );
 
-          const enriched: EnrichedStaff[] = dbStaff.map((s: any) => {
+          enriched = dbStaff.map((s: any) => {
             const userInfo = userMap.get(s.user_id);
             return {
               ...s,
@@ -134,15 +213,15 @@ export default function StaffManager() {
               user_name: userInfo?.full_name || null,
             };
           });
-
-          setStaffList(enriched);
-          setLoading(false);
-          return;
+        } else {
+          enriched = dbStaff.map((s: any) => ({ ...s, user_email: s.user_id }));
         }
+      } else {
+        enriched = dbStaff.map((s: any) => ({ ...s, user_email: s.user_id }));
       }
 
-      // Fallback if Edge function returned empty
-      setStaffList(dbStaff.map((s: any) => ({ ...s, user_email: s.user_id })));
+      setStaffList(enriched);
+      fetchStores(enriched);
     } catch (err) {
       console.error('Error in fetchStaffData:', err);
     } finally {
@@ -151,7 +230,6 @@ export default function StaffManager() {
   };
 
   useEffect(() => {
-    fetchStores();
     fetchStaffData();
   }, []);
 
@@ -168,10 +246,9 @@ export default function StaffManager() {
 
   // Live registered user search (debounced)
   useEffect(() => {
-    if (selectedUser) return; // Skip searching if a user is already selected
+    if (selectedUser) return;
 
     const timer = setTimeout(async () => {
-      const q = userQuery.trim();
       setIsSearchingUsers(true);
       try {
         const { data: sessionData } = await supabase.auth.getSession();
@@ -182,7 +259,7 @@ export default function StaffManager() {
         }
 
         const res = await supabase.functions.invoke('lookup-user-by-email', {
-          body: { query: q },
+          body: { query: userQuery.trim() },
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -202,7 +279,193 @@ export default function StaffManager() {
     return () => clearTimeout(timer);
   }, [userQuery, selectedUser]);
 
-  // Handle assigning new staff
+  // Create New Store Handler
+  const handleCreateStoreSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateStoreError(null);
+
+    const storeName = newStoreForm.name.trim();
+    if (!storeName) {
+      setCreateStoreError('Store name is required.');
+      return;
+    }
+
+    if (!newStoreForm.country) {
+      setCreateStoreError('Country selection is required.');
+      return;
+    }
+
+    // Check duplicate store name in state
+    if (stores.some((s) => s.name.toLowerCase() === storeName.toLowerCase())) {
+      setCreateStoreError(`A store with the name "${storeName}" already exists.`);
+      return;
+    }
+
+    // Check duplicate store code if provided
+    if (
+      newStoreForm.store_code.trim() &&
+      stores.some((s) => s.store_code && s.store_code.toLowerCase() === newStoreForm.store_code.trim().toLowerCase())
+    ) {
+      setCreateStoreError(`A store with code "${newStoreForm.store_code.trim()}" already exists.`);
+      return;
+    }
+
+    setCreatingStore(true);
+    try {
+      const countryMeta = SUPPORTED_COUNTRIES.find((c) => c.name === newStoreForm.country) || {
+        code: 'TZ',
+        currency: 'TZS',
+      };
+
+      const payload = {
+        name: storeName,
+        country: newStoreForm.country,
+        country_code: countryMeta.code,
+        currency_code: countryMeta.currency,
+        location_name: newStoreForm.location_name.trim() || null,
+        store_code: newStoreForm.store_code.trim() || null,
+        address: newStoreForm.address.trim() || null,
+        city: newStoreForm.city.trim() || null,
+        phone: newStoreForm.phone.trim() || null,
+        email: newStoreForm.email.trim() || null,
+        status: newStoreForm.status,
+        is_active: newStoreForm.status === 'active',
+      };
+
+      const { data: newStore, error } = await fromAny('stores').insert(payload).select().single();
+
+      if (error) {
+        console.error('Error creating store:', error);
+        setCreateStoreError(error.message || 'Failed to create store.');
+      } else {
+        toast.success(`Store "${storeName}" created successfully!`);
+        setIsCreateStoreOpen(false);
+        setNewStoreForm({
+          name: '',
+          country: 'Tanzania',
+          location_name: '',
+          store_code: '',
+          address: '',
+          city: '',
+          phone: '',
+          email: '',
+          status: 'active',
+        });
+
+        // Refresh stores & set auto-selected ID to new store
+        await fetchStaffData();
+        if (newStore?.id) {
+          setSelectedStoreId(newStore.id);
+        }
+      }
+    } catch (err: any) {
+      console.error('Unexpected error creating store:', err);
+      setCreateStoreError(err.message || 'An unexpected error occurred.');
+    } finally {
+      setCreatingStore(false);
+    }
+  };
+
+  // Open Edit Store Modal
+  const handleOpenEditStore = (st: Store) => {
+    setEditingStore(st);
+    setEditStoreForm({
+      name: st.name || '',
+      country: st.country || 'Tanzania',
+      location_name: st.location_name || '',
+      store_code: st.store_code || '',
+      address: st.address || '',
+      city: st.city || '',
+      phone: st.phone || '',
+      email: st.email || '',
+      status: (st.status as 'active' | 'inactive') || 'active',
+    });
+  };
+
+  // Edit Store Submit Handler
+  const handleSaveEditStore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStore) return;
+
+    const storeName = editStoreForm.name.trim();
+    if (!storeName) {
+      toast.error('Store name is required.');
+      return;
+    }
+
+    setUpdatingStore(true);
+    try {
+      const countryMeta = SUPPORTED_COUNTRIES.find((c) => c.name === editStoreForm.country) || {
+        code: editingStore.country_code || 'TZ',
+        currency: editingStore.currency_code || 'TZS',
+      };
+
+      const payload = {
+        name: storeName,
+        country: editStoreForm.country,
+        country_code: countryMeta.code,
+        currency_code: countryMeta.currency,
+        location_name: editStoreForm.location_name.trim() || null,
+        store_code: editStoreForm.store_code.trim() || null,
+        address: editStoreForm.address.trim() || null,
+        city: editStoreForm.city.trim() || null,
+        phone: editStoreForm.phone.trim() || null,
+        email: editStoreForm.email.trim() || null,
+        status: editStoreForm.status,
+        is_active: editStoreForm.status === 'active',
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await fromAny('stores').update(payload).eq('id', editingStore.id);
+
+      if (error) {
+        toast.error(`Failed to update store: ${error.message}`);
+      } else {
+        toast.success(`Store "${storeName}" updated successfully.`);
+        setEditingStore(null);
+        fetchStaffData();
+      }
+    } catch (err) {
+      console.error('Error updating store:', err);
+      toast.error('Failed to update store.');
+    } finally {
+      setUpdatingStore(false);
+    }
+  };
+
+  // Toggle Store Status (Activate / Deactivate)
+  const handleToggleStoreStatus = async (st: Store) => {
+    const newStatus = st.status === 'active' ? 'inactive' : 'active';
+    const actionText = newStatus === 'active' ? 'activate' : 'deactivate';
+
+    const isConfirmed = confirm(
+      `Are you sure you want to ${actionText} "${st.name}"?\n\n${
+        newStatus === 'inactive'
+          ? 'Deactivated stores will no longer be selectable for new staff assignments, but historical staff records and orders will remain intact.'
+          : 'Re-activating this store will allow administrators to assign staff to it again.'
+      }`
+    );
+
+    if (!isConfirmed) return;
+
+    try {
+      const { error } = await fromAny('stores')
+        .update({ status: newStatus, is_active: newStatus === 'active', updated_at: new Date().toISOString() })
+        .eq('id', st.id);
+
+      if (error) {
+        toast.error(`Failed to ${actionText} store: ${error.message}`);
+      } else {
+        toast.success(`Store "${st.name}" set to ${newStatus}.`);
+        fetchStaffData();
+      }
+    } catch (err) {
+      console.error('Error toggling store status:', err);
+      toast.error('Failed to change store status.');
+    }
+  };
+
+  // Assign New Staff Member Submit Handler
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setInlineAlert(null);
@@ -218,7 +481,7 @@ export default function StaffManager() {
     if (!selectedStoreId) {
       setInlineAlert({
         type: 'error',
-        message: 'No store selected. Please select a valid store location.',
+        message: 'No store selected. Please create or select an active store location.',
       });
       return;
     }
@@ -250,7 +513,6 @@ export default function StaffManager() {
       });
 
       if (insertErr) {
-        // Catch duplicate constraint error (user already assigned to this store)
         if (
           insertErr.code === '23505' ||
           insertErr.message?.includes('duplicate key') ||
@@ -301,16 +563,16 @@ export default function StaffManager() {
     }
   };
 
-  // Open edit modal
-  const handleOpenEdit = (staff: EnrichedStaff) => {
+  // Open edit staff modal
+  const handleOpenEditStaff = (staff: EnrichedStaff) => {
     setEditingStaff(staff);
     setEditStoreId(staff.store_id);
     setEditRole((staff.staff_role as any) || 'sales_rep');
     setEditStatus(staff.status || 'active');
   };
 
-  // Save edited assignment
-  const handleSaveEdit = async (e: React.FormEvent) => {
+  // Save edited staff assignment
+  const handleSaveEditStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStaff) return;
 
@@ -340,10 +602,10 @@ export default function StaffManager() {
     }
   };
 
-  // Remove / Deactivate staff assignment
+  // Remove staff assignment
   const handleRemoveStaff = async (id: string, staffEmail?: string) => {
     const isConfirmed = confirm(
-      `Are you sure you want to remove the store staff assignment for ${staffEmail || 'this user'}?\n\nIMPORTANT: The user's authentication account will remain intact. Only the store assignment relationship (User ↔ Store ↔ Role) will be removed.`
+      `Are you sure you want to remove the store staff assignment for ${staffEmail || 'this user'}?\n\nIMPORTANT: The user's authentication account will remain intact. Only the store assignment relationship (User ↔ Store ↔ Role) will be deleted.`
     );
 
     if (!isConfirmed) return;
@@ -362,14 +624,8 @@ export default function StaffManager() {
     }
   };
 
-  // Helper for country flags
-  const getCountryFlag = (countryCode?: string, countryName?: string) => {
-    if (countryCode === 'TZ' || countryName?.toLowerCase() === 'tanzania') return '🇹🇿';
-    if (countryCode === 'NG' || countryName?.toLowerCase() === 'nigeria') return '🇳🇬';
-    if (countryCode === 'KE' || countryName?.toLowerCase() === 'kenya') return '🇰🇪';
-    if (countryCode === 'UG' || countryName?.toLowerCase() === 'uganda') return '🇺🇬';
-    return '🌍';
-  };
+  // Filter stores available for assignment (only active stores)
+  const activeAssignableStores = stores.filter((s) => s.status === 'active' || s.is_active);
 
   // Filter staff list based on filters & search query
   const filteredStaff = staffList.filter((s) => {
@@ -399,19 +655,24 @@ export default function StaffManager() {
             STORE <span className="text-primary">STAFF ASSIGNMENTS</span>
           </h2>
           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
-            Assign existing user accounts to Tanzania, Nigeria, and regional store operations
+            Manage African Boy stores and assign registered staff across Tanzania, Nigeria, and regional operations
           </p>
         </div>
-        <button
-          onClick={() => {
-            fetchStores();
-            fetchStaffData();
-          }}
-          disabled={loading || storesLoading}
-          className="px-4 py-2.5 bg-card border border-foreground/10 hover:border-primary text-foreground rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm"
-        >
-          <RefreshCw size={14} className={loading || storesLoading ? 'animate-spin text-primary' : ''} /> Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsCreateStoreOpen(true)}
+            className="px-4 py-2.5 bg-primary text-primary-foreground font-black rounded-2xl text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-md"
+          >
+            <Plus size={16} /> Create Store
+          </button>
+          <button
+            onClick={() => fetchStaffData()}
+            disabled={loading || storesLoading}
+            className="px-4 py-2.5 bg-card border border-foreground/10 hover:border-primary text-foreground rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm"
+          >
+            <RefreshCw size={14} className={loading || storesLoading ? 'animate-spin text-primary' : ''} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* SECTION 1: ASSIGN NEW STAFF FORM */}
@@ -421,11 +682,30 @@ export default function StaffManager() {
             <UserCheck className="text-primary" size={18} /> ASSIGN NEW STORE STAFF
           </h3>
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">
-            Search for an existing registered user account and assign them to a country store location
+            Search for an existing registered user account and assign them to an active store location
           </p>
         </div>
 
-        {inlineAlert && (
+        {/* Empty Store Warning / Alert Banner */}
+        {stores.length === 0 && !storesLoading ? (
+          <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={20} className="shrink-0" />
+              <div>
+                <p className="font-bold text-xs">No stores available. Create a store first.</p>
+                <p className="text-[11px] opacity-90">
+                  Before you can assign staff members, you must create at least one store location (e.g., African Boy Tanzania).
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsCreateStoreOpen(true)}
+              className="px-4 py-2 bg-primary text-primary-foreground font-black rounded-xl text-xs uppercase tracking-widest flex items-center gap-1.5 shrink-0 hover:scale-[1.02] transition-all"
+            >
+              <Plus size={14} /> + CREATE STORE
+            </button>
+          </div>
+        ) : inlineAlert ? (
           <div
             className={`p-4 rounded-2xl border text-xs font-medium flex items-start gap-3 ${
               inlineAlert.type === 'warning'
@@ -438,21 +718,16 @@ export default function StaffManager() {
             <AlertCircle size={18} className="shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="font-bold">{inlineAlert.message}</p>
-              {inlineAlert.type === 'warning' && (
-                <p className="text-[11px] opacity-90">
-                  User accounts must exist before assignment. Ask staff members to register on the website or mobile app first.
-                </p>
-              )}
             </div>
           </div>
-        )}
+        ) : null}
 
         <form onSubmit={handleAssignSubmit} className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
             {/* Field 1: User Search & Selection Combobox */}
             <div className="sm:col-span-6 space-y-2 relative" ref={searchBoxRef}>
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">
-                Select Staff Member (Search Existing Users)
+                Select Staff Member (Search Registered Users)
               </label>
 
               {selectedUser ? (
@@ -515,7 +790,7 @@ export default function StaffManager() {
                           {userQuery.trim() ? (
                             <p>No existing user found matching &quot;{userQuery}&quot;.</p>
                           ) : (
-                            <p>Start typing an email address or name to search existing users.</p>
+                            <p>Start typing an email address or name to search registered users.</p>
                           )}
                         </div>
                       ) : (
@@ -563,9 +838,16 @@ export default function StaffManager() {
                   <div className="w-3.5 h-3.5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                   Loading stores...
                 </div>
-              ) : stores.length === 0 ? (
-                <div className="w-full px-5 py-3.5 bg-destructive/10 border border-destructive/20 rounded-2xl text-[11px] font-bold text-destructive">
-                  No stores available. Create a store first.
+              ) : activeAssignableStores.length === 0 ? (
+                <div className="w-full px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-2xl text-[11px] font-bold text-destructive flex items-center justify-between gap-2">
+                  <span>No active store available.</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateStoreOpen(true)}
+                    className="text-[10px] font-black underline uppercase"
+                  >
+                    + Create Store
+                  </button>
                 </div>
               ) : (
                 <select
@@ -573,7 +855,7 @@ export default function StaffManager() {
                   onChange={(e) => setSelectedStoreId(Number(e.target.value))}
                   className="w-full px-5 py-3.5 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
                 >
-                  {stores.map((s) => (
+                  {activeAssignableStores.map((s) => (
                     <option key={s.id} value={s.id} className="bg-card text-foreground font-bold">
                       {getCountryFlag(s.country_code, s.country)} {s.country || s.name} ({s.country_code})
                     </option>
@@ -606,7 +888,7 @@ export default function StaffManager() {
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              disabled={submitting || !selectedUser || stores.length === 0}
+              disabled={submitting || !selectedUser || activeAssignableStores.length === 0}
               className="px-8 py-3.5 bg-primary text-primary-foreground font-black rounded-2xl text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
@@ -621,8 +903,122 @@ export default function StaffManager() {
         </form>
       </div>
 
-      {/* SECTION 2: ACTIVE STAFF TABLE & FILTERS */}
+      {/* SECTION 2: STORE MANAGEMENT (STORES OVERVIEW) */}
       <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-black italic uppercase tracking-tight flex items-center gap-2">
+              <Building2 className="text-primary" size={20} /> STORES & OPERATIONAL LOCATIONS
+            </h3>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">
+              Overview of active stores, regional locations, and staff allocations
+            </p>
+          </div>
+          <button
+            onClick={() => setIsCreateStoreOpen(true)}
+            className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
+          >
+            <Plus size={15} /> + Add Store
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {storesLoading ? (
+            <div className="col-span-full py-8 text-center text-xs text-muted-foreground font-bold flex items-center justify-center gap-2">
+              <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              Loading store details...
+            </div>
+          ) : stores.length === 0 ? (
+            <div className="col-span-full p-8 bg-card border border-foreground/5 rounded-[32px] text-center space-y-3">
+              <StoreIcon className="mx-auto text-muted-foreground opacity-50" size={32} />
+              <p className="font-black text-sm text-foreground uppercase tracking-tight">No Stores Created Yet</p>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                Create initial operational stores (e.g. African Boy Tanzania, African Boy Nigeria) to start assigning staff.
+              </p>
+              <button
+                onClick={() => setIsCreateStoreOpen(true)}
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase tracking-widest inline-flex items-center gap-2 hover:scale-[1.02] transition-all shadow-md"
+              >
+                <Plus size={16} /> + CREATE STORE
+              </button>
+            </div>
+          ) : (
+            stores.map((st) => {
+              const flag = getCountryFlag(st.country_code, st.country);
+              const isActive = st.status === 'active' || st.is_active;
+
+              return (
+                <div
+                  key={st.id}
+                  className={`bg-card border rounded-[28px] p-5 shadow-lg space-y-4 transition-all relative overflow-hidden ${
+                    isActive ? 'border-foreground/10 hover:border-primary/50' : 'border-destructive/20 opacity-75'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shrink-0">
+                        {flag}
+                      </div>
+                      <div>
+                        <h4 className="font-black text-foreground text-sm uppercase tracking-tight leading-tight">
+                          {st.name}
+                        </h4>
+                        <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <MapPin size={11} className="text-primary" /> {st.country || 'Global'} ({st.country_code})
+                          {st.location_name && <span>• {st.location_name}</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        isActive
+                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                          : 'bg-destructive/10 text-destructive border-destructive/20'
+                      }`}
+                    >
+                      {isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+
+                  {/* Info Meta Pill Bar */}
+                  <div className="flex items-center justify-between text-xs pt-2 border-t border-foreground/5">
+                    <div className="flex items-center gap-1.5 text-muted-foreground font-bold">
+                      <Users size={14} className="text-primary" />
+                      <span className="text-foreground font-black">{st.staff_count || 0}</span>
+                      <span className="text-[10px] uppercase tracking-wider">Assigned Staff</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenEditStore(st)}
+                        className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-xl transition-all"
+                        title="Edit Store Details"
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleToggleStoreStatus(st)}
+                        className={`p-2 rounded-xl transition-all ${
+                          isActive
+                            ? 'hover:bg-amber-500/10 text-muted-foreground hover:text-amber-500'
+                            : 'hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500'
+                        }`}
+                        title={isActive ? 'Deactivate Store' : 'Activate Store'}
+                      >
+                        <Power size={15} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* SECTION 3: ACTIVE STAFF TABLE & FILTERS */}
+      <div className="space-y-4 pt-4">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-black italic uppercase tracking-tight">ACTIVE STORE STAFF MEMBERS</h3>
@@ -726,7 +1122,13 @@ export default function StaffManager() {
                         })
                       : 'N/A';
 
-                    const countryName = st.store?.country || (st.store?.country_code === 'TZ' ? 'Tanzania' : st.store?.country_code === 'NG' ? 'Nigeria' : 'Global');
+                    const countryName =
+                      st.store?.country ||
+                      (st.store?.country_code === 'TZ'
+                        ? 'Tanzania'
+                        : st.store?.country_code === 'NG'
+                        ? 'Nigeria'
+                        : 'Global');
                     const flag = getCountryFlag(st.store?.country_code, countryName);
 
                     return (
@@ -796,7 +1198,7 @@ export default function StaffManager() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
-                              onClick={() => handleOpenEdit(st)}
+                              onClick={() => handleOpenEditStaff(st)}
                               className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-xl transition-all"
                               title="Edit Staff Assignment"
                             >
@@ -821,6 +1223,305 @@ export default function StaffManager() {
         </div>
       </div>
 
+      {/* CREATE NEW STORE MODAL */}
+      {isCreateStoreOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-foreground/10 rounded-[32px] p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black italic uppercase tracking-tight flex items-center gap-2">
+                  <Building2 className="text-primary" size={20} /> CREATE NEW STORE
+                </h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">
+                  Set up a new store or country operational branch for African Boy
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCreateStoreOpen(false)}
+                className="p-2 hover:bg-foreground/10 rounded-xl text-muted-foreground transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {createStoreError && (
+              <div className="p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{createStoreError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateStoreSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Store Name */}
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Store Name <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newStoreForm.name}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, name: e.target.value })}
+                    placeholder="e.g. African Boy Tanzania"
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  />
+                </div>
+
+                {/* Country */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Country <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={newStoreForm.country}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, country: e.target.value })}
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  >
+                    {SUPPORTED_COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.name} className="bg-card text-foreground font-bold">
+                        {c.flag} {c.name} ({c.currency})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Store / Location Name */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Location / Branch Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newStoreForm.location_name}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, location_name: e.target.value })}
+                    placeholder="e.g. Tanzania Operations"
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  />
+                </div>
+
+                {/* Store Code */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Store Code (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newStoreForm.store_code}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, store_code: e.target.value })}
+                    placeholder="e.g. TZ-001"
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  />
+                </div>
+
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Initial Status
+                  </label>
+                  <select
+                    value={newStoreForm.status}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, status: e.target.value as any })}
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  >
+                    <option value="active" className="bg-card text-foreground font-bold">
+                      Active
+                    </option>
+                    <option value="inactive" className="bg-card text-foreground font-bold">
+                      Inactive
+                    </option>
+                  </select>
+                </div>
+
+                {/* Optional Address Fields */}
+                <div className="sm:col-span-2 space-y-1.5 pt-2 border-t border-foreground/5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-primary">Optional Information</p>
+                </div>
+
+                {/* City */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={newStoreForm.city}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, city: e.target.value })}
+                    placeholder="e.g. Dar es Salaam"
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={newStoreForm.phone}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, phone: e.target.value })}
+                    placeholder="e.g. +255..."
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-foreground/5">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateStoreOpen(false)}
+                  className="px-5 py-2.5 bg-foreground/5 hover:bg-foreground/10 text-muted-foreground rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingStore}
+                  className="px-6 py-2.5 bg-primary text-primary-foreground font-black rounded-2xl text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-md flex items-center gap-2"
+                >
+                  {creatingStore ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
+                  ) : (
+                    <>
+                      <Plus size={16} /> Create Store
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT STORE DETAILS MODAL */}
+      {editingStore && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-foreground/10 rounded-[32px] p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black italic uppercase tracking-tight flex items-center gap-2">
+                  <Edit2 className="text-primary" size={18} /> EDIT STORE DETAILS
+                </h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">
+                  Update configuration for {editingStore.name}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingStore(null)}
+                className="p-2 hover:bg-foreground/10 rounded-xl text-muted-foreground transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditStore} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Store Name */}
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Store Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editStoreForm.name}
+                    onChange={(e) => setEditStoreForm({ ...editStoreForm, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  />
+                </div>
+
+                {/* Country */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Country
+                  </label>
+                  <select
+                    value={editStoreForm.country}
+                    onChange={(e) => setEditStoreForm({ ...editStoreForm, country: e.target.value })}
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  >
+                    {SUPPORTED_COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.name} className="bg-card text-foreground font-bold">
+                        {c.flag} {c.name} ({c.currency})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Status
+                  </label>
+                  <select
+                    value={editStoreForm.status}
+                    onChange={(e) => setEditStoreForm({ ...editStoreForm, status: e.target.value as any })}
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  >
+                    <option value="active" className="bg-card text-foreground font-bold">
+                      Active
+                    </option>
+                    <option value="inactive" className="bg-card text-foreground font-bold">
+                      Inactive
+                    </option>
+                  </select>
+                </div>
+
+                {/* Location Name */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Location Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editStoreForm.location_name}
+                    onChange={(e) => setEditStoreForm({ ...editStoreForm, location_name: e.target.value })}
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  />
+                </div>
+
+                {/* Store Code */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Store Code
+                  </label>
+                  <input
+                    type="text"
+                    value={editStoreForm.store_code}
+                    onChange={(e) => setEditStoreForm({ ...editStoreForm, store_code: e.target.value })}
+                    className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-foreground/5">
+                <button
+                  type="button"
+                  onClick={() => setEditingStore(null)}
+                  className="px-5 py-2.5 bg-foreground/5 hover:bg-foreground/10 text-muted-foreground rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingStore}
+                  className="px-6 py-2.5 bg-primary text-primary-foreground font-black rounded-2xl text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-md flex items-center gap-2"
+                >
+                  {updatingStore ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* EDIT STAFF ASSIGNMENT MODAL */}
       {editingStaff && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -842,7 +1543,7 @@ export default function StaffManager() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-4">
+            <form onSubmit={handleSaveEditStaff} className="space-y-4">
               {/* User Readonly Details */}
               <div className="p-3.5 bg-background/50 border border-foreground/10 rounded-2xl space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Staff Account</p>

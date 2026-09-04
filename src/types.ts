@@ -83,10 +83,17 @@ export interface Store {
   country_code: string;
   currency_code: string;
   country?: string;
+  location_name?: string;
+  store_code?: string;
+  address?: string;
+  city?: string;
+  phone?: string;
+  email?: string;
   status?: string;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+  staff_count?: number;
 }
 
 export interface ProductStoreAvailability {
