@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { castOrders } from '@/lib/supabase-helpers';
+import { fromAny, castOrders } from '@/lib/supabase-helpers';
 import { Order, Customer, StoreStaff, Store } from '../types';
 import { useCountry } from '../context/CountryContext';
 import { ShoppingBag, Users, Eye, RefreshCw, LogOut, Store as StoreIcon, ShieldCheck } from 'lucide-react';

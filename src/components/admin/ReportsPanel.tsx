@@ -120,8 +120,7 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
       const { data: rangeData } = await query;
 
       // 2. Query prior customer emails for new customer metric
-      let priorQuery = supabase
-        .from('orders')
+      let priorQuery = fromAny('orders')
         .select('customer_email')
         .lt('created_at', start.toISOString());
 
