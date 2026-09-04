@@ -182,7 +182,7 @@ export default function StaffManager() {
         }
 
         const res = await supabase.functions.invoke('lookup-user-by-email', {
-          body: { query: userQuery.trim() },
+          body: { query: q },
           headers: { Authorization: `Bearer ${token}` },
         });
 
