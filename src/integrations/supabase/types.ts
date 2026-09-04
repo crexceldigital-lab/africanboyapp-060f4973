@@ -50,6 +50,7 @@ export type Database = {
           payment_reference: string | null
           snippe_checkout_url: string | null
           status: string
+          store_id: number | null
           total_amount: number
           updated_at: string | null
           user_id: string | null
@@ -71,6 +72,7 @@ export type Database = {
           payment_reference?: string | null
           snippe_checkout_url?: string | null
           status?: string
+          store_id?: number | null
           total_amount?: number
           updated_at?: string | null
           user_id?: string | null
@@ -92,11 +94,20 @@ export type Database = {
           payment_reference?: string | null
           snippe_checkout_url?: string | null
           status?: string
+          store_id?: number | null
           total_amount?: number
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -164,6 +175,98 @@ export type Database = {
           id?: string
           phone_number?: string | null
           vip_tier?: string | null
+        }
+        Relationships: []
+      }
+      store_staff: {
+        Row: {
+          created_at: string
+          id: string
+          staff_role: string
+          status: string
+          store_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          staff_role?: string
+          status?: string
+          store_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          staff_role?: string
+          status?: string
+          store_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_staff_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string
+          country_code: string
+          created_at: string
+          currency_code: string
+          email: string | null
+          id: number
+          is_active: boolean
+          location_name: string | null
+          name: string
+          phone: string | null
+          status: string
+          store_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string
+          country_code?: string
+          created_at?: string
+          currency_code?: string
+          email?: string | null
+          id?: number
+          is_active?: boolean
+          location_name?: string | null
+          name: string
+          phone?: string | null
+          status?: string
+          store_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string
+          country_code?: string
+          created_at?: string
+          currency_code?: string
+          email?: string | null
+          id?: number
+          is_active?: boolean
+          location_name?: string | null
+          name?: string
+          phone?: string | null
+          status?: string
+          store_code?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
