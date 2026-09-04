@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny, castOrders } from '@/lib/supabase-helpers';
 import { Order, Customer, StoreStaff, Store } from '../types';
 import { useCountry } from '../context/CountryContext';
 import { ShoppingBag, Users, Eye, RefreshCw, LogOut, Store as StoreIcon, ShieldCheck } from 'lucide-react';
@@ -25,15 +26,15 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
   const fetchStaffData = async () => {
     setLoading(true);
     try {
-      // Fetch orders for staff store_id
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
+      // Fetch orders for staff store_id (use fromAny to avoid stale
+      // generated-types deep-instantiation errors)
+      const { data: ordersData, error: ordersError } = await fromAny('orders')
         .select('*')
         .eq('store_id', staffAssignment.store_id)
         .order('created_at', { ascending: false });
 
       if (!ordersError && ordersData) {
-        const ords = ordersData as Order[];
+        const ords = castOrders(ordersData);
         setOrders(ords);
 
         // Map unique customers from store orders

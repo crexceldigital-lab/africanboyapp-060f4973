@@ -6,6 +6,7 @@ import { NavTab, StoreStaff, Store } from '../../types';
 import AdminLogin from '../../pages/AdminLogin';
 import StaffDashboard from '../../pages/StaffDashboard';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny } from '@/lib/supabase-helpers';
 
 interface RequireAdminProps {
   children: ReactNode;
@@ -27,8 +28,7 @@ export default function RequireAdmin({ children, onNavigate }: RequireAdminProps
       }
 
       try {
-        const { data: staff } = await supabase
-          .from('store_staff')
+        const { data: staff } = await fromAny('store_staff')
           .select('*, store:stores(*)')
           .eq('user_id', user.id)
           .maybeSingle();

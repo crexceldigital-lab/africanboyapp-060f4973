@@ -15,6 +15,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny, castOrders } from '@/lib/supabase-helpers';
 import { Order, OrderItem, Store } from '../../types';
 import RankedBarList, { RankedItem } from './RankedBarList';
 import RadialStatPair from './RadialStatPair';
@@ -37,14 +38,13 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
   // Fetch active stores
   useEffect(() => {
     const fetchStores = async () => {
-      const { data } = await supabase
-        .from('stores')
+      const { data } = await fromAny('stores')
         .select('*')
         .eq('is_active', true)
         .order('id');
 
       if (data) {
-        setStores(data as Store[]);
+        setStores(data as unknown as Store[]);
       }
     };
     fetchStores();
@@ -105,9 +105,9 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
       setLoading(true);
       const { start, end } = getRange(periodMode, selectedDate);
 
-      // 1. Build base query for range orders
-      let query = supabase
-        .from('orders')
+      // 1. Build base query for range orders (use fromAny to avoid stale
+      // generated-types deep-instantiation errors)
+      let query = fromAny('orders')
         .select('*')
         .gte('created_at', start.toISOString())
         .lte('created_at', end.toISOString())
@@ -120,8 +120,7 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
       const { data: rangeData } = await query;
 
       // 2. Query prior customer emails for new customer metric
-      let priorQuery = supabase
-        .from('orders')
+      let priorQuery = fromAny('orders')
         .select('customer_email')
         .lt('created_at', start.toISOString());
 
@@ -136,12 +135,7 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
         if (o.customer_email) emailSet.add(o.customer_email.toLowerCase().trim());
       });
 
-      const parsedOrders: Order[] = (rangeData || []).map((o: any) => ({
-        ...o,
-        total_amount: Number(o.total_amount) || 0,
-        delivery_fee: Number(o.delivery_fee) || 0,
-        items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
-      }));
+      const parsedOrders = castOrders(rangeData || []);
 
       setOrders(parsedOrders);
       setPriorEmails(emailSet);

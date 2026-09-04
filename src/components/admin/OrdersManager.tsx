@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { castOrders } from '@/lib/supabase-helpers';
 import { Order } from '../../types';
 import { Search, Eye, Filter, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,7 +24,7 @@ export default function OrdersManager() {
     if (error) {
       toast.error('Failed to load orders');
     } else if (data) {
-      setOrders(data as Order[]);
+      setOrders(castOrders(data));
     }
   };
 

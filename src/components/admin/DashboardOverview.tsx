@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { castOrders } from '@/lib/supabase-helpers';
 import { Order } from '../../types';
 import { ShoppingBag, DollarSign, Users, Clock, Eye, ArrowUpRight, CheckCircle, RefreshCw, TrendingUp } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -61,7 +62,7 @@ export default function DashboardOverview({ onNavigateTab }: DashboardOverviewPr
         .select('*', { count: 'exact', head: true });
 
       if (!ordersError && ordersData) {
-        const orders = ordersData as Order[];
+        const orders = castOrders(ordersData);
         setRecentOrders(orders.slice(0, 7));
 
         const totalOrders = orders.length;

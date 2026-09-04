@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Save, Plus, Trash2 } from 'lucide-react';
 import { Product, ProductColor, Category, Subcategory, AttributeSize, AttributeColor } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny } from '@/lib/supabase-helpers';
 
 export interface ProductFormData {
   name: string;
@@ -51,17 +52,17 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
   }, [isOpen]);
 
   const fetchAttributes = async () => {
-    const { data: cats } = await supabase.from('product_categories').select('*').eq('status', 'active');
-    if (cats) setDbCategories(cats as Category[]);
+    const { data: cats } = await fromAny('product_categories').select('*').eq('status', 'active');
+    if (cats) setDbCategories(cats as unknown as Category[]);
 
-    const { data: subs } = await supabase.from('product_subcategories').select('*').eq('status', 'active');
-    if (subs) setDbSubcategories(subs as Subcategory[]);
+    const { data: subs } = await fromAny('product_subcategories').select('*').eq('status', 'active');
+    if (subs) setDbSubcategories(subs as unknown as Subcategory[]);
 
-    const { data: szs } = await supabase.from('product_sizes').select('*').eq('status', 'active').order('sort_order');
-    if (szs) setDbSizes(szs as AttributeSize[]);
+    const { data: szs } = await fromAny('product_sizes').select('*').eq('status', 'active').order('sort_order');
+    if (szs) setDbSizes(szs as unknown as AttributeSize[]);
 
-    const { data: cols } = await supabase.from('product_colors').select('*').eq('status', 'active');
-    if (cols) setDbColors(cols as AttributeColor[]);
+    const { data: cols } = await fromAny('product_colors').select('*').eq('status', 'active');
+    if (cols) setDbColors(cols as unknown as AttributeColor[]);
   };
 
   if (!isOpen) return null;

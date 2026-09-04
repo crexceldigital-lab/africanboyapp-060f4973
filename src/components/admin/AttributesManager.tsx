@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny, castProducts } from '@/lib/supabase-helpers';
 import { Category, Subcategory, AttributeSize, AttributeColor, Product } from '../../types';
 import StaffManager from './StaffManager';
 import { Plus, Trash2, Edit2, Tag, Layers, Maximize2, Palette, X, Save, Check, UserCheck } from 'lucide-react';
@@ -31,12 +32,11 @@ export default function AttributesManager() {
     try {
       // 1. Fetch products to compute usage counts
       const { data: productsData } = await supabase.from('products').select('*');
-      const loadedProducts = (productsData || []) as Product[];
+      const loadedProducts = castProducts(productsData || []);
       setProducts(loadedProducts);
 
       // 2. Fetch categories
-      const { data: catData } = await supabase
-        .from('product_categories')
+      const { data: catData } = await fromAny('product_categories')
         .select('*')
         .order('name');
       
@@ -48,8 +48,7 @@ export default function AttributesManager() {
       }
 
       // 3. Fetch subcategories
-      const { data: subCatData } = await supabase
-        .from('product_subcategories')
+      const { data: subCatData } = await fromAny('product_subcategories')
         .select('*, product_categories(name)')
         .order('name');
       
@@ -62,8 +61,7 @@ export default function AttributesManager() {
       }
 
       // 4. Fetch sizes
-      const { data: sizesData } = await supabase
-        .from('product_sizes')
+      const { data: sizesData } = await fromAny('product_sizes')
         .select('*')
         .order('sort_order', { ascending: true });
       
@@ -75,8 +73,7 @@ export default function AttributesManager() {
       }
 
       // 5. Fetch colors
-      const { data: colorsData } = await supabase
-        .from('product_colors')
+      const { data: colorsData } = await fromAny('product_colors')
         .select('*')
         .order('name');
       
@@ -130,11 +127,11 @@ export default function AttributesManager() {
 
     if (subTab === 'categories') {
       if (editingItem) {
-        const { error } = await supabase.from('product_categories').update({ name: nameInput.trim() }).eq('id', editingItem.id);
+        const { error } = await fromAny('product_categories').update({ name: nameInput.trim() }).eq('id', editingItem.id);
         if (error) toast.error('Failed to update category');
         else toast.success('Category updated');
       } else {
-        const { error } = await supabase.from('product_categories').insert({ name: nameInput.trim() });
+        const { error } = await fromAny('product_categories').insert({ name: nameInput.trim() });
         if (error) toast.error('Failed to add category');
         else toast.success('Category created');
       }
@@ -144,31 +141,31 @@ export default function AttributesManager() {
         return;
       }
       if (editingItem) {
-        const { error } = await supabase.from('product_subcategories').update({ category_id: selectedCategoryId, name: nameInput.trim() }).eq('id', editingItem.id);
+        const { error } = await fromAny('product_subcategories').update({ category_id: selectedCategoryId, name: nameInput.trim() }).eq('id', editingItem.id);
         if (error) toast.error('Failed to update subcategory');
         else toast.success('Subcategory updated');
       } else {
-        const { error } = await supabase.from('product_subcategories').insert({ category_id: selectedCategoryId, name: nameInput.trim() });
+        const { error } = await fromAny('product_subcategories').insert({ category_id: selectedCategoryId, name: nameInput.trim() });
         if (error) toast.error('Failed to add subcategory');
         else toast.success('Subcategory created');
       }
     } else if (subTab === 'sizes') {
       if (editingItem) {
-        const { error } = await supabase.from('product_sizes').update({ name: nameInput.trim(), sort_order: Number(sortOrderInput) }).eq('id', editingItem.id);
+        const { error } = await fromAny('product_sizes').update({ name: nameInput.trim(), sort_order: Number(sortOrderInput) }).eq('id', editingItem.id);
         if (error) toast.error('Failed to update size');
         else toast.success('Size updated');
       } else {
-        const { error } = await supabase.from('product_sizes').insert({ name: nameInput.trim(), sort_order: Number(sortOrderInput) });
+        const { error } = await fromAny('product_sizes').insert({ name: nameInput.trim(), sort_order: Number(sortOrderInput) });
         if (error) toast.error('Failed to add size');
         else toast.success('Size added');
       }
     } else if (subTab === 'colors') {
       if (editingItem) {
-        const { error } = await supabase.from('product_colors').update({ name: nameInput.trim(), hex: hexInput }).eq('id', editingItem.id);
+        const { error } = await fromAny('product_colors').update({ name: nameInput.trim(), hex: hexInput }).eq('id', editingItem.id);
         if (error) toast.error('Failed to update color');
         else toast.success('Color updated');
       } else {
-        const { error } = await supabase.from('product_colors').insert({ name: nameInput.trim(), hex: hexInput });
+        const { error } = await fromAny('product_colors').insert({ name: nameInput.trim(), hex: hexInput });
         if (error) toast.error('Failed to add color');
         else toast.success('Color added');
       }

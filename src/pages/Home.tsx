@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Product, NavTab } from '../types';
 import { ArrowRight, ChevronDown, Flame } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny } from '@/lib/supabase-helpers';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 import heroBg from '@/assets/hero-bg.png';
 import spotlight1 from '@/assets/spotlight-1.png';
@@ -35,8 +36,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
   useEffect(() => {
     const fetchProductOfTheDay = async () => {
-      const { data: potd } = await supabase
-        .from('product_of_the_day')
+      const { data: potd } = await fromAny('product_of_the_day')
         .select('product_id, set_for_date, products(*)')
         .order('set_for_date', { ascending: false })
         .order('created_at', { ascending: false })
