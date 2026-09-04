@@ -171,6 +171,7 @@ export default function StaffManager() {
     if (selectedUser) return; // Skip searching if a user is already selected
 
     const timer = setTimeout(async () => {
+      const q = userQuery.trim();
       setIsSearchingUsers(true);
       try {
         const { data: sessionData } = await supabase.auth.getSession();
