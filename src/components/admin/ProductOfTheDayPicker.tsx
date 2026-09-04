@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, RefreshCcw, Search, X, Check, Star } from 'lucide-react';
 import { Product } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
+import { fromAny } from '@/lib/supabase-helpers';
 import { toast } from 'sonner';
 
 export default function ProductOfTheDayPicker() {
@@ -15,8 +16,7 @@ export default function ProductOfTheDayPicker() {
 
   const fetchCurrentPick = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('product_of_the_day')
+    const { data, error } = await fromAny('product_of_the_day')
       .select('id, product_id, set_for_date, products(*)')
       .order('set_for_date', { ascending: false })
       .order('created_at', { ascending: false })
@@ -58,8 +58,7 @@ export default function ProductOfTheDayPicker() {
 
   const handleSelectProduct = async (product: Product) => {
     const today = new Date().toISOString().split('T')[0];
-    const { error } = await supabase
-      .from('product_of_the_day')
+    const { error } = await fromAny('product_of_the_day')
       .insert({
         product_id: product.id,
         set_for_date: today,
