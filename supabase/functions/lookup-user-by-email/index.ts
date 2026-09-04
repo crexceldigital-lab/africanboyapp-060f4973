@@ -156,9 +156,10 @@ Deno.serve(async (req) => {
       );
     }
 
+    // No usable parameters: return an empty result instead of erroring
     return new Response(
-      JSON.stringify({ error: "Missing required parameter: email or user_ids" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      JSON.stringify({ users: [], found: false }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (err: any) {
     console.error("Lookup user error:", err);
