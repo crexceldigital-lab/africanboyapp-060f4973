@@ -82,7 +82,11 @@ export interface Store {
   name: string;
   country_code: string;
   currency_code: string;
+  country?: string;
+  status?: string;
   is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ProductStoreAvailability {
@@ -97,8 +101,10 @@ export interface StoreStaff {
   id: string;
   user_id: string;
   store_id: number;
-  staff_role: 'sales_rep' | 'store_manager';
+  staff_role: 'sales_rep' | 'store_manager' | string;
+  status?: string;
   created_at?: string;
+  updated_at?: string;
   store?: Store;
 }
 

@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
 
     // 3. Process Request Body
     const body = await req.json().catch(() => ({}));
-    const { email, user_ids } = body;
+    const { email, user_ids, query } = body;
 
     // Case A: Batch lookup by user_ids (for staff list display)
     if (Array.isArray(user_ids) && user_ids.length > 0) {
@@ -87,7 +87,37 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Case B: Lookup single user by email (for assigning new staff)
+    // Case B: Search registered users by email or name query string
+    if (typeof query === "string") {
+      const { data: authData, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (listErr) throw listErr;
+
+      const searchQuery = query.trim().toLowerCase();
+      const matchedUsers = (authData.users || [])
+        .filter((u) => {
+          if (!searchQuery) return true;
+          const emailMatch = u.email && u.email.toLowerCase().includes(searchQuery);
+          const nameMatch = (
+            (u.user_metadata?.full_name && u.user_metadata.full_name.toLowerCase().includes(searchQuery)) ||
+            (u.user_metadata?.name && u.user_metadata.name.toLowerCase().includes(searchQuery)) ||
+            (u.user_metadata?.display_name && u.user_metadata.display_name.toLowerCase().includes(searchQuery))
+          );
+          return emailMatch || nameMatch;
+        })
+        .slice(0, 25)
+        .map((u) => ({
+          user_id: u.id,
+          email: u.email || "",
+          full_name: u.user_metadata?.full_name || u.user_metadata?.name || u.user_metadata?.display_name || null,
+        }));
+
+      return new Response(
+        JSON.stringify({ users: matchedUsers }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // Case C: Lookup single user by exact email (for assigning new staff)
     if (email && typeof email === "string") {
       const searchEmail = email.trim().toLowerCase();
       const { data: authData, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
