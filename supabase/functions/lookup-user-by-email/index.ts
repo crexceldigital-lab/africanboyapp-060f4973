@@ -68,7 +68,13 @@ Deno.serve(async (req) => {
     const { email, user_ids, query } = body;
 
     // Case A: Batch lookup by user_ids (for staff list display)
-    if (Array.isArray(user_ids) && user_ids.length > 0) {
+    if (Array.isArray(user_ids)) {
+      if (user_ids.length === 0) {
+        return new Response(
+          JSON.stringify({ users: [] }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
       const { data: authData, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       if (listErr) throw listErr;
 
