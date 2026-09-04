@@ -94,6 +94,29 @@ Deno.serve(async (req) => {
       console.error("Failed to update order:", error);
     }
 
+    // Operational sync: append confirmed orders to the Google Sheet (non-blocking).
+    if (newStatus === "completed") {
+      try {
+        let syncOrderId = orderId as string | undefined;
+        if (!syncOrderId && reference) {
+          const { data: found } = await supabase
+            .from("orders")
+            .select("id")
+            .eq("payment_reference", reference)
+            .maybeSingle();
+          syncOrderId = found?.id;
+        }
+        if (syncOrderId) {
+          const { error: syncError } = await supabase.functions.invoke("sync-order-to-sheet", {
+            body: { orderId: syncOrderId },
+          });
+          if (syncError) console.error("Sheet sync failed:", syncError);
+        }
+      } catch (syncErr) {
+        console.error("Sheet sync error:", syncErr);
+      }
+    }
+
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

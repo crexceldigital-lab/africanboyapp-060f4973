@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const userEmail = claimsData.claims.email as string;
 
     const body = await req.json();
-    const { items, totalAmount, deliveryFee, grandTotal, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl } = body;
+    const { items, totalAmount, deliveryFee, grandTotal, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude } = body;
 
     // Create order in DB using service role
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -62,6 +62,9 @@ Deno.serve(async (req) => {
         customer_name: customerName || "",
         customer_email: customerEmail || userEmail || "",
         customer_phone: customerPhone || "",
+        delivery_address: typeof deliveryAddress === "string" ? deliveryAddress.slice(0, 400) : null,
+        delivery_latitude: typeof deliveryLatitude === "number" ? deliveryLatitude : null,
+        delivery_longitude: typeof deliveryLongitude === "number" ? deliveryLongitude : null,
       })
       .select()
       .single();
