@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { castOrders } from '@/lib/supabase-helpers';
 import { Customer, Order } from '../../types';
 import { Search, Eye, RefreshCw, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,7 +29,7 @@ export default function CustomersManager() {
         console.error('Error fetching orders for customers view:', ordersError);
       }
 
-      const orders = (ordersData || []) as Order[];
+      const orders = castOrders(ordersData || []);
       const profilesMap = new Map<string, any>();
       
       // Index profiles by id

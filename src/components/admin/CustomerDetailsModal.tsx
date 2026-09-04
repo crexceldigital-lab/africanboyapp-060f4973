@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Customer, Order } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
+import { castOrders } from '@/lib/supabase-helpers';
 import { User, Mail, Phone, Calendar, ShoppingBag, DollarSign, TrendingUp, Eye } from 'lucide-react';
 import OrderDetailsModal from './OrderDetailsModal';
 
@@ -38,7 +39,7 @@ export default function CustomerDetailsModal({ customer, isOpen, onClose }: Cust
     setLoadingOrders(false);
 
     if (!error && data) {
-      setCustomerOrders(data as Order[]);
+      setCustomerOrders(castOrders(data));
     }
   };
 
