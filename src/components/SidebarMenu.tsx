@@ -12,6 +12,7 @@ import { useCountry } from '../context/CountryContext';
 import { useTheme } from '../context/ThemeContext';
 import { MOCK_COUNTRIES } from '../data/mockData';
 import { Switch } from './ui/switch';
+import { trackEvent } from '../lib/analytics';
 
 interface SidebarMenuProps {
   isOpen: boolean;
