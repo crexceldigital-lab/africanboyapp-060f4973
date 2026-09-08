@@ -33,12 +33,13 @@ interface ProductModalProps {
   setFormData: React.Dispatch<React.SetStateAction<ProductFormData>>;
   onSubmit: (e: React.FormEvent) => void;
   categories: string[];
+  submitting?: boolean;
 }
 
 const PRESET_SIZES_CLOTHING = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
 const PRESET_SIZES_JEANS = ['28', '30', '32', '34', '36', '38'];
 
-export default function ProductModal({ isOpen, onClose, editingProduct, formData, setFormData, onSubmit }: ProductModalProps) {
+export default function ProductModal({ isOpen, onClose, editingProduct, formData, setFormData, onSubmit, submitting = false }: ProductModalProps) {
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
   const [dbSubcategories, setDbSubcategories] = useState<Subcategory[]>([]);
   const [dbSizes, setDbSizes] = useState<AttributeSize[]>([]);
@@ -483,8 +484,8 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
             <button type="button" onClick={onClose} className="flex-1 py-4 bg-secondary border border-foreground/5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-muted transition-all">
               Cancel
             </button>
-            <button type="submit" className="flex-1 py-4 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl">
-              <Save size={18} /> {editingProduct ? 'Update Product' : 'Create Product'}
+            <button type="submit" disabled={submitting || uploading} className="flex-1 py-4 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl disabled:opacity-60 disabled:pointer-events-none">
+              <Save size={18} /> {submitting ? (editingProduct ? 'Saving Product...' : 'Creating Product...') : (editingProduct ? 'Update Product' : 'Create Product')}
             </button>
           </div>
         </form>
