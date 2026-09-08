@@ -339,6 +339,7 @@ export default function Admin() {
             setFormData={setFormData}
             onSubmit={handleSubmit}
             categories={PRODUCT_CATEGORIES}
+            submitting={isSaving}
           />
         </div>
       )}
