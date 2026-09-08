@@ -11,6 +11,8 @@ export interface ProductFormData {
   category: string;
   subcategory: string;
   price: string;
+  cost_price: string;
+
   sale_price: string;
   on_sale: boolean;
   discount_percent: string;
