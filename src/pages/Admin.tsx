@@ -30,6 +30,8 @@ export default function Admin() {
     category: 'T-Shirt',
     subcategory: '',
     price: '',
+    cost_price: '',
+
     sale_price: '',
     on_sale: false,
     discount_percent: '10',
