@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Save, Plus, Trash2 } from 'lucide-react';
+import { X, Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 import { Product, ProductColor, Category, Subcategory, AttributeSize, AttributeColor } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
