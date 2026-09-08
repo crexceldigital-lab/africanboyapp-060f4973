@@ -363,7 +363,7 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
                   {uploading ? 'Uploading...' : 'Upload Image'}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     className="hidden"
                     onChange={e => {
                       const file = e.target.files?.[0];
