@@ -139,6 +139,8 @@ export default function Admin() {
       category: formData.category,
       subcategory: formData.subcategory || null,
       price: rawPrice,
+      cost_price: Number(formData.cost_price) || 0,
+
       on_sale: formData.on_sale,
       discount_percent: rawDiscount,
       sale_price: formData.on_sale ? derivedSalePrice : (formData.sale_price ? Number(formData.sale_price) : null),
