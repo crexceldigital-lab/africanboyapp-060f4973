@@ -51,8 +51,9 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
 
   const handleUpload = async (file: File) => {
     setUploadError(null);
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Please choose an image file.');
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type.toLowerCase())) {
+      setUploadError('Please choose a JPG, PNG or WEBP image.');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -72,11 +73,19 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
       const { data } = supabase.storage.from('products').getPublicUrl(path);
       setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
     } catch (err: any) {
-      setUploadError(err?.message || 'Upload failed. Please try again.');
+      console.error('Product image upload failed:', err);
+      const raw = String(err?.message || '');
+      const permission = /permission|denied|policy|unauthor|row-level/i.test(raw);
+      setUploadError(
+        permission
+          ? 'Unable to upload product image. Please check your permissions and try again.'
+          : 'Unable to upload product image. Please try again.'
+      );
     } finally {
       setUploading(false);
     }
   };
+
 
 
   useEffect(() => {
