@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Save, Plus, Trash2 } from 'lucide-react';
+import { X, Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 import { Product, ProductColor, Category, Subcategory, AttributeSize, AttributeColor } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
@@ -11,6 +11,8 @@ export interface ProductFormData {
   category: string;
   subcategory: string;
   price: string;
+  cost_price: string;
+
   sale_price: string;
   on_sale: boolean;
   discount_percent: string;
@@ -31,12 +33,13 @@ interface ProductModalProps {
   setFormData: React.Dispatch<React.SetStateAction<ProductFormData>>;
   onSubmit: (e: React.FormEvent) => void;
   categories: string[];
+  submitting?: boolean;
 }
 
 const PRESET_SIZES_CLOTHING = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
 const PRESET_SIZES_JEANS = ['28', '30', '32', '34', '36', '38'];
 
-export default function ProductModal({ isOpen, onClose, editingProduct, formData, setFormData, onSubmit }: ProductModalProps) {
+export default function ProductModal({ isOpen, onClose, editingProduct, formData, setFormData, onSubmit, submitting = false }: ProductModalProps) {
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
   const [dbSubcategories, setDbSubcategories] = useState<Subcategory[]>([]);
   const [dbSizes, setDbSizes] = useState<AttributeSize[]>([]);
@@ -44,6 +47,47 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
 
   const [customColorName, setCustomColorName] = useState('');
   const [customColorHex, setCustomColorHex] = useState('#000000');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleUpload = async (file: File) => {
+    setUploadError(null);
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type.toLowerCase())) {
+      setUploadError('Please choose a JPG, PNG or WEBP image.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Image is too large (max 10MB).');
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('products').upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from('products').getPublicUrl(path);
+      setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
+    } catch (err: any) {
+      console.error('Product image upload failed:', err);
+      const raw = String(err?.message || '');
+      const permission = /permission|denied|policy|unauthor|row-level/i.test(raw);
+      setUploadError(
+        permission
+          ? 'Unable to upload product image. Please check your permissions and try again.'
+          : 'Unable to upload product image. Please try again.'
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+
 
   useEffect(() => {
     if (isOpen) {
@@ -207,9 +251,14 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
           </div>
 
           {/* Pricing Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Regular Price (TZS)</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Purchasing Price (Cost, TZS)</label>
+              <input type="number" min="0" value={formData.cost_price || ''} onChange={e => setFormData({ ...formData, cost_price: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" placeholder="0" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Selling Price (TZS)</label>
               <input required type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" placeholder="0" />
             </div>
 
@@ -218,6 +267,40 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
               <input type="number" value={formData.sale_price || ''} onChange={e => setFormData({ ...formData, sale_price: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold text-primary focus:border-primary outline-none transition-all" placeholder="Leave empty for auto-derived" />
             </div>
           </div>
+
+          {/* Live Profit Preview */}
+          {(() => {
+            const cost = Number(formData.cost_price) || 0;
+            const base = Number(formData.price) || 0;
+            const derived = formData.on_sale
+              ? Math.round(base - (base * (Number(formData.discount_percent) || 10) / 100))
+              : (formData.sale_price ? Number(formData.sale_price) : base);
+            const effective = derived || base;
+            if (!cost || !effective) return null;
+            const profit = effective - cost;
+            const margin = effective > 0 ? (profit / effective) * 100 : 0;
+            return (
+              <div className="bg-background/40 border border-foreground/5 rounded-3xl p-6 flex flex-wrap gap-6 items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Profit Per Unit</span>
+                  <span className={`text-lg font-black italic font-mono ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                    {profit.toLocaleString()} TZS
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Margin</span>
+                  <span className={`text-lg font-black italic font-mono ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                    {margin.toFixed(1)}%
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Based On Selling Price</span>
+                  <span className="text-lg font-black italic font-mono text-foreground">{effective.toLocaleString()} TZS</span>
+                </div>
+              </div>
+            );
+          })()}
+
 
           {/* On Sale Controls */}
           <div className="bg-background/40 border border-foreground/5 rounded-3xl p-6 space-y-4">
@@ -262,11 +345,48 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
             )}
           </div>
 
-          {/* Image & Description */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Image URL</label>
-            <input required type="text" value={formData.image_url} onChange={e => setFormData({ ...formData, image_url: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" placeholder="https://example.com/image.jpg" />
+          {/* Image: upload or URL */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Product Image</label>
+
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="w-24 h-24 rounded-2xl border border-foreground/10 bg-background/50 overflow-hidden flex items-center justify-center flex-shrink-0">
+                {formData.image_url && !formData.image_url.startsWith('file://') ? (
+                  <img src={formData.image_url} alt="Product preview" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon size={22} className="text-muted-foreground" />
+                )}
+              </div>
+
+              <div className="flex-1 space-y-3 w-full">
+                <label className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all cursor-pointer ${uploading ? 'opacity-60 pointer-events-none' : 'hover:bg-foreground/10'} bg-foreground/5 border-foreground/10`}>
+                  <Upload size={16} />
+                  {uploading ? 'Uploading...' : 'Upload Image'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUpload(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+
+                <input
+                  required
+                  type="text"
+                  value={formData.image_url}
+                  onChange={e => setFormData({ ...formData, image_url: e.target.value })}
+                  className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+                  placeholder="Or paste an image link (https://...)"
+                />
+                {uploadError && <p className="text-[11px] font-bold text-destructive ml-2">{uploadError}</p>}
+              </div>
+            </div>
           </div>
+
 
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Description</label>
@@ -364,8 +484,8 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
             <button type="button" onClick={onClose} className="flex-1 py-4 bg-secondary border border-foreground/5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-muted transition-all">
               Cancel
             </button>
-            <button type="submit" className="flex-1 py-4 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl">
-              <Save size={18} /> {editingProduct ? 'Update Product' : 'Create Product'}
+            <button type="submit" disabled={submitting || uploading} className="flex-1 py-4 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl disabled:opacity-60 disabled:pointer-events-none">
+              <Save size={18} /> {submitting ? (editingProduct ? 'Saving Product...' : 'Creating Product...') : (editingProduct ? 'Update Product' : 'Create Product')}
             </button>
           </div>
         </form>

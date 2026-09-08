@@ -104,6 +104,25 @@ export default function ProductQuickView({ product, onClose, onEdit }: ProductQu
                 </div>
               </div>
 
+              {/* Cost & Profit */}
+              {Number(product.cost_price) > 0 && (() => {
+                const cost = Number(product.cost_price);
+                const effective = Number(product.sale_price) || Number(product.price);
+                const profit = effective - cost;
+                const margin = effective > 0 ? (profit / effective) * 100 : 0;
+                return (
+                  <div className="flex flex-wrap gap-4 text-xs font-mono font-bold">
+                    <span className="px-3.5 py-1.5 bg-foreground/5 rounded-xl border border-foreground/5 text-muted-foreground">
+                      COST {cost.toLocaleString()} TZS
+                    </span>
+                    <span className={`px-3.5 py-1.5 rounded-xl border border-foreground/5 ${profit >= 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
+                      PROFIT {profit.toLocaleString()} TZS · {margin.toFixed(1)}%
+                    </span>
+                  </div>
+                );
+              })()}
+
+
               {/* Metadata Badges */}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-3.5 py-1.5 bg-foreground/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground border border-foreground/5 flex items-center gap-1.5">

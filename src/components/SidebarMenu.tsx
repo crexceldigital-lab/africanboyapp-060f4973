@@ -12,6 +12,7 @@ import { useCountry } from '../context/CountryContext';
 import { useTheme } from '../context/ThemeContext';
 import { MOCK_COUNTRIES } from '../data/mockData';
 import { Switch } from './ui/switch';
+import { trackEvent } from '../lib/analytics';
 
 interface SidebarMenuProps {
   isOpen: boolean;
@@ -219,24 +220,27 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                           href="https://wa.me/255627997928"
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={() => trackEvent('social_click', { platform: 'whatsapp' })}
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-green-500 hover:bg-green-500/10 transition-colors"
                         >
                           <WhatsAppIcon size={16} />
                           <span>WhatsApp</span>
                         </a>
                         <a
-                          href="https://www.facebook.com/groups/233041184933729/?ref=share&mibextid=NSMWBT"
+                          href="https://www.facebook.com/africanboyJUX"
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={() => trackEvent('social_click', { platform: 'facebook' })}
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
                         >
                           <FacebookIcon size={16} />
                           <span>Facebook</span>
                         </a>
                         <a
-                          href="https://www.instagram.com/africanboy_brand?igsh=MWl4dG1ka3BwamszMA=="
+                          href="https://www.instagram.com/africanboy_brand/"
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={() => trackEvent('social_click', { platform: 'instagram' })}
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-pink-500 hover:bg-pink-500/10 transition-colors"
                         >
                           <InstagramIcon size={16} />
@@ -317,15 +321,16 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
               {/* Social icons */}
               <div className="flex items-center justify-center gap-4">
                 {[
-                  { Icon: InstagramIcon, href: 'https://www.instagram.com/africanboy_brand?igsh=MWl4dG1ka3BwamszMA==' },
-                  { Icon: FacebookIcon, href: 'https://www.facebook.com/groups/233041184933729/?ref=share&mibextid=NSMWBT' },
-                  { Icon: WhatsAppIcon, href: 'https://wa.me/255627997928' },
-                ].map(({ Icon, href }, i) => (
+                  { Icon: InstagramIcon, platform: 'instagram', href: 'https://www.instagram.com/africanboy_brand/' },
+                  { Icon: FacebookIcon, platform: 'facebook', href: 'https://www.facebook.com/africanboyJUX' },
+                  { Icon: WhatsAppIcon, platform: 'whatsapp', href: 'https://wa.me/255627997928' },
+                ].map(({ Icon, href, platform }, i) => (
                   <a
                     key={i}
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackEvent('social_click', { platform })}
                     className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                   >
                     <Icon size={18} />

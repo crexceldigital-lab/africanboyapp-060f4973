@@ -113,40 +113,64 @@ export type Database = {
         Row: {
           category: string
           colors: Json
+          cost_price: number
           created_at: string | null
           description: string
+          discount_percent: number
           id: string
           image_url: string
           name: string
+          on_sale: boolean
           price: number
+          sale_price: number | null
           sizes: string[]
+          sku: string | null
+          status: string
+          stock: Json
           stock_quantity: number
+          subcategory: string | null
           updated_at: string | null
         }
         Insert: {
           category?: string
           colors?: Json
+          cost_price?: number
           created_at?: string | null
           description?: string
+          discount_percent?: number
           id?: string
           image_url?: string
           name: string
+          on_sale?: boolean
           price?: number
+          sale_price?: number | null
           sizes?: string[]
+          sku?: string | null
+          status?: string
+          stock?: Json
           stock_quantity?: number
+          subcategory?: string | null
           updated_at?: string | null
         }
         Update: {
           category?: string
           colors?: Json
+          cost_price?: number
           created_at?: string | null
           description?: string
+          discount_percent?: number
           id?: string
           image_url?: string
           name?: string
+          on_sale?: boolean
           price?: number
+          sale_price?: number | null
           sizes?: string[]
+          sku?: string | null
+          status?: string
+          stock?: Json
           stock_quantity?: number
+          subcategory?: string | null
           updated_at?: string | null
         }
         Relationships: []
