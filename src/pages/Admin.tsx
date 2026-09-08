@@ -89,6 +89,8 @@ export default function Admin() {
         category: product.category,
         subcategory: product.subcategory || '',
         price: String(product.price),
+        cost_price: product.cost_price ? String(product.cost_price) : '',
+
         sale_price: product.sale_price ? String(product.sale_price) : '',
         on_sale: product.on_sale || false,
         discount_percent: String(product.discount_percent || 10),
