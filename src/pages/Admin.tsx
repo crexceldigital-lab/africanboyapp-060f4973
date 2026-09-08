@@ -54,6 +54,8 @@ export default function Admin() {
       setProducts(data.map((p: any) => ({
         ...p,
         price: Number(p.price),
+        cost_price: Number(p.cost_price) || 0,
+
         sale_price: p.sale_price ? Number(p.sale_price) : null,
         colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
         stock: typeof p.stock === 'object' && p.stock !== null ? p.stock : {},
