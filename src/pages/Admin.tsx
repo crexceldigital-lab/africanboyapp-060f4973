@@ -23,6 +23,8 @@ export default function Admin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
@@ -129,55 +131,76 @@ export default function Admin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+
     const rawPrice = Number(formData.price) || 0;
     const rawDiscount = Number(formData.discount_percent) || 10;
     const derivedSalePrice = Math.round(rawPrice - (rawPrice * rawDiscount / 100));
 
+    // Explicit validation with clear messages
+    if (!formData.name.trim()) return toast.error('Product name is required.');
+    if (!formData.category) return toast.error('Product category is required.');
+    if (rawPrice <= 0) return toast.error('Selling price must be greater than 0.');
+    if (!formData.image_url.trim() || formData.image_url.startsWith('file://')) {
+      return toast.error('Please upload a product image or paste a valid image link.');
+    }
+
     const productData = {
-      name: formData.name,
-      sku: formData.sku || null,
+      name: formData.name.trim(),
+      sku: formData.sku.trim() || null,
       category: formData.category,
       subcategory: formData.subcategory || null,
       price: rawPrice,
       cost_price: Number(formData.cost_price) || 0,
-
       on_sale: formData.on_sale,
       discount_percent: rawDiscount,
       sale_price: formData.on_sale ? derivedSalePrice : (formData.sale_price ? Number(formData.sale_price) : null),
-      stock_quantity: Number(formData.stock_quantity),
-      stock: formData.stock,
-      image_url: formData.image_url,
+      stock_quantity: Number(formData.stock_quantity) || 0,
+      stock: formData.stock || {},
+      image_url: formData.image_url.trim(),
       description: formData.description,
       sizes: formData.sizes,
       colors: formData.colors,
       status: formData.status || 'active',
     };
 
-    if (editingProduct) {
-      const { error } = await supabase
-        .from('products')
-        .update({ ...productData, colors: productData.colors as any, updated_at: new Date().toISOString() })
-        .eq('id', editingProduct.id);
+    setIsSaving(true);
+    try {
+      const { error } = editingProduct
+        ? await supabase
+            .from('products')
+            .update({ ...productData, colors: productData.colors as any, updated_at: new Date().toISOString() } as any)
+            .eq('id', editingProduct.id)
+        : await supabase
+            .from('products')
+            .insert({ ...productData, colors: productData.colors as any } as any);
 
       if (error) {
-        toast.error('Failed to update product');
+        console.error('Product save failed:', error);
+        const msg = String(error.message || '');
+        if (/duplicate key|unique/i.test(msg) && /sku/i.test(msg)) {
+          toast.error('A product with this SKU already exists.');
+        } else if (/permission|row-level|policy/i.test(msg)) {
+          toast.error('You do not have permission to save products. Please sign in as an admin.');
+        } else if (/column .* does not exist|schema cache/i.test(msg)) {
+          toast.error(`Database field mismatch: ${msg}`);
+        } else {
+          toast.error(msg || 'Failed to save product.');
+        }
         return;
       }
-      toast.success('Product updated!');
-    } else {
-      const { error } = await supabase
-        .from('products')
-        .insert({ ...productData, colors: productData.colors as any });
 
-      if (error) {
-        toast.error('Failed to add product');
-        return;
-      }
-      toast.success('Product added!');
+      toast.success(editingProduct ? 'Product updated successfully.' : 'Product created successfully.');
+      setIsModalOpen(false);
+      await fetchProducts();
+    } catch (err: any) {
+      console.error('Unexpected product save error:', err);
+      toast.error(err?.message || 'Unexpected error while saving product.');
+    } finally {
+      setIsSaving(false);
     }
-    setIsModalOpen(false);
-    fetchProducts();
   };
+
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from('products').delete().eq('id', id);
