@@ -30,6 +30,8 @@ export default function Admin() {
     category: 'T-Shirt',
     subcategory: '',
     price: '',
+    cost_price: '',
+
     sale_price: '',
     on_sale: false,
     discount_percent: '10',
@@ -52,6 +54,8 @@ export default function Admin() {
       setProducts(data.map((p: any) => ({
         ...p,
         price: Number(p.price),
+        cost_price: Number(p.cost_price) || 0,
+
         sale_price: p.sale_price ? Number(p.sale_price) : null,
         colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
         stock: typeof p.stock === 'object' && p.stock !== null ? p.stock : {},
@@ -85,6 +89,8 @@ export default function Admin() {
         category: product.category,
         subcategory: product.subcategory || '',
         price: String(product.price),
+        cost_price: product.cost_price ? String(product.cost_price) : '',
+
         sale_price: product.sale_price ? String(product.sale_price) : '',
         on_sale: product.on_sale || false,
         discount_percent: String(product.discount_percent || 10),
@@ -104,6 +110,8 @@ export default function Admin() {
         category: 'T-Shirt',
         subcategory: '',
         price: '',
+        cost_price: '',
+
         sale_price: '',
         on_sale: false,
         discount_percent: '10',
@@ -131,6 +139,8 @@ export default function Admin() {
       category: formData.category,
       subcategory: formData.subcategory || null,
       price: rawPrice,
+      cost_price: Number(formData.cost_price) || 0,
+
       on_sale: formData.on_sale,
       discount_percent: rawDiscount,
       sale_price: formData.on_sale ? derivedSalePrice : (formData.sale_price ? Number(formData.sale_price) : null),

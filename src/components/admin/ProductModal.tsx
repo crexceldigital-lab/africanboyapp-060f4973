@@ -11,6 +11,8 @@ export interface ProductFormData {
   category: string;
   subcategory: string;
   price: string;
+  cost_price: string;
+
   sale_price: string;
   on_sale: boolean;
   discount_percent: string;
@@ -239,9 +241,14 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
           </div>
 
           {/* Pricing Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Regular Price (TZS)</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Purchasing Price (Cost, TZS)</label>
+              <input type="number" min="0" value={formData.cost_price || ''} onChange={e => setFormData({ ...formData, cost_price: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" placeholder="0" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Selling Price (TZS)</label>
               <input required type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" placeholder="0" />
             </div>
 
@@ -250,6 +257,40 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
               <input type="number" value={formData.sale_price || ''} onChange={e => setFormData({ ...formData, sale_price: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold text-primary focus:border-primary outline-none transition-all" placeholder="Leave empty for auto-derived" />
             </div>
           </div>
+
+          {/* Live Profit Preview */}
+          {(() => {
+            const cost = Number(formData.cost_price) || 0;
+            const base = Number(formData.price) || 0;
+            const derived = formData.on_sale
+              ? Math.round(base - (base * (Number(formData.discount_percent) || 10) / 100))
+              : (formData.sale_price ? Number(formData.sale_price) : base);
+            const effective = derived || base;
+            if (!cost || !effective) return null;
+            const profit = effective - cost;
+            const margin = effective > 0 ? (profit / effective) * 100 : 0;
+            return (
+              <div className="bg-background/40 border border-foreground/5 rounded-3xl p-6 flex flex-wrap gap-6 items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Profit Per Unit</span>
+                  <span className={`text-lg font-black italic font-mono ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                    {profit.toLocaleString()} TZS
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Margin</span>
+                  <span className={`text-lg font-black italic font-mono ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                    {margin.toFixed(1)}%
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Based On Selling Price</span>
+                  <span className="text-lg font-black italic font-mono text-foreground">{effective.toLocaleString()} TZS</span>
+                </div>
+              </div>
+            );
+          })()}
+
 
           {/* On Sale Controls */}
           <div className="bg-background/40 border border-foreground/5 rounded-3xl p-6 space-y-4">

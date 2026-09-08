@@ -113,6 +113,7 @@ export type Database = {
         Row: {
           category: string
           colors: Json
+          cost_price: number
           created_at: string | null
           description: string
           id: string
@@ -126,6 +127,7 @@ export type Database = {
         Insert: {
           category?: string
           colors?: Json
+          cost_price?: number
           created_at?: string | null
           description?: string
           id?: string
@@ -139,6 +141,7 @@ export type Database = {
         Update: {
           category?: string
           colors?: Json
+          cost_price?: number
           created_at?: string | null
           description?: string
           id?: string
