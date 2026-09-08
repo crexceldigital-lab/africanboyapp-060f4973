@@ -11,7 +11,7 @@ const DELIVERY_PRICES: Record<DeliveryZone, number> = {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product, size?: string, color?: string) => void;
+  addToCart: (product: Product, size?: string, color?: string, quantityToAdd?: number) => void;
   addTicket: (event: AppEvent) => void;
   removeFromCart: (cartKey: string) => void;
   updateQuantity: (cartKey: string, delta: number) => void;
@@ -34,10 +34,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZone>('inside_dar');
 
-  const addToCart = (product: Product, size?: string, color?: string) => {
+  const addToCart = (product: Product, size?: string, color?: string, quantityToAdd: number = 1) => {
+    const qty = Math.max(1, quantityToAdd);
     const key = getCartKey(product.id, size, color);
     trackAddToCart(
-      { id: product.id, name: product.name, price: product.price, quantity: 1, category: product.category, selectedSize: size, selectedColor: color },
+      { id: product.id, name: product.name, price: product.price, quantity: qty, category: product.category, selectedSize: size, selectedColor: color },
       'TZS'
     );
     setCart(prevCart => {
@@ -45,11 +46,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existingItem) {
         return prevCart.map(item =>
           getCartKey(item.id, item.selectedSize, item.selectedColor) === key
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + qty }
             : item
         );
       }
-      return [...prevCart, { ...product, quantity: 1, selectedSize: size, selectedColor: color }];
+      return [...prevCart, { ...product, quantity: qty, selectedSize: size, selectedColor: color }];
     });
   };
 

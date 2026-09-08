@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Product } from '../types';
 import ProductCard from '../components/ProductCard';
+import ProductDetailModal from '../components/ProductDetailModal';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny, castProducts } from '@/lib/supabase-helpers';
 import { useCountry } from '../context/CountryContext';
@@ -12,6 +13,7 @@ export default function Shop() {
   const [products, setProducts] = useState<Product[]>([]);
   const [availabilityMap, setAvailabilityMap] = useState<Record<string, { is_available: boolean; stock_quantity: number }> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     const fetchProductsAndAvailability = async () => {
@@ -51,7 +53,22 @@ export default function Shop() {
         }
 
         if (!error && data) {
-          setProducts(castProducts(data));
+          const fetchedProducts = castProducts(data);
+          setProducts(fetchedProducts);
+
+          // Deep linking check: ?product=id or ?product=name
+          const params = new URLSearchParams(window.location.search);
+          const productIdOrSlug = params.get('product');
+          if (productIdOrSlug) {
+            const found = fetchedProducts.find(
+              (p) =>
+                p.id === productIdOrSlug ||
+                p.name.toLowerCase().replace(/\s+/g, '-') === productIdOrSlug.toLowerCase()
+            );
+            if (found) {
+              setSelectedProduct(found);
+            }
+          }
         }
       } catch (err) {
         console.error('Error fetching shop products:', err);
@@ -62,6 +79,19 @@ export default function Shop() {
 
     fetchProductsAndAvailability();
   }, [selectedCountry]);
+
+  // Sync URL query string with selected product
+  const handleSelectProduct = (product: Product | null) => {
+    setSelectedProduct(product);
+    const url = new URL(window.location.href);
+    if (product) {
+      const slug = product.name.toLowerCase().replace(/\s+/g, '-');
+      url.searchParams.set('product', product.id || slug);
+    } else {
+      url.searchParams.delete('product');
+    }
+    window.history.replaceState({}, '', url.toString());
+  };
 
   const categories = [
     'All',
@@ -79,7 +109,7 @@ export default function Shop() {
   // Filter products by availability in the current store
   const availableProducts = products
     .filter((p) => {
-      if (!availabilityMap) return true; // Default fallback if no per-store rows defined
+      if (!availabilityMap) return true;
       const storeAvail = availabilityMap[p.id];
       if (!storeAvail) return true;
       return storeAvail.is_available === true;
@@ -167,11 +197,24 @@ export default function Shop() {
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
         >
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onSelect={(p) => handleSelectProduct(p)}
+            />
           ))}
         </motion.div>
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          productsList={filteredProducts.length > 0 ? filteredProducts : availableProducts}
+          onClose={() => handleSelectProduct(null)}
+          onSelectProduct={(p) => handleSelectProduct(p)}
+        />
       )}
     </div>
   );
 }
-

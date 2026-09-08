@@ -4,6 +4,7 @@ import { Product, NavTab } from '../types';
 import { ArrowRight, ChevronDown, Flame } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
+import ProductDetailModal from '../components/ProductDetailModal';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 import heroBg from '@/assets/hero-bg.png';
 import spotlight1 from '@/assets/spotlight-1.png';
@@ -27,6 +28,7 @@ interface HomeProps {
 export default function Home({ onNavigate }: HomeProps) {
   const [, setFeaturedProducts] = useState<Product[]>([]);
   const [productOfTheDay, setProductOfTheDay] = useState<Product | null>(null);
+  const [selectedDetailProduct, setSelectedDetailProduct] = useState<Product | null>(null);
   const [updatesIndex, setUpdatesIndex] = useState(0);
   const [lifestyleIndex, setLifestyleIndex] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -348,11 +350,14 @@ export default function Home({ onNavigate }: HomeProps) {
           >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
               {/* Image Showcase */}
-              <div className="md:col-span-5 aspect-square rounded-3xl overflow-hidden bg-black/40 border border-foreground/10 relative group-hover:border-primary/40 transition-colors">
+              <div
+                onClick={() => setSelectedDetailProduct(productOfTheDay)}
+                className="md:col-span-5 aspect-square rounded-3xl overflow-hidden bg-black/40 border border-foreground/10 relative group-hover:border-primary/40 transition-colors cursor-pointer"
+              >
                 <img
                   src={productOfTheDay.image_url}
                   alt={productOfTheDay.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 p-4"
                 />
                 <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground font-black text-xs px-3.5 py-1.5 rounded-full uppercase tracking-widest shadow-lg flex items-center gap-1.5 border border-primary-foreground/20">
@@ -374,7 +379,10 @@ export default function Home({ onNavigate }: HomeProps) {
                   <span className="text-primary text-xs font-black tracking-widest uppercase block">
                     FEATURED TODAY
                   </span>
-                  <h2 className="text-3xl sm:text-5xl font-black italic uppercase tracking-tight text-foreground leading-none">
+                  <h2
+                    onClick={() => setSelectedDetailProduct(productOfTheDay)}
+                    className="text-3xl sm:text-5xl font-black italic uppercase tracking-tight text-foreground leading-none cursor-pointer hover:text-primary transition-colors"
+                  >
                     {productOfTheDay.name}
                   </h2>
                   <p className="text-xs sm:text-sm text-muted-foreground font-medium line-clamp-3 leading-relaxed">
@@ -407,10 +415,10 @@ export default function Home({ onNavigate }: HomeProps) {
 
                 {/* CTA Button */}
                 <button
-                  onClick={() => onNavigate('shop')}
-                  className="px-8 py-4 bg-primary text-primary-foreground rounded-full font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_25px_hsl(43,96%,49%,0.4)]"
+                  onClick={() => setSelectedDetailProduct(productOfTheDay)}
+                  className="px-8 py-4 bg-primary text-black rounded-full font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_25px_hsl(43,96%,49%,0.4)]"
                 >
-                  <span>SHOP PRODUCT OF THE DAY</span>
+                  <span>INSPECT PRODUCT OF THE DAY</span>
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -537,6 +545,14 @@ export default function Home({ onNavigate }: HomeProps) {
           </motion.div>
         </div>
       </section>
+
+      {/* Product Detail Modal */}
+      {selectedDetailProduct && (
+        <ProductDetailModal
+          product={selectedDetailProduct}
+          onClose={() => setSelectedDetailProduct(null)}
+        />
+      )}
     </div>
   );
 }
