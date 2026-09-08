@@ -262,11 +262,48 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
             )}
           </div>
 
-          {/* Image & Description */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Image URL</label>
-            <input required type="text" value={formData.image_url} onChange={e => setFormData({ ...formData, image_url: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" placeholder="https://example.com/image.jpg" />
+          {/* Image: upload or URL */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Product Image</label>
+
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="w-24 h-24 rounded-2xl border border-foreground/10 bg-background/50 overflow-hidden flex items-center justify-center flex-shrink-0">
+                {formData.image_url && !formData.image_url.startsWith('file://') ? (
+                  <img src={formData.image_url} alt="Product preview" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon size={22} className="text-muted-foreground" />
+                )}
+              </div>
+
+              <div className="flex-1 space-y-3 w-full">
+                <label className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all cursor-pointer ${uploading ? 'opacity-60 pointer-events-none' : 'hover:bg-foreground/10'} bg-foreground/5 border-foreground/10`}>
+                  <Upload size={16} />
+                  {uploading ? 'Uploading...' : 'Upload Image'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUpload(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+
+                <input
+                  required
+                  type="text"
+                  value={formData.image_url}
+                  onChange={e => setFormData({ ...formData, image_url: e.target.value })}
+                  className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+                  placeholder="Or paste an image link (https://...)"
+                />
+                {uploadError && <p className="text-[11px] font-bold text-destructive ml-2">{uploadError}</p>}
+              </div>
+            </div>
           </div>
+
 
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Description</label>
