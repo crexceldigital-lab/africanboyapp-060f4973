@@ -20,10 +20,10 @@ BEGIN
   END IF;
 END $$;
 
--- 2. Ensure default product stock_quantity is restored to production baseline (50 units) where needed
-UPDATE public.products
-SET stock_quantity = 50
-WHERE stock_quantity < 50;
+-- 2. Product inventory is intentionally left untouched.
+-- A previous version of this migration forced stock_quantity up to 50 for every
+-- product, which hid genuinely sold-out items. Resetting test transactions must
+-- never modify inventory.
 
 -- 3. Verify user profiles & roles are preserved
 -- (Profiles, user_roles, products, stores, store_staff, gallery items are untouched)
