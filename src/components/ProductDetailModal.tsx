@@ -18,6 +18,7 @@ import { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { useCountry } from '../context/CountryContext';
 import ProductLightboxModal from './ProductLightboxModal';
+import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -82,11 +83,16 @@ export default function ProductDetailModal({
     setSizeError(false);
   }, [product]);
 
-  // Keyboard navigation & lock body scroll
+  // Lock body scroll while the modal is mounted (ref-counted, shared with lightbox)
   useEffect(() => {
     if (!product) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, [product]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!product) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isLightboxOpen) {
@@ -95,10 +101,7 @@ export default function ProductDetailModal({
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [product, isLightboxOpen, onClose]);
 
   if (!product) return null;

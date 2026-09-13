@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock';
 
 interface ProductLightboxModalProps {
   isOpen: boolean;
@@ -41,12 +42,16 @@ export default function ProductLightboxModal({
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   }, [images.length]);
 
-  // Keyboard navigation & lock body scroll
+  // Lock body scroll while open (ref-counted, shared with the product modal)
   useEffect(() => {
     if (!isOpen) return;
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, [isOpen]);
 
-    const originalStyle = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -59,10 +64,7 @@ export default function ProductLightboxModal({
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = originalStyle;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, images.length, handlePrev, handleNext, onClose]);
 
   if (!isOpen || images.length === 0) return null;
