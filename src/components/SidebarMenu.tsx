@@ -4,7 +4,7 @@ import {
   X, Home, ShoppingBag, Grid3X3, Sparkles, TrendingUp,
   ShoppingCart, Heart, Truck, Ruler, Package, RotateCcw,
   Mail, Info, Image, ChevronDown, ChevronRight, User,
-  Sun, Moon, Phone, MessageCircle
+  Sun, Moon, Phone, MessageCircle, MapPin
 } from 'lucide-react';
 import { NavTab } from '../types';
 import { useCart } from '../context/CartContext';
@@ -210,6 +210,10 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
               <SectionLabel label="Shopping" />
               <div className="px-2 space-y-0.5">
                 <MenuItem icon={ShoppingCart} label="Cart" onClick={() => navigate('shop')} badge={cartCount} />
+                <MenuItem icon={MapPin} label="Store Locator" onClick={() => {
+                  window.dispatchEvent(new CustomEvent('ab_open_store_locator'));
+                  onClose();
+                }} />
                 <MenuItem icon={Heart} label="Wishlist" onClick={() => navigate('shop')} />
                 <MenuItem icon={Truck} label="Track Order" onClick={() => navigate('profile')} />
               </div>

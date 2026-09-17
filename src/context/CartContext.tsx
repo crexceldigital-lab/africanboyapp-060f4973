@@ -2,11 +2,12 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Product, CartItem, AppEvent } from '../types';
 import { trackAddToCart } from '../lib/analytics';
 
-export type DeliveryZone = 'inside_dar' | 'outside_dar';
+export type DeliveryZone = 'inside_dar' | 'outside_dar' | 'pickup';
 
 const DELIVERY_PRICES: Record<DeliveryZone, number> = {
   inside_dar: 3000,
   outside_dar: 10000,
+  pickup: 0,
 };
 
 interface CartContextType {

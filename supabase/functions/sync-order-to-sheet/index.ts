@@ -76,6 +76,30 @@ Deno.serve(async (req) => {
       .join(" | ");
 
     // Payment method is a non-sensitive label (e.g. "mobile_money"); no references or tokens.
+    // Deduplication check: check if order.id has already been appended to Column A
+    try {
+      const checkRes = await fetch(
+        `${GATEWAY_URL}/spreadsheets/${SHEET_ID}/values/${TAB}!A:A`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "X-Connection-Api-Key": GOOGLE_SHEETS_API_KEY,
+          },
+        }
+      );
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        const existingIds = (checkData.values || []).map((r: any) => String(r[0] || ""));
+        if (existingIds.includes(String(order.id))) {
+          console.log(`Order ${order.id} already exists in Google Sheet. Skipping duplicate append.`);
+          return json({ success: true, skipped: true, reason: "Order already synchronized", orderId: order.id });
+        }
+      }
+    } catch (dedupeErr) {
+      console.warn("Sheets deduplication check warning:", dedupeErr);
+    }
+
     const row = [
       order.id,
       order.created_at,
@@ -91,7 +115,7 @@ Deno.serve(async (req) => {
       Number(order.delivery_fee) || 0,
       order.currency || "TZS",
       order.payment_method || "",
-      "", // Fulfilment notes — filled in manually by the ops team
+      "Synced via Server", // Fulfillment notes
     ];
 
     const res = await fetch(

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Plus, Trash2, ShoppingBag, CheckCircle2, ArrowLeft, Loader2, LogIn } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, CheckCircle2, ArrowLeft, Loader2, LogIn, MapPin, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useState, useEffect } from 'react';
 import { useCountry } from '../context/CountryContext';
@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import AddressAutocomplete from './AddressAutocomplete';
 import DeliveryMapPreview from './DeliveryMapPreview';
+import StoreLocator, { STORE_LOCATIONS, StoreLocation } from './StoreLocator';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 
 interface CartDrawerProps {
@@ -30,6 +31,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     latitude: null,
     longitude: null,
   });
+  const [isStoreLocatorOpen, setIsStoreLocatorOpen] = useState(false);
+  const [selectedPickupStore, setSelectedPickupStore] = useState<StoreLocation>(STORE_LOCATIONS[0]);
 
   // Auth form state
   const [isSignup, setIsSignup] = useState(false);
@@ -40,6 +43,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [authCountryId, setAuthCountryId] = useState(1);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+
+  // Listen for global open store locator event
+  useEffect(() => {
+    const handleOpenStoreLocator = () => setIsStoreLocatorOpen(true);
+    window.addEventListener('ab_open_store_locator', handleOpenStoreLocator);
+    return () => window.removeEventListener('ab_open_store_locator', handleOpenStoreLocator);
+  }, []);
 
   // Check for payment success redirect
   useEffect(() => {
@@ -66,6 +76,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     setStep('processing');
     const currency = selectedCountry?.currency_code || 'TZS';
     trackBeginCheckout(cart, grandTotal, currency);
+
+    const finalAddress = deliveryZone === 'pickup'
+      ? `STORE PICKUP: ${selectedPickupStore.name} (${selectedPickupStore.address})`
+      : deliveryAddress;
+    const finalLat = deliveryZone === 'pickup' ? selectedPickupStore.coordinates.lat : deliveryCoords.latitude;
+    const finalLng = deliveryZone === 'pickup' ? selectedPickupStore.coordinates.lng : deliveryCoords.longitude;
+
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
@@ -85,9 +102,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           customerName: user?.full_name || '',
           customerEmail: user?.email || '',
           customerPhone: user?.phone_number || '',
-          deliveryAddress,
-          deliveryLatitude: deliveryCoords.latitude,
-          deliveryLongitude: deliveryCoords.longitude,
+          deliveryAddress: finalAddress,
+          deliveryLatitude: finalLat,
+          deliveryLongitude: finalLng,
           redirectUrl: window.location.origin + '/?payment=success',
         },
       });
@@ -324,50 +341,85 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
             {step === 'cart' && cart.length > 0 && (
               <div className="p-6 border-t border-foreground/5 space-y-4">
+                {/* Delivery Zone Options */}
                 <div className="space-y-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery Address</span>
-                  <AddressAutocomplete
-                    value={deliveryAddress}
-                    onChange={setDeliveryAddress}
-                    onResolved={({ address, latitude, longitude }) => {
-                      setDeliveryAddress(address);
-                      setDeliveryCoords({ latitude, longitude });
-                    }}
-                    regionCode={selectedCountry?.code || 'TZ'}
-                  />
-                  <DeliveryMapPreview
-                    latitude={deliveryCoords.latitude}
-                    longitude={deliveryCoords.longitude}
-                    address={deliveryAddress}
-                    onLocationChange={({ latitude, longitude }) => setDeliveryCoords({ latitude, longitude })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery Zone</span>
-                  <div className="flex gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Fulfillment Method</span>
+                  <div className="grid grid-cols-3 gap-1.5">
                     <button
                       onClick={() => setDeliveryZone('inside_dar')}
-                      className={`flex-1 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${
+                      className={`py-2 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider border-2 transition-all text-center ${
                         deliveryZone === 'inside_dar'
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-foreground/10 text-muted-foreground hover:border-foreground/20'
                       }`}
                     >
-                      Inside Dar · {formatPrice(3000)}
+                      Inside Dar
+                      <span className="block text-[8px] font-normal opacity-80">{formatPrice(3000)}</span>
                     </button>
                     <button
                       onClick={() => setDeliveryZone('outside_dar')}
-                      className={`flex-1 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${
+                      className={`py-2 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider border-2 transition-all text-center ${
                         deliveryZone === 'outside_dar'
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-foreground/10 text-muted-foreground hover:border-foreground/20'
                       }`}
                     >
-                      Other Regions · {formatPrice(10000)}
+                      Other Regions
+                      <span className="block text-[8px] font-normal opacity-80">{formatPrice(10000)}</span>
+                    </button>
+                    <button
+                      onClick={() => setDeliveryZone('pickup')}
+                      className={`py-2 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider border-2 transition-all text-center ${
+                        deliveryZone === 'pickup'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-foreground/10 text-muted-foreground hover:border-foreground/20'
+                      }`}
+                    >
+                      Store Pickup
+                      <span className="block text-[8px] font-normal text-emerald-500">FREE</span>
                     </button>
                   </div>
                 </div>
+
+                {/* Delivery Address OR Store Pickup Card */}
+                {deliveryZone === 'pickup' ? (
+                  <div className="p-3 bg-card border border-primary/20 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1">
+                        <Store size={12} /> Pickup Store Selected
+                      </span>
+                      <button
+                        onClick={() => setIsStoreLocatorOpen(true)}
+                        className="text-[9px] font-black uppercase tracking-widest text-primary underline hover:opacity-80"
+                      >
+                        Change Store
+                      </button>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase">{selectedPickupStore.name}</h4>
+                      <p className="text-[10px] text-muted-foreground font-medium">{selectedPickupStore.address}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery Address</span>
+                    <AddressAutocomplete
+                      value={deliveryAddress}
+                      onChange={setDeliveryAddress}
+                      onResolved={({ address, latitude, longitude }) => {
+                        setDeliveryAddress(address);
+                        setDeliveryCoords({ latitude, longitude });
+                      }}
+                      regionCode={selectedCountry?.code || 'TZ'}
+                    />
+                    <DeliveryMapPreview
+                      latitude={deliveryCoords.latitude}
+                      longitude={deliveryCoords.longitude}
+                      address={deliveryAddress}
+                      onLocationChange={({ latitude, longitude }) => setDeliveryCoords({ latitude, longitude })}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
@@ -376,7 +428,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery</span>
-                    <span className="text-sm font-bold">{formatPrice(deliveryFee)}</span>
+                    <span className="text-sm font-bold">{deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-foreground/10">
                     <span className="text-xs font-black uppercase tracking-widest">Total</span>
@@ -395,6 +447,18 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           </motion.div>
         </>
       )}
+
+      {/* Global & Checkout Store Locator Modal */}
+      <StoreLocator
+        isOpen={isStoreLocatorOpen}
+        onClose={() => setIsStoreLocatorOpen(false)}
+        onSelectStore={(store) => {
+          setSelectedPickupStore(store);
+          setDeliveryZone('pickup');
+          setIsStoreLocatorOpen(false);
+        }}
+        selectedStoreId={selectedPickupStore.id}
+      />
     </AnimatePresence>
   );
 }

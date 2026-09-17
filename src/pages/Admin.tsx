@@ -166,36 +166,49 @@ export default function Admin() {
 
     setIsSaving(true);
     try {
-      const { error } = editingProduct
-        ? await supabase
-            .from('products')
-            .update({ ...productData, colors: productData.colors as any, updated_at: new Date().toISOString() } as any)
-            .eq('id', editingProduct.id)
-        : await supabase
-            .from('products')
-            .insert({ ...productData, colors: productData.colors as any } as any);
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update({ ...productData, colors: productData.colors as any, updated_at: new Date().toISOString() } as any)
+          .eq('id', editingProduct.id);
 
-      if (error) {
-        console.error('Product save failed:', error);
-        const msg = String(error.message || '');
-        if (/duplicate key|unique/i.test(msg) && /sku/i.test(msg)) {
-          toast.error('A product with this SKU already exists.');
-        } else if (/permission|row-level|policy/i.test(msg)) {
-          toast.error('You do not have permission to save products. Please sign in as an admin.');
-        } else if (/column .* does not exist|schema cache/i.test(msg)) {
-          toast.error(`Database field mismatch: ${msg}`);
-        } else {
-          toast.error(msg || 'Failed to save product.');
+        if (error) throw error;
+        toast.success('Product updated successfully.');
+      } else {
+        const { data: newProd, error } = await supabase
+          .from('products')
+          .insert({ ...productData, colors: productData.colors as any } as any)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Populate store availability so storefront immediately lists it for all stores
+        if (newProd && newProd.id) {
+          try {
+            await fromAny('product_store_availability').upsert([
+              { product_id: newProd.id, store_id: 1, is_available: true, stock_quantity: productData.stock_quantity },
+              { product_id: newProd.id, store_id: 2, is_available: true, stock_quantity: productData.stock_quantity },
+            ], { onConflict: 'product_id,store_id' });
+          } catch (availErr) {
+            console.warn('Store availability sync warning:', availErr);
+          }
         }
-        return;
+        toast.success(`Product ${productData.name} (SKU: ${productData.sku || 'N/A'}) created successfully.`);
       }
 
-      toast.success(editingProduct ? 'Product updated successfully.' : 'Product created successfully.');
       setIsModalOpen(false);
       await fetchProducts();
     } catch (err: any) {
-      console.error('Unexpected product save error:', err);
-      toast.error(err?.message || 'Unexpected error while saving product.');
+      console.error('Product save error:', err);
+      const msg = String(err?.message || '');
+      if (/duplicate key|unique/i.test(msg) && /sku/i.test(msg)) {
+        toast.error('A product with this SKU already exists.');
+      } else if (/permission|row-level|policy/i.test(msg)) {
+        toast.error('Unable to save product to database. Please verify your admin session.');
+      } else {
+        toast.error(msg || 'Failed to save product.');
+      }
     } finally {
       setIsSaving(false);
     }
