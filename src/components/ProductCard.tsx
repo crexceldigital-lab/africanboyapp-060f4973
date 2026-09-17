@@ -47,6 +47,9 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  const selectedColorObj = product.colors?.find(c => c.name === selectedColor);
+  const displayedImage = selectedColorObj?.image_url || product.image_url;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -72,7 +75,7 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
 
           {/* Image object-contain to display full product clearly */}
           <img
-            src={product.image_url || undefined}
+            src={displayedImage || undefined}
             alt={product.name}
             className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105 select-none"
             referrerPolicy="no-referrer"
@@ -117,31 +120,49 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
               )}
             </div>
           </div>
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             {product.category}
           </p>
 
           {/* Swatch Previews */}
           {product.colors && product.colors.length > 0 && (
-            <div className="flex items-center gap-1.5 mb-3" onClick={(e) => e.stopPropagation()}>
-              {product.colors.map((color) => (
-                <button
-                  key={color.name}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedColor(color.name);
-                  }}
-                  title={color.name}
-                  aria-label={`Select colour ${color.name}`}
-                  aria-pressed={selectedColor === color.name}
-                  className={`w-4 h-4 rounded-full border transition-all ${
-                    selectedColor === color.name
-                      ? 'border-primary scale-125 shadow-[0_0_6px_hsl(43,96%,49%,0.6)]'
-                      : 'border-foreground/20 hover:border-foreground/40'
-                  }`}
-                  style={{ backgroundColor: color.hex }}
-                />
-              ))}
+            <div className="flex items-center gap-1.5 mb-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
+              {product.colors.map((color) => {
+                const isSelected = selectedColor === color.name;
+                const isUnavailable = color.available === false;
+                return (
+                  <button
+                    key={color.name}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isUnavailable) setSelectedColor(color.name);
+                    }}
+                    title={`${color.name}${isUnavailable ? ' (Out of stock)' : ''}`}
+                    aria-label={`Select colour ${color.name}`}
+                    aria-pressed={isSelected}
+                    disabled={isUnavailable}
+                    className={`relative w-4 h-4 rounded-full border transition-all ${
+                      isSelected
+                        ? 'border-primary scale-125 shadow-[0_0_8px_hsl(43,96%,49%,0.7)]'
+                        : isUnavailable
+                        ? 'border-foreground/10 opacity-30 cursor-not-allowed'
+                        : 'border-foreground/20 hover:border-foreground/60 hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: color.hex }}
+                  >
+                    {isUnavailable && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="w-full h-[1px] bg-red-500 rotate-45" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              {selectedColor && (
+                <span className="text-[10px] text-muted-foreground font-semibold ml-1">
+                  {selectedColor}
+                </span>
+              )}
             </div>
           )}
 

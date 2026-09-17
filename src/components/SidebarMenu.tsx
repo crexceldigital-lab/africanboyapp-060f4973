@@ -22,8 +22,28 @@ interface SidebarMenuProps {
 }
 
 const CATEGORIES = [
-  'T-Shirts', 'Jeans', 'Caps', 'Hoods', 'Footwear', 'Accessories', 'Tracksuits'
+  'T-Shirts',
+  'Shirts',
+  'Shorts',
+  'Pants / Trousers',
+  'Jackets',
+  'Leather Jackets',
+  'Leather Coats',
+  'Hoodies',
+  'Accessories',
+  'All Products',
 ];
+
+// Helper to map navigation category names to filter keys
+export const mapNavCategoryToFilter = (catName: string): string => {
+  switch (catName) {
+    case 'T-Shirts': return 'T-Shirt';
+    case 'Pants / Trousers': return 'Jeans';
+    case 'Hoodies': return 'Hoods';
+    case 'All Products': return 'All';
+    default: return catName;
+  }
+};
 
 // WhatsApp icon component
 const WhatsAppIcon = ({ size = 18 }: { size?: number }) => (
@@ -164,7 +184,13 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                         {CATEGORIES.map(cat => (
                           <button
                             key={cat}
-                            onClick={() => navigate('shop')}
+                            onClick={() => {
+                              const filterKey = mapNavCategoryToFilter(cat);
+                              const url = new URL(window.location.href);
+                              url.searchParams.set('category', filterKey);
+                              window.history.replaceState({}, '', url.toString());
+                              navigate('shop');
+                            }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors"
                           >
                             <ChevronRight size={14} className="text-muted-foreground" />

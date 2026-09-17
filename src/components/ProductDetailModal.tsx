@@ -359,30 +359,40 @@ export default function ProductDetailModal({
                         <span className="font-extrabold uppercase tracking-wider text-foreground/80">
                           Select Color
                         </span>
-                        <span className="text-primary font-bold uppercase tracking-wider text-[11px]">
+                        <span className="text-primary font-black uppercase tracking-wider text-[11px] font-mono">
                           {selectedColor || product.colors[0].name}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2.5">
                         {product.colors.map((color) => {
                           const isSelected = selectedColor === color.name;
+                          const isUnavailable = color.available === false;
                           return (
                             <button
                               key={color.name}
-                              onClick={() => handleColorSelect(color.name)}
-                              title={color.name}
+                              onClick={() => !isUnavailable && handleColorSelect(color.name)}
+                              disabled={isUnavailable}
+                              title={`${color.name}${isUnavailable ? ' (Unavailable)' : ''}`}
                               aria-label={`Select color ${color.name}`}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all text-xs font-bold ${
+                              className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl border transition-all text-xs font-bold ${
                                 isSelected
-                                  ? 'bg-primary/10 border-primary text-foreground shadow-[0_0_12px_hsl(43,96%,49%,0.3)] scale-105'
-                                  : 'bg-card border-foreground/15 text-muted-foreground hover:border-foreground/40 hover:text-foreground'
+                                  ? 'bg-primary/10 border-primary text-foreground shadow-[0_0_15px_hsl(43,96%,49%,0.35)] scale-105'
+                                  : isUnavailable
+                                  ? 'bg-card/40 border-foreground/10 text-muted-foreground/40 opacity-40 cursor-not-allowed'
+                                  : 'bg-card border-foreground/15 text-muted-foreground hover:border-foreground/50 hover:text-foreground'
                               }`}
                             >
                               <span
-                                className={`w-4 h-4 rounded-full border border-black/30 shadow-sm`}
+                                className="relative w-4 h-4 rounded-full border border-black/30 shadow-sm flex items-center justify-center overflow-hidden"
                                 style={{ backgroundColor: color.hex }}
-                              />
-                              <span>{color.name}</span>
+                              >
+                                {isUnavailable && (
+                                  <span className="w-full h-[1.5px] bg-red-500 rotate-45 absolute" />
+                                )}
+                              </span>
+                              <span className={isUnavailable ? 'line-through' : ''}>
+                                {color.name}
+                              </span>
                             </button>
                           );
                         })}

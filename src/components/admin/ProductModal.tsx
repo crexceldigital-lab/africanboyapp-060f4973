@@ -4,6 +4,7 @@ import { X, Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
 import { Product, ProductColor, Category, Subcategory, AttributeSize, AttributeColor } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
+import { PRODUCT_CATEGORIES, AFRICAN_BOY_FASHION_COLORS, LEATHER_COLOR_PRESETS } from '../../constants';
 
 export interface ProductFormData {
   name: string;
@@ -120,14 +121,7 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
 
   const availableColors = dbColors.length > 0
     ? dbColors.map(c => ({ name: c.name, hex: c.hex }))
-    : [
-        { name: 'Black', hex: '#1a1a1a' },
-        { name: 'White', hex: '#f5f5f5' },
-        { name: 'Gold', hex: '#c8a45c' },
-        { name: 'Navy', hex: '#1b2a4a' },
-        { name: 'Burgundy', hex: '#800020' },
-        { name: 'Olive', hex: '#556b2f' },
-      ];
+    : (formData.category.toLowerCase().includes('leather') ? LEATHER_COLOR_PRESETS : AFRICAN_BOY_FASHION_COLORS);
 
   const handlePerSizeStockChange = (size: string, qtyStr: string) => {
     const qty = Math.max(0, parseInt(qtyStr, 10) || 0);
@@ -225,7 +219,7 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
                 {dbCategories.length > 0 ? (
                   dbCategories.map(c => <option key={c.id} value={c.name} className="bg-card text-foreground">{c.name}</option>)
                 ) : (
-                  ['T-Shirt', 'Hoods', 'Jeans', 'Accessories', 'Footwear', 'Tracksuit', 'Caps'].map(c => <option key={c} value={c} className="bg-card text-foreground">{c}</option>)
+                  PRODUCT_CATEGORIES.map(c => <option key={c} value={c} className="bg-card text-foreground">{c}</option>)
                 )}
               </select>
             </div>

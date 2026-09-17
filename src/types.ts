@@ -8,6 +8,8 @@ export interface ProductColor {
   id?: string;
   name: string;
   hex: string;
+  image_url?: string;
+  available?: boolean;
   status?: string;
 }
 
@@ -24,12 +26,14 @@ export interface Product {
   category: string;
   subcategory?: string | null;
   image_url: string;
+  images?: string[];
   description: string;
   stock_quantity: number;
   stock?: Record<string, number> | null;
   sizes: string[];
   colors: ProductColor[];
   status?: 'active' | 'inactive' | 'stock_out' | string;
+  tags?: string[];
   created_at?: string;
   updated_at?: string;
 }
