@@ -135,6 +135,7 @@ export default function Shop() {
     'Leather Jackets',
     'Leather Coats',
     'Hoods',
+    'Socks',
     'Caps',
     'Boxer',
     'Footwear',
@@ -175,6 +176,7 @@ export default function Shop() {
         const catMatch = p.category.toLowerCase() === category.toLowerCase() ||
           (category === 'T-Shirt' && p.category.toLowerCase().includes('t-shirt')) ||
           (category === 'Hoods' && (p.category.toLowerCase().includes('hood') || p.category.toLowerCase().includes('hoodie'))) ||
+          (category === 'Socks' && (p.category.toLowerCase().includes('sock') || p.category.toLowerCase().includes('socks'))) ||
           (category === 'Jeans' && (p.category.toLowerCase().includes('jean') || p.category.toLowerCase().includes('trouser') || p.category.toLowerCase().includes('pant')));
         if (!catMatch) return false;
       }

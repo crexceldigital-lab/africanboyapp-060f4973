@@ -30,6 +30,7 @@ const CATEGORIES = [
   'Leather Jackets',
   'Leather Coats',
   'Hoodies',
+  'Socks',
   'Accessories',
   'All Products',
 ];
@@ -40,6 +41,7 @@ export const mapNavCategoryToFilter = (catName: string): string => {
     case 'T-Shirts': return 'T-Shirt';
     case 'Pants / Trousers': return 'Jeans';
     case 'Hoodies': return 'Hoods';
+    case 'Socks': return 'Socks';
     case 'All Products': return 'All';
     default: return catName;
   }

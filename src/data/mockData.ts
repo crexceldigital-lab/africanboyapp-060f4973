@@ -151,6 +151,42 @@ export const MOCK_PRODUCTS: Product[] = [
       { name: 'Royal Blue', hex: '#4169e1' },
     ],
   },
+  {
+    id: '9',
+    name: 'AFB Signature Crew Socks (3-Pack)',
+    sku: 'AFB-SOCK-001',
+    price: 25000,
+    category: 'Socks',
+    image_url: 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=400',
+    description: 'Premium combed cotton crew socks with woven African Boy logo knit and reinforced heel-toe cushioning.',
+    stock_quantity: 45,
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: [
+      { name: 'Black', hex: '#1a1a1a' },
+      { name: 'White', hex: '#f5f5f5' },
+      { name: 'Cream', hex: '#fdfbf7' },
+      { name: 'Red', hex: '#dc2626' },
+    ],
+    tags: ['Socks', 'New', 'AFB Essential'],
+  },
+  {
+    id: '10',
+    name: 'AFB Luxury Monogram Ribbed Socks',
+    sku: 'AFB-SOCK-002',
+    price: 20000,
+    category: 'Socks',
+    image_url: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400',
+    description: 'Ribbed athletic crew socks featuring gold thread African Boy monogram accent.',
+    stock_quantity: 30,
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: [
+      { name: 'White', hex: '#f5f5f5' },
+      { name: 'Black', hex: '#1a1a1a' },
+      { name: 'Navy Blue', hex: '#1b2a4a' },
+      { name: 'Gold', hex: '#d4af37' },
+    ],
+    tags: ['Socks', 'Luxury'],
+  },
 ];
 
 export const MOCK_EVENTS: AppEvent[] = [

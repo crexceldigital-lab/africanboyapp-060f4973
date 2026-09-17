@@ -11,6 +11,7 @@ export const PRODUCT_CATEGORIES = [
   'Leather Jackets',
   'Leather Coats',
   'Hoods',
+  'Socks',
   'Caps',
   'Boxer',
   'Footwear',
