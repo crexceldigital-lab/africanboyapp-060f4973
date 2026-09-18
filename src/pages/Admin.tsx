@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, LayoutList, LayoutGrid } from 'lucide-react';
 import { Product, ProductColor, AdminTab } from '../types';
 import { PRODUCT_CATEGORIES } from '../constants';
 import ProductTable from '../components/admin/ProductTable';
+import ProductGrid from '../components/admin/ProductGrid';
 import ProductModal, { ProductFormData } from '../components/admin/ProductModal';
 import ProductQuickView from '../components/admin/ProductQuickView';
 import GalleryManager from '../components/admin/GalleryManager';
@@ -20,10 +21,22 @@ export default function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ab_admin_view_mode');
+      if (saved === 'list' || saved === 'grid') return saved;
+    }
+    return 'list';
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleViewModeChange = (mode: 'list' | 'grid') => {
+    setViewMode(mode);
+    localStorage.setItem('ab_admin_view_mode', mode);
+  };
 
 
   const [formData, setFormData] = useState<ProductFormData>({
@@ -280,7 +293,7 @@ export default function Admin() {
 
       {activeTab === 'products' && (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
               <input
@@ -290,9 +303,38 @@ export default function Admin() {
                 className="w-full pl-12 pr-4 py-3 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
               />
             </div>
+
+            {/* List / Grid View Toggle */}
+            <div className="flex items-center gap-1 p-1 bg-card border border-foreground/10 rounded-2xl flex-shrink-0 self-end sm:self-auto">
+              <button
+                onClick={() => handleViewModeChange('list')}
+                title="List View"
+                className={`px-3 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-wider ${
+                  viewMode === 'list'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
+                }`}
+              >
+                <LayoutList size={18} />
+                <span className="hidden md:inline">List</span>
+              </button>
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                title="Grid View"
+                className={`px-3 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-wider ${
+                  viewMode === 'grid'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
+                }`}
+              >
+                <LayoutGrid size={18} />
+                <span className="hidden md:inline">Grid</span>
+              </button>
+            </div>
+
             <button
               onClick={() => handleOpenModal()}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex-shrink-0"
             >
               <Plus size={18} /> Add Product
             </button>
@@ -329,14 +371,25 @@ export default function Admin() {
             })}
           </div>
 
-          <ProductTable
-            products={filteredProducts}
-            activeTab={activeTab}
-            onEdit={handleOpenModal}
-            onDelete={handleDelete}
-            onUpdateStock={handleUpdateStock}
-            onQuickView={setQuickViewProduct}
-          />
+          {viewMode === 'list' ? (
+            <ProductTable
+              products={filteredProducts}
+              activeTab={activeTab}
+              onEdit={handleOpenModal}
+              onDelete={handleDelete}
+              onUpdateStock={handleUpdateStock}
+              onQuickView={setQuickViewProduct}
+            />
+          ) : (
+            <ProductGrid
+              products={filteredProducts}
+              activeTab={activeTab}
+              onEdit={handleOpenModal}
+              onDelete={handleDelete}
+              onUpdateStock={handleUpdateStock}
+              onQuickView={setQuickViewProduct}
+            />
+          )}
 
           <ProductQuickView
             product={quickViewProduct}
