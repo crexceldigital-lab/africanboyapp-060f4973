@@ -211,8 +211,14 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
 
   // Complete POS Sale (Invokes process_pos_sale RPC)
   const handleCompleteSale = async (payments: PaymentLine[]) => {
-    if (cart.length === 0) return toast.error('Cart is empty');
-    if (!user) return toast.error('Staff session invalid. Please log in again.');
+    if (cart.length === 0) {
+      toast.error('Cart is empty');
+      return;
+    }
+    if (!user) {
+      toast.error('Staff session invalid. Please log in again.');
+      return;
+    }
 
     setProcessingSale(true);
     try {
