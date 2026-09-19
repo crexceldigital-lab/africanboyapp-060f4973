@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { castOrders } from '@/lib/supabase-helpers';
 import { Order } from '../../types';
-import { ShoppingBag, DollarSign, Users, Clock, Eye, ArrowUpRight, CheckCircle, RefreshCw, TrendingUp } from 'lucide-react';
+import { ShoppingBag, DollarSign, Users, Clock, Eye, ArrowUpRight, CheckCircle, RefreshCw, TrendingUp, Boxes, AlertTriangle, Layers, Store } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import OrderDetailsModal from './OrderDetailsModal';
 import ProductOfTheDayPicker from './ProductOfTheDayPicker';
@@ -24,6 +24,15 @@ interface StatMetrics {
   repeatPurchaseRate: number;
   newCustomersCount: number;
   returningCustomersCount: number;
+
+  // Stock Value Summary Metrics
+  totalStockValue: number;
+  potentialRetailValue: number;
+  potentialGrossProfit: number;
+  totalUnitsInStock: number;
+  productsInStockCount: number;
+  outOfStockCount: number;
+  lowStockCount: number;
 }
 
 interface DashboardOverviewProps {
@@ -46,6 +55,13 @@ export default function DashboardOverview({ onNavigateTab }: DashboardOverviewPr
     repeatPurchaseRate: 0,
     newCustomersCount: 0,
     returningCustomersCount: 0,
+    totalStockValue: 0,
+    potentialRetailValue: 0,
+    potentialGrossProfit: 0,
+    totalUnitsInStock: 0,
+    productsInStockCount: 0,
+    outOfStockCount: 0,
+    lowStockCount: 0,
   });
 
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
