@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Product, ProductColor } from '@/types';
 import { X, Check, ShoppingBag } from 'lucide-react';
 import { useCountry } from '@/context/CountryContext';
+import { isFootwearCategory } from '@/constants';
 
 interface VariantSelectorModalProps {
   product: Product | null;
@@ -20,6 +21,7 @@ export default function VariantSelectorModal({
 
   if (!isOpen || !product) return null;
 
+  const isFootwear = isFootwearCategory(product.category, product.subcategory);
   const hasSizes = product.sizes && product.sizes.length > 0;
   const hasColors = product.colors && product.colors.length > 0;
 
@@ -62,23 +64,30 @@ export default function VariantSelectorModal({
         {hasSizes && (
           <div className="space-y-3">
             <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-              Select Size <span className="text-primary">*</span>
+              {isFootwear ? 'Select Size (EU)' : 'Select Size'} <span className="text-primary">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
-              {product.sizes.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => setSelectedSize(size)}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border-2 transition-all ${
-                    selectedSize === size
-                      ? 'border-primary bg-primary text-primary-foreground shadow-md scale-105'
-                      : 'border-foreground/10 bg-background hover:border-foreground/20 text-foreground'
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+              {product.sizes.map((size) => {
+                const sizeStock = product.stock ? (product.stock[size] ?? (product.stock_quantity > 0 ? 1 : 0)) : (product.stock_quantity > 0 ? 1 : 0);
+                const isOutOfStock = sizeStock <= 0;
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    disabled={isOutOfStock}
+                    onClick={() => !isOutOfStock && setSelectedSize(size)}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border-2 transition-all ${
+                      selectedSize === size
+                        ? 'border-primary bg-primary text-primary-foreground shadow-md scale-105'
+                        : isOutOfStock
+                        ? 'border-foreground/10 bg-background/50 text-muted-foreground/40 line-through opacity-50 cursor-not-allowed'
+                        : 'border-foreground/10 bg-background hover:border-foreground/20 text-foreground'
+                    }`}
+                  >
+                    {size}{isOutOfStock ? ' (N/A)' : ''}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

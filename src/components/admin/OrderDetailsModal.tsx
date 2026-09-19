@@ -4,6 +4,7 @@ import { Order, OrderShipment, OrderActivity } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Package, User, MapPin, CreditCard, Calendar, CheckCircle2, Clock, AlertTriangle, Truck, PlusCircle, ShieldCheck } from 'lucide-react';
+import { formatSizeDisplay } from '../../constants';
 
 interface OrderDetailsModalProps {
   order: Order | null;
@@ -249,7 +250,7 @@ export default function OrderDetailsModal({ order, isOpen, onClose, onOrderUpdat
                             {item.name}
                             {(item.size || item.color) && (
                               <span className="block text-[10px] text-muted-foreground font-normal">
-                                {[item.color, item.size].filter(Boolean).join(' / ')}
+                                {[item.color, item.size ? formatSizeDisplay(item.size) : null].filter(Boolean).join(' / ')}
                               </span>
                             )}
                           </td>

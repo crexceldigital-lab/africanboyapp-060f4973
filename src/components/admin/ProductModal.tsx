@@ -4,7 +4,7 @@ import { X, Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
 import { Product, ProductColor, Category, Subcategory, AttributeSize, AttributeColor } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
-import { PRODUCT_CATEGORIES, AFRICAN_BOY_FASHION_COLORS, LEATHER_COLOR_PRESETS, PRESET_SIZES_CLOTHING, PRESET_SIZES_JEANS, PRESET_SIZES_FOOTWEAR, isFootwearCategory } from '../../constants';
+import { PRODUCT_CATEGORIES, AFRICAN_BOY_FASHION_COLORS, LEATHER_COLOR_PRESETS, PRESET_SIZES_CLOTHING, PRESET_SIZES_JEANS, PRESET_SIZES_FOOTWEAR, PRESET_SIZES_FREE, isFootwearCategory, isFreeSizeCategory } from '../../constants';
 
 export interface ProductFormData {
   name: string;
@@ -113,13 +113,16 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
   const availableSubcategories = dbSubcategories.filter(sc => !currentCategoryObj || sc.category_id === currentCategoryObj.id);
 
   const isFootwear = isFootwearCategory(formData.category, formData.subcategory);
+  const isFreeSize = isFreeSizeCategory(formData.category, formData.subcategory);
 
   const defaultPresets = isFootwear
     ? PRESET_SIZES_FOOTWEAR
+    : isFreeSize
+    ? PRESET_SIZES_FREE
     : (formData.category === 'Jeans' ? PRESET_SIZES_JEANS : PRESET_SIZES_CLOTHING);
 
-  // Combine database sizes or default presets with any existing numeric sizes on the product
-  const rawAvailable = dbSizes.length > 0 && !isFootwear
+  // Combine database sizes or default presets with any existing sizes on the product
+  const rawAvailable = dbSizes.length > 0 && !isFootwear && !isFreeSize
     ? dbSizes.map(s => s.name)
     : defaultPresets;
 
@@ -393,17 +396,101 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
             <textarea required value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full px-6 py-4 bg-background/50 border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all min-h-[90px] resize-none" placeholder="Product details, material, fit guidance..." />
           </div>
 
-          {/* Per-Size Stock Breakdown Matrix (Image 7 Reference Pattern) */}
+          {/* Per-Size Stock Breakdown Matrix */}
           <div className="space-y-4 bg-background/40 border border-foreground/5 rounded-3xl p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-primary">Size & Stock Inventory</label>
-                <p className="text-[11px] text-muted-foreground font-bold">Specify inventory count per size. Total updates automatically.</p>
+                <label className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  {isFootwear
+                    ? 'SIZE (EU) & STOCK INVENTORY'
+                    : isFreeSize || formData.sizes?.includes('FREE SIZE')
+                    ? 'SIZE (FREE SIZE) & STOCK INVENTORY'
+                    : 'SIZE & STOCK INVENTORY'}
+                </label>
+                <p className="text-[11px] text-muted-foreground font-bold">Specify inventory count per size. Total stock updates automatically.</p>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Total Stock</span>
                 <span className="text-lg font-black italic font-mono text-primary">{formData.stock_quantity || 0}</span>
               </div>
+            </div>
+
+            {/* Admin Preset Selector Buttons */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-foreground/5">
+              <span className="text-[10px] font-black text-muted-foreground uppercase mr-1">Presets:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const defaultStock = PRESET_SIZES_FOOTWEAR.reduce((acc, s) => ({ ...acc, [s]: formData.stock?.[s] ?? 0 }), {} as Record<string, number>);
+                  const total = Object.values(defaultStock).reduce((sum, v) => sum + v, 0);
+                  setFormData(prev => ({
+                    ...prev,
+                    sizes: [...PRESET_SIZES_FOOTWEAR],
+                    stock: defaultStock,
+                    stock_quantity: String(total),
+                  }));
+                }}
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                  isFootwear ? 'bg-primary text-black border-primary' : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:bg-foreground/10'
+                }`}
+              >
+                Footwear (EU 36-47)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const clothingSizes = ['S', 'M', 'L', 'XL', 'XXL'];
+                  const defaultStock = clothingSizes.reduce((acc, s) => ({ ...acc, [s]: formData.stock?.[s] ?? 0 }), {} as Record<string, number>);
+                  const total = Object.values(defaultStock).reduce((sum, v) => sum + v, 0);
+                  setFormData(prev => ({
+                    ...prev,
+                    sizes: clothingSizes,
+                    stock: defaultStock,
+                    stock_quantity: String(total),
+                  }));
+                }}
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                  !isFootwear && !isFreeSize && formData.category !== 'Jeans' ? 'bg-primary text-black border-primary' : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:bg-foreground/10'
+                }`}
+              >
+                Clothing (S-XXL)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentQty = Number(formData.stock_quantity) || 10;
+                  setFormData(prev => ({
+                    ...prev,
+                    sizes: ['FREE SIZE'],
+                    stock: { 'FREE SIZE': currentQty },
+                    stock_quantity: String(currentQty),
+                  }));
+                }}
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                  isFreeSize || formData.sizes?.includes('FREE SIZE') ? 'bg-primary text-black border-primary' : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:bg-foreground/10'
+                }`}
+              >
+                FREE SIZE
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const jeansSizes = [...PRESET_SIZES_JEANS];
+                  const defaultStock = jeansSizes.reduce((acc, s) => ({ ...acc, [s]: formData.stock?.[s] ?? 0 }), {} as Record<string, number>);
+                  const total = Object.values(defaultStock).reduce((sum, v) => sum + v, 0);
+                  setFormData(prev => ({
+                    ...prev,
+                    sizes: jeansSizes,
+                    stock: defaultStock,
+                    stock_quantity: String(total),
+                  }));
+                }}
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                  formData.category === 'Jeans' ? 'bg-primary text-black border-primary' : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:bg-foreground/10'
+                }`}
+              >
+                Jeans (28-38)
+              </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">

@@ -19,6 +19,7 @@ import { useCart } from '../context/CartContext';
 import { useCountry } from '../context/CountryContext';
 import ProductLightboxModal from './ProductLightboxModal';
 import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock';
+import { isFootwearCategory } from '../constants';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -70,13 +71,19 @@ export default function ProductDetailModal({
     return imgs.length > 0 ? imgs : [product.image_url];
   }, [product]);
 
-  // Reset local state whenever active product changes
   useEffect(() => {
     if (!product) return;
     const defaultColor = product.colors && product.colors.length > 0 ? product.colors[0].name : '';
-    const defaultSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : '';
+    let initialSize = '';
+    if (product.sizes && product.sizes.length > 0) {
+      const firstInStock = product.sizes.find(s => {
+        if (!product.stock) return true;
+        return (product.stock[s] ?? 0) > 0;
+      });
+      initialSize = firstInStock || product.sizes[0];
+    }
     setSelectedColor(defaultColor);
-    setSelectedSize(defaultSize);
+    setSelectedSize(initialSize);
     setQuantity(1);
     setAdded(false);
     setActiveImageIndex(0);
@@ -107,10 +114,14 @@ export default function ProductDetailModal({
   if (!product) return null;
 
   const isOutOfStock = product.stock_quantity <= 0;
+  const isFootwear = isFootwearCategory(product.category, product.subcategory);
+  const isFreeSize =
+    product.sizes?.includes('FREE SIZE') ||
+    (product.sizes?.length === 1 && (product.sizes[0].toUpperCase() === 'FREE SIZE' || product.sizes[0].toUpperCase() === 'ONE SIZE'));
   const isOneSize =
     !product.sizes ||
     product.sizes.length === 0 ||
-    (product.sizes.length === 1 && product.sizes[0].toLowerCase().includes('one size'));
+    isFreeSize;
 
   // Calculate pricing
   const effectivePrice = product.on_sale
@@ -404,11 +415,11 @@ export default function ProductDetailModal({
                   )}
 
                   {/* Size Options */}
-                  {!isOneSize && product.sizes && product.sizes.length > 0 && (
+                  {!isFreeSize && product.sizes && product.sizes.length > 0 && (
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-extrabold uppercase tracking-wider text-foreground/80">
-                          Select Size
+                          {isFootwear ? 'SELECT SIZE (EU)' : 'SELECT SIZE'}
                         </span>
                         {sizeError && (
                           <span className="text-destructive font-bold text-[11px] uppercase tracking-wider animate-bounce">
@@ -419,19 +430,24 @@ export default function ProductDetailModal({
                       <div className="flex flex-wrap gap-2">
                         {product.sizes.map((size) => {
                           const isSelected = selectedSize === size;
+                          const sizeStock = product.stock ? (product.stock[size] ?? (product.stock_quantity > 0 ? 1 : 0)) : (product.stock_quantity > 0 ? 1 : 0);
+                          const isSizeOutOfStock = sizeStock <= 0;
                           return (
                             <button
                               key={size}
-                              onClick={() => handleSizeSelect(size)}
+                              disabled={isSizeOutOfStock}
+                              onClick={() => !isSizeOutOfStock && handleSizeSelect(size)}
                               className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
                                 isSelected
                                   ? 'bg-primary text-black border-primary shadow-[0_0_15px_hsl(43,96%,49%,0.4)] scale-105'
+                                  : isSizeOutOfStock
+                                  ? 'bg-card/40 border-foreground/10 text-muted-foreground/40 opacity-50 cursor-not-allowed line-through'
                                   : sizeError
                                   ? 'bg-destructive/10 border-destructive text-destructive hover:bg-destructive/20'
                                   : 'bg-foreground/5 text-foreground/90 border-foreground/15 hover:border-primary hover:text-primary'
                               }`}
                             >
-                              {size}
+                              {size}{isSizeOutOfStock ? ' OUT OF STOCK' : (isSelected ? ' ✓' : '')}
                             </button>
                           );
                         })}
@@ -439,11 +455,16 @@ export default function ProductDetailModal({
                     </div>
                   )}
 
-                  {/* ONE SIZE indicator if applicable */}
-                  {isOneSize && (
-                    <div className="inline-flex items-center gap-2 px-3.5 py-2 bg-foreground/5 border border-foreground/10 rounded-xl text-xs font-black uppercase tracking-wider text-muted-foreground">
-                      <span>SIZE:</span>
-                      <span className="text-primary">ONE SIZE</span>
+                  {/* FREE SIZE indicator if applicable */}
+                  {isFreeSize && (
+                    <div className="space-y-2">
+                      <span className="font-extrabold uppercase tracking-wider text-xs text-foreground/80 block">
+                        SIZE
+                      </span>
+                      <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary/10 border border-primary/30 rounded-xl text-xs font-black uppercase tracking-wider text-primary shadow-sm">
+                        <Check size={14} className="text-primary" />
+                        <span>FREE SIZE</span>
+                      </div>
                     </div>
                   )}
 

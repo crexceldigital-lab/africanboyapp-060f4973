@@ -9,6 +9,7 @@ import AddressAutocomplete from './AddressAutocomplete';
 import DeliveryMapPreview from './DeliveryMapPreview';
 import StoreLocator, { STORE_LOCATIONS, StoreLocation } from './StoreLocator';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
+import { formatSizeDisplay } from '../constants';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -271,7 +272,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                               <h4 className="font-bold text-sm truncate">{item.name}</h4>
                               {(item.selectedSize || item.selectedColor) && (
                                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
-                                  {[item.selectedColor, item.selectedSize].filter(Boolean).join(' · ')}
+                                  {[item.selectedColor, item.selectedSize ? formatSizeDisplay(item.selectedSize) : null].filter(Boolean).join(' · ')}
                                 </p>
                               )}
                               <p className="text-primary font-bold text-sm mt-1">{formatPrice(item.price)}</p>

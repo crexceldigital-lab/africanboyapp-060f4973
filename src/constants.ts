@@ -52,7 +52,8 @@ export const LEATHER_COLOR_PRESETS = [
 
 export const PRESET_SIZES_CLOTHING = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
 export const PRESET_SIZES_JEANS = ['28', '30', '32', '34', '36', '38'];
-export const PRESET_SIZES_FOOTWEAR = ['38', '39', '40', '41', '42', '43', '44', '45'];
+export const PRESET_SIZES_FOOTWEAR = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47'];
+export const PRESET_SIZES_FREE = ['FREE SIZE'];
 
 export function isFootwearCategory(category?: string, subcategory?: string): boolean {
   const text = `${category || ''} ${subcategory || ''}`.toLowerCase();
@@ -67,13 +68,28 @@ export function isFootwearCategory(category?: string, subcategory?: string): boo
   );
 }
 
+export function isFreeSizeCategory(category?: string, subcategory?: string): boolean {
+  const text = `${category || ''} ${subcategory || ''}`.toLowerCase();
+  return (
+    text.includes('cap') ||
+    text.includes('hat') ||
+    text.includes('bag') ||
+    text.includes('accessory') ||
+    text.includes('accessories') ||
+    text.includes('socks')
+  );
+}
+
 export function formatSizeDisplay(size?: string): string {
   if (!size) return '';
   const clean = size.trim();
-  if (/^\d+$/.test(clean)) {
-    return `Size ${clean}`;
+  if (clean.toUpperCase() === 'FREE SIZE' || clean.toUpperCase() === 'ONE SIZE' || clean.toUpperCase() === 'FS') {
+    return 'FREE SIZE';
   }
-  return clean;
+  if (clean.toLowerCase().startsWith('size ')) {
+    return clean;
+  }
+  return `Size ${clean}`;
 }
 
 export const NAV_ITEMS: { id: NavTab; icon: LucideIcon; label: string }[] = [
