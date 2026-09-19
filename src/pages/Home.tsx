@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
 import ProductDetailModal from '../components/ProductDetailModal';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
-import heroBg from '@/assets/hero-bg.png';
+import heroBg from '@/assets/hero-group.jpg.asset.json';
 import spotlight1 from '@/assets/spotlight-1.png';
 import spotlight2 from '@/assets/spotlight-2.png';
 import spotlight3 from '@/assets/spotlight-3.png';
