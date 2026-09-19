@@ -680,12 +680,44 @@ export default function ReportsPanel({ staffStoreId }: ReportsPanelProps) {
               <p className="text-lg font-black italic tracking-tight text-foreground">{newCustomers}</p>
             </div>
 
-            <div className="p-5 bg-card border border-foreground/5 rounded-3xl space-y-1 shadow-sm">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[10px] font-black uppercase tracking-widest">Cancelled</span>
-                <XCircle size={16} className="text-destructive" />
+          </div>
+
+          {/* Sales Channel Breakdown (Online vs In-Store POS) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-5 bg-card border border-blue-500/20 rounded-[28px] shadow-sm flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 block">
+                  Online E-Commerce Channel
+                </span>
+                <p className="text-2xl font-black italic font-mono text-foreground mt-0.5">
+                  {orders.filter(o => o.sale_type !== 'in_store' && o.status !== 'cancelled' && o.status !== 'refunded').reduce((sum, o) => sum + o.total_amount, 0).toLocaleString()}{' '}
+                  <span className="text-xs text-primary font-bold">TZS</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground font-bold mt-1">
+                  {orders.filter(o => o.sale_type !== 'in_store').length} online orders
+                </p>
               </div>
-              <p className="text-lg font-black italic tracking-tight text-foreground">{cancelledCount}</p>
+              <div className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-xs font-black uppercase tracking-wider border border-blue-500/20">
+                Online
+              </div>
+            </div>
+
+            <div className="p-5 bg-card border border-emerald-500/20 rounded-[28px] shadow-sm flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 block">
+                  In-Store POS Channel
+                </span>
+                <p className="text-2xl font-black italic font-mono text-foreground mt-0.5">
+                  {orders.filter(o => o.sale_type === 'in_store' && o.status !== 'cancelled' && o.status !== 'refunded').reduce((sum, o) => sum + o.total_amount, 0).toLocaleString()}{' '}
+                  <span className="text-xs text-primary font-bold">TZS</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground font-bold mt-1">
+                  {orders.filter(o => o.sale_type === 'in_store').length} POS in-store sales
+                </p>
+              </div>
+              <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-black uppercase tracking-wider border border-emerald-500/20">
+                In-Store POS
+              </div>
             </div>
           </div>
 

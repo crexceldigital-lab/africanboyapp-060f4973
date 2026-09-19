@@ -202,3 +202,25 @@ export function trackPurchase(
     dedupeKey
   );
 }
+
+/** Track POS In-Store sale completion separately from online e-commerce GA events */
+export function trackPosSaleCompleted(
+  receiptNumber: string,
+  items: EcomItem[],
+  value: number,
+  currency: string,
+  storeId: number,
+  staffUserId: string
+) {
+  initAnalytics();
+  trackEvent('pos_sale_completed', {
+    receipt_number: receiptNumber,
+    channel: 'in_store',
+    store_id: storeId,
+    staff_user_id: staffUserId,
+    currency,
+    value,
+    items: toGaItems(items),
+  }, `pos_sale:${receiptNumber}`);
+}
+

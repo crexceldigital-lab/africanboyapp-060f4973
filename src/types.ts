@@ -2,7 +2,7 @@ import { LucideIcon } from 'lucide-react';
 
 export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin';
 
-export type AdminTab = 'dashboard' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery' | 'reports' | 'staff';
+export type AdminTab = 'dashboard' | 'pos' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery' | 'reports' | 'staff';
 
 export interface ProductColor {
   id?: string;
@@ -60,18 +60,36 @@ export interface OrderItem {
   quantity: number;
   size?: string;
   color?: string;
+  sku?: string;
   image_url?: string;
+}
+
+export interface SalePayment {
+  id?: string;
+  order_id?: string;
+  payment_method: string;
+  amount: number;
+  reference?: string | null;
+  created_at?: string;
 }
 
 export interface Order {
   id: string;
   user_id?: string | null;
   store_id?: number | null;
+  staff_user_id?: string | null;
+  sale_type?: 'online' | 'in_store' | string;
+  receipt_number?: string | null;
   customer_name?: string | null;
   customer_email?: string | null;
   customer_phone?: string | null;
   delivery_zone?: string | null;
   delivery_fee?: number;
+  subtotal?: number;
+  discount_amount?: number;
+  discount_type?: string;
+  discount_value?: number;
+  approved_by?: string | null;
   total_amount: number;
   currency?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'refunded' | string;
@@ -79,8 +97,51 @@ export interface Order {
   payment_reference?: string | null;
   snippe_checkout_url?: string | null;
   items: OrderItem[];
+  payments?: SalePayment[];
+  notes?: string | null;
+  is_voided?: boolean;
+  voided_at?: string | null;
+  voided_by?: string | null;
+  void_reason?: string | null;
   created_at: string;
   updated_at?: string | null;
+}
+
+export interface InventoryMovement {
+  id: string;
+  product_id: string;
+  store_id?: number | null;
+  staff_user_id?: string | null;
+  quantity: number;
+  movement_type: 'SALE' | 'RESTOCK' | 'ADJUSTMENT' | 'VOID' | string;
+  reference_id?: string | null;
+  previous_stock: number;
+  new_stock: number;
+  created_at: string;
+  product_name?: string;
+}
+
+export interface HeldSale {
+  id: string;
+  hold_number: string;
+  store_id: number;
+  staff_user_id: string;
+  customer_data?: { id?: string; name: string; phone?: string; email?: string } | null;
+  items: CartItem[];
+  subtotal: number;
+  discount_amount: number;
+  total_amount: number;
+  created_at: string;
+}
+
+export interface PosAuditLog {
+  id: string;
+  user_id?: string;
+  store_id?: number;
+  action: string;
+  reference?: string;
+  details?: Record<string, any>;
+  created_at: string;
 }
 
 export interface Store {

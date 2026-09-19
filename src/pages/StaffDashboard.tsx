@@ -3,9 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { fromAny, castOrders } from '@/lib/supabase-helpers';
 import { Order, Customer, StoreStaff, Store } from '../types';
 import { useCountry } from '../context/CountryContext';
-import { ShoppingBag, Users, Eye, RefreshCw, LogOut, Store as StoreIcon, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, Users, Eye, RefreshCw, LogOut, Store as StoreIcon, ShieldCheck, Monitor, DollarSign, PlusCircle } from 'lucide-react';
 import OrderDetailsModal from '../components/admin/OrderDetailsModal';
 import CustomerDetailsModal from '../components/admin/CustomerDetailsModal';
+import POSScreen from '../components/pos/POSScreen';
+import MySalesTab from '../components/pos/MySalesTab';
 import { toast } from 'sonner';
 
 interface StaffDashboardProps {
@@ -15,7 +17,7 @@ interface StaffDashboardProps {
 
 export default function StaffDashboard({ staffAssignment, onNavigateHome }: StaffDashboardProps) {
   const { logout, user } = useCountry();
-  const [activeTab, setActiveTab] = useState<'orders' | 'customers'>('orders');
+  const [activeTab, setActiveTab] = useState<'pos' | 'orders' | 'customers' | 'my_sales'>('pos');
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,8 +28,7 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
   const fetchStaffData = async () => {
     setLoading(true);
     try {
-      // Fetch orders for staff store_id (use fromAny to avoid stale
-      // generated-types deep-instantiation errors)
+      // Fetch orders for staff store_id
       const { data: ordersData, error: ordersError } = await fromAny('orders')
         .select('*')
         .eq('store_id', staffAssignment.store_id)
@@ -104,7 +105,8 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
   const filteredOrders = orders.filter(o =>
     o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (o.customer_name && o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (o.customer_email && o.customer_email.toLowerCase().includes(searchQuery.toLowerCase()))
+    (o.customer_email && o.customer_email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (o.receipt_number && o.receipt_number.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const filteredCustomers = customers.filter(c =>
@@ -148,12 +150,18 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
                 </span>
               </div>
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                Staff Portal · {user?.email}
+                Staff POS Portal · {user?.email}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setActiveTab('pos')}
+              className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 transition-all flex items-center gap-2 shadow-lg"
+            >
+              <PlusCircle size={16} /> NEW SALE
+            </button>
             <button
               onClick={fetchStaffData}
               disabled={loading}
@@ -175,10 +183,21 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-3 border-b border-foreground/10 pb-4">
+        <div className="flex items-center gap-3 border-b border-foreground/10 pb-4 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab('pos')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'pos'
+                ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
+                : 'bg-card border border-foreground/10 text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Monitor size={16} /> POS (NEW SALE)
+          </button>
+
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${
               activeTab === 'orders'
                 ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
                 : 'bg-card border border-foreground/10 text-muted-foreground hover:text-foreground'
@@ -186,9 +205,10 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
           >
             <ShoppingBag size={16} /> ORDERS ({orders.length})
           </button>
+
           <button
             onClick={() => setActiveTab('customers')}
-            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${
               activeTab === 'customers'
                 ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
                 : 'bg-card border border-foreground/10 text-muted-foreground hover:text-foreground'
@@ -196,18 +216,37 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
           >
             <Users size={16} /> CUSTOMERS ({customers.length})
           </button>
+
+          <button
+            onClick={() => setActiveTab('my_sales')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'my_sales'
+                ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
+                : 'bg-card border border-foreground/10 text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <DollarSign size={16} /> MY SALES
+          </button>
         </div>
 
-        {/* Search Filter */}
-        <div className="flex justify-between items-center">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder={`Search ${activeTab}...`}
-            className="w-full max-w-md px-5 py-3 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none"
-          />
-        </div>
+        {/* Tab 1: POS Screen */}
+        {activeTab === 'pos' && <POSScreen staffAssignment={staffAssignment} />}
+
+        {/* Tab 2: My Sales Tab */}
+        {activeTab === 'my_sales' && <MySalesTab staffAssignment={staffAssignment} />}
+
+        {/* Search Filter for Orders / Customers */}
+        {(activeTab === 'orders' || activeTab === 'customers') && (
+          <div className="flex justify-between items-center">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder={`Search ${activeTab}...`}
+              className="w-full max-w-md px-5 py-3 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none"
+            />
+          </div>
+        )}
 
         {/* Content Area */}
         {activeTab === 'orders' ? (

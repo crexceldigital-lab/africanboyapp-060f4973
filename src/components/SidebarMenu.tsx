@@ -4,7 +4,7 @@ import {
   X, Home, ShoppingBag, Grid3X3, Sparkles, TrendingUp,
   ShoppingCart, Heart, Truck, Ruler, Package, RotateCcw,
   Mail, Info, Image, ChevronDown, ChevronRight, User,
-  Sun, Moon, Phone, MessageCircle, MapPin
+  Sun, Moon, Phone, MessageCircle, MapPin, Monitor
 } from 'lucide-react';
 import { NavTab } from '../types';
 import { useCart } from '../context/CartContext';
@@ -291,9 +291,10 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
                 </AnimatePresence>
               </div>
 
-              {/* Brand */}
-              <SectionLabel label="Brand" />
+              {/* Brand & Management */}
+              <SectionLabel label="Brand & Staff" />
               <div className="px-2 space-y-0.5">
+                <MenuItem icon={Monitor} label="POS / Staff Portal" onClick={() => navigate('admin')} isActive={activeTab === 'admin'} />
                 <MenuItem icon={Info} label="About African Boy" onClick={() => {}} />
                 <MenuItem icon={Image} label="Gallery / Lookbook" onClick={() => navigate('video')} isActive={activeTab === 'video'} />
               </div>

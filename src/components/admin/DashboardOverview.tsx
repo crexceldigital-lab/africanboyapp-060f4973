@@ -12,6 +12,10 @@ import RadialStatPair from './RadialStatPair';
 interface StatMetrics {
   totalOrders: number;
   totalRevenue: number;
+  onlineRevenue: number;
+  inStoreRevenue: number;
+  onlineOrdersCount: number;
+  inStoreOrdersCount: number;
   activeCustomers: number;
   pendingOrders: number;
   inProgressOrders: number;
@@ -30,6 +34,10 @@ export default function DashboardOverview({ onNavigateTab }: DashboardOverviewPr
   const [metrics, setMetrics] = useState<StatMetrics>({
     totalOrders: 0,
     totalRevenue: 0,
+    onlineRevenue: 0,
+    inStoreRevenue: 0,
+    onlineOrdersCount: 0,
+    inStoreOrdersCount: 0,
     activeCustomers: 0,
     pendingOrders: 0,
     inProgressOrders: 0,
@@ -66,12 +74,24 @@ export default function DashboardOverview({ onNavigateTab }: DashboardOverviewPr
         setRecentOrders(orders.slice(0, 7));
 
         const totalOrders = orders.length;
-        const totalRevenue = orders.reduce((sum, o) => {
+        let totalRevenue = 0;
+        let onlineRevenue = 0;
+        let inStoreRevenue = 0;
+        let onlineOrdersCount = 0;
+        let inStoreOrdersCount = 0;
+
+        orders.forEach((o) => {
+          const amt = Number(o.total_amount) || 0;
+          const isOnline = o.sale_type !== 'in_store';
+          if (isOnline) onlineOrdersCount += 1;
+          else inStoreOrdersCount += 1;
+
           if (o.status !== 'cancelled' && o.status !== 'refunded') {
-            return sum + (Number(o.total_amount) || 0);
+            totalRevenue += amt;
+            if (isOnline) onlineRevenue += amt;
+            else inStoreRevenue += amt;
           }
-          return sum;
-        }, 0);
+        });
 
         const pendingOrders = orders.filter(o => o.status === 'pending').length;
         const inProgressOrders = orders.filter(o => o.status === 'in_progress').length;
@@ -150,6 +170,10 @@ export default function DashboardOverview({ onNavigateTab }: DashboardOverviewPr
         setMetrics({
           totalOrders,
           totalRevenue,
+          onlineRevenue,
+          inStoreRevenue,
+          onlineOrdersCount,
+          inStoreOrdersCount,
           activeCustomers: customersCount || 0,
           pendingOrders,
           inProgressOrders,
@@ -238,11 +262,14 @@ export default function DashboardOverview({ onNavigateTab }: DashboardOverviewPr
               <DollarSign size={18} />
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <h3 className="text-3xl font-black italic tracking-tight font-mono text-primary">
               {metrics.totalRevenue.toLocaleString()} <span className="text-xs font-normal">TZS</span>
             </h3>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Gross revenue from sales</p>
+            <div className="flex gap-2 text-[9px] font-mono font-bold">
+              <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md">Online: {metrics.onlineRevenue.toLocaleString()} TZS</span>
+              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md">POS: {metrics.inStoreRevenue.toLocaleString()} TZS</span>
+            </div>
           </div>
         </div>
 
@@ -254,11 +281,12 @@ export default function DashboardOverview({ onNavigateTab }: DashboardOverviewPr
               <ShoppingBag size={18} />
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <h3 className="text-3xl font-black italic tracking-tight font-mono">{metrics.totalOrders}</h3>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
-              <CheckCircle size={10} className="text-emerald-400" /> {metrics.completedOrders} completed
-            </p>
+            <div className="flex gap-2 text-[9px] font-mono font-bold">
+              <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md">Online: {metrics.onlineOrdersCount}</span>
+              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md">POS: {metrics.inStoreOrdersCount}</span>
+            </div>
           </div>
         </div>
 

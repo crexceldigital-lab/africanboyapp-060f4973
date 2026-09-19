@@ -13,6 +13,7 @@ import CustomersManager from '../components/admin/CustomersManager';
 import AttributesManager from '../components/admin/AttributesManager';
 import ReportsPanel from '../components/admin/ReportsPanel';
 import StaffManager from '../components/admin/StaffManager';
+import POSScreen from '../components/pos/POSScreen';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -252,6 +253,7 @@ export default function Admin() {
 
   const tabLabels: Record<AdminTab, string> = {
     dashboard: 'Dashboard',
+    pos: 'POS (Store)',
     products: 'Products',
     orders: 'Orders',
     customers: 'Customers',
@@ -259,6 +261,20 @@ export default function Admin() {
     gallery: 'Gallery',
     reports: 'Reports',
     staff: 'Staff',
+  };
+
+  const adminStaffAssignment = {
+    id: 'admin-pos-session',
+    user_id: 'admin',
+    store_id: 1,
+    staff_role: 'admin',
+    store: {
+      id: 1,
+      name: 'African Boy Tanzania',
+      country_code: 'TZ',
+      currency_code: 'TZS',
+      is_active: true,
+    },
   };
 
   return (
@@ -273,7 +289,7 @@ export default function Admin() {
 
       {/* Main Navigation Pill Bar */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar p-1.5 bg-card border border-foreground/5 rounded-full">
-        {(['dashboard', 'products', 'orders', 'customers', 'attributes', 'gallery', 'reports', 'staff'] as AdminTab[]).map(tab => (
+        {(['dashboard', 'pos', 'products', 'orders', 'customers', 'attributes', 'gallery', 'reports', 'staff'] as AdminTab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -290,6 +306,8 @@ export default function Admin() {
 
       {/* Tab Contents */}
       {activeTab === 'dashboard' && <DashboardOverview onNavigateTab={(t) => setActiveTab(t as AdminTab)} />}
+
+      {activeTab === 'pos' && <POSScreen staffAssignment={adminStaffAssignment} />}
 
       {activeTab === 'products' && (
         <div className="space-y-6">
