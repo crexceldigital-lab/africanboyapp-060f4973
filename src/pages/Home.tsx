@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
 import ProductDetailModal from '../components/ProductDetailModal';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
-import heroBg from '@/assets/hero-bg.png';
+import heroBg from '@/assets/hero-group.jpg.asset.json';
 import spotlight1 from '@/assets/spotlight-1.png';
 import spotlight2 from '@/assets/spotlight-2.png';
 import spotlight3 from '@/assets/spotlight-3.png';
@@ -142,7 +142,7 @@ export default function Home({ onNavigate }: HomeProps) {
             transition={{ type: 'spring', stiffness: 100, damping: 30 }}
           >
             <motion.img
-              src={heroBg}
+              src={heroBg.url}
               alt="African Boy Collection"
               className="w-full h-full object-cover pointer-events-none"
               initial={shouldReduceMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
