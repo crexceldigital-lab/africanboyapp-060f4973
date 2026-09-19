@@ -22,9 +22,10 @@ import TrackOrder from './pages/TrackOrder';
 
 function AppContent() {
   const { loading } = useCountry();
-  const [activeTab, setActiveTab] = useState<NavTab>('home');
-  const [showSplash, setShowSplash] = useState(true);
-  const [splashMounted, setSplashMounted] = useState(true);
+  const initialTab: NavTab = window.location.pathname === '/shop' ? 'shop' : 'home';
+  const [activeTab, setActiveTab] = useState<NavTab>(initialTab);
+  const [showSplash, setShowSplash] = useState(false);
+  const [splashMounted, setSplashMounted] = useState(false);
 
   if (window.location.pathname === '/track-order') {
     return (

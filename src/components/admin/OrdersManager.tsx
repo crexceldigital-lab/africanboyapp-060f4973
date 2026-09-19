@@ -30,6 +30,22 @@ export default function OrdersManager() {
 
   useEffect(() => {
     fetchOrders();
+
+    // Subscribe to Realtime order updates
+    const channel = supabase
+      .channel('admin-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
@@ -74,6 +90,7 @@ export default function OrdersManager() {
   const filteredOrders = orders.filter((o) => {
     const matchesSearch =
       o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.order_number && o.order_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (o.customer_name && o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (o.customer_email && o.customer_email.toLowerCase().includes(searchQuery.toLowerCase()));
     
@@ -144,7 +161,10 @@ export default function OrdersManager() {
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-foreground/[0.02] transition-colors group">
                     <td className="px-8 py-6 font-mono text-sm font-bold">
-                      #{order.id.substring(0, 8)}
+                      #{order.order_number || order.id.substring(0, 8)}
+                      <span className={`block text-[9px] font-black uppercase tracking-wider mt-1 ${order.sale_type === 'in_store' ? 'text-blue-400' : 'text-emerald-400'}`}>
+                        {order.sale_type === 'in_store' ? 'IN-STORE POS' : 'ONLINE ORDER'}
+                      </span>
                     </td>
                     <td className="px-8 py-6">
                       <p className="text-sm font-black italic uppercase">{formatProductsSummary(order.items)}</p>

@@ -41,51 +41,34 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { items, totalAmount, deliveryFee, grandTotal, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude, isGuest } = body;
+    const { items, totalAmount, deliveryFee, discountAmount, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude, isGuest } = body;
 
     const isGuestOrder = Boolean(isGuest) || !userId;
-    const randomDigits = Math.floor(100000 + Math.random() * 900000);
-    const orderNumber = `AFB-${new Date().getFullYear()}-${randomDigits}`;
-
-    // Create order in DB using service role
+    const orderCurrency = currency || "TZS";
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const orderCurrency = currency || "TZS";
-    const { data: store } = await supabaseAdmin
-      .from("stores")
-      .select("id")
-      .eq("currency_code", orderCurrency)
-      .maybeSingle();
+    // Call atomic RPC: process_online_checkout
+    const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc("process_online_checkout", {
+      p_customer_name: customerName || "Guest Customer",
+      p_customer_phone: customerPhone || "",
+      p_customer_email: customerEmail || userEmail || null,
+      p_delivery_address: typeof deliveryAddress === "string" ? deliveryAddress.slice(0, 400) : null,
+      p_delivery_zone: deliveryZone || "inside_dar",
+      p_delivery_fee: Number(deliveryFee) || 0,
+      p_discount_amount: Number(discountAmount) || 0,
+      p_currency: orderCurrency,
+      p_is_guest: isGuestOrder,
+      p_items: items,
+      p_user_id: userId,
+    });
 
-    const storeId = store?.id || 1; // Default to Tanzania store (id = 1) if unspecified
+    if (rpcError) {
+      throw new Error(`Checkout Error: ${rpcError.message}`);
+    }
 
-    const { data: order, error: orderError } = await supabaseAdmin
-      .from("orders")
-      .insert({
-        order_number: orderNumber,
-        user_id: userId,
-        store_id: storeId,
-        status: "pending",
-        payment_status: "unpaid",
-        amount_paid: 0,
-        balance: grandTotal,
-        is_guest: isGuestOrder,
-        total_amount: grandTotal,
-        delivery_fee: deliveryFee,
-        currency: orderCurrency,
-        delivery_zone: deliveryZone,
-        items: items,
-        customer_name: customerName || "",
-        customer_email: customerEmail || userEmail || "",
-        customer_phone: customerPhone || "",
-        delivery_address: typeof deliveryAddress === "string" ? deliveryAddress.slice(0, 400) : null,
-        delivery_latitude: typeof deliveryLatitude === "number" ? deliveryLatitude : null,
-        delivery_longitude: typeof deliveryLongitude === "number" ? deliveryLongitude : null,
-      })
-      .select()
-      .single();
-
-    if (orderError) throw new Error(`Failed to create order: ${orderError.message}`);
+    const orderId = rpcData.order_id;
+    const orderNumber = rpcData.order_number;
+    const serverTotalAmount = Number(rpcData.total_amount);
 
     // Determine the function URL for webhook
     const projectId = Deno.env.get("SUPABASE_URL")!.match(/https:\/\/(.+)\.supabase\.co/)?.[1];
@@ -99,7 +82,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: Math.round(grandTotal),
+        amount: Math.round(serverTotalAmount),
         currency: currency || "TZS",
         allowed_methods: ["mobile_money", "card"],
         customer: {
@@ -109,16 +92,17 @@ Deno.serve(async (req) => {
         },
         redirect_url: redirectUrl || "",
         webhook_url: webhookUrl,
-        description: `African Boy Order #${order.id.slice(0, 8)}`,
+        description: `African Boy Order #${orderNumber}`,
         metadata: {
-          order_id: order.id,
+          order_id: orderId,
+          order_number: orderNumber,
           user_id: userId,
         },
         expires_in: 3600,
         line_items: items.map((item: any) => ({
           name: item.name,
           quantity: item.quantity,
-          amount: Math.round(item.price * item.quantity),
+          amount: Math.round((item.price || 0) * (item.quantity || 1)),
         })),
       }),
     });
@@ -137,13 +121,14 @@ Deno.serve(async (req) => {
         payment_reference: sessionData.reference,
         snippe_checkout_url: sessionData.checkout_url,
       })
-      .eq("id", order.id);
+      .eq("id", orderId);
 
     return new Response(
       JSON.stringify({
         success: true,
         checkout_url: sessionData.checkout_url,
-        order_id: order.id,
+        order_id: orderId,
+        order_number: orderNumber,
         reference: sessionData.reference,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

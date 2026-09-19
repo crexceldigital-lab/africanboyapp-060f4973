@@ -64,34 +64,105 @@ Deno.serve(async (req) => {
     }
 
     let newStatus = "pending";
+    let paymentStatus = "unpaid";
+
     if (event === "payment.completed" || paymentData?.status === "completed") {
       newStatus = "completed";
+      paymentStatus = "paid";
     } else if (event === "payment.failed" || paymentData?.status === "failed") {
-      newStatus = "failed";
+      newStatus = "cancelled";
+      paymentStatus = "failed";
     } else if (paymentData?.status === "voided" || paymentData?.status === "expired") {
       newStatus = "cancelled";
+      paymentStatus = "cancelled";
     }
 
-    // Update order by order_id or payment_reference
-    const updateData: Record<string, any> = {
-      status: newStatus,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (paymentData?.channel?.type) {
-      updateData.payment_method = paymentData.channel.type;
-    }
-
-    let query = supabase.from("orders").update(updateData);
+    // Fetch order details for inventory deduction & amount paid
+    let orderRecord: any = null;
     if (orderId) {
-      query = query.eq("id", orderId);
-    } else {
-      query = query.eq("payment_reference", reference);
+      const { data } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
+      orderRecord = data;
+    } else if (reference) {
+      const { data } = await supabase.from("orders").select("*").eq("payment_reference", reference).maybeSingle();
+      orderRecord = data;
     }
 
-    const { error } = await query;
-    if (error) {
-      console.error("Failed to update order:", error);
+    const actualOrderId = orderRecord?.id || orderId;
+
+    if (actualOrderId) {
+      const updateData: Record<string, any> = {
+        status: newStatus,
+        payment_status: paymentStatus,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (paymentStatus === "paid" && orderRecord) {
+        updateData.amount_paid = orderRecord.total_amount;
+        updateData.balance = 0;
+      }
+
+      if (paymentData?.channel?.type) {
+        updateData.payment_method = paymentData.channel.type;
+      }
+
+      await supabase.from("orders").update(updateData).eq("id", actualOrderId);
+
+      // Inventory deduction & activity log on payment completion
+      if (paymentStatus === "paid" && orderRecord && orderRecord.payment_status !== "paid") {
+        const storeId = orderRecord.store_id || 1;
+        const items = Array.isArray(orderRecord.items) ? orderRecord.items : [];
+
+        for (const item of items) {
+          const prodId = item.product_id || item.id;
+          const qty = Number(item.quantity) || 1;
+
+          if (prodId) {
+            // Deduct master stock
+            const { data: prod } = await supabase.from("products").select("stock_quantity").eq("id", prodId).maybeSingle();
+            if (prod) {
+              const currentStock = Number(prod.stock_quantity) || 0;
+              const newStock = Math.max(0, currentStock - qty);
+              await supabase.from("products").update({ stock_quantity: newStock }).eq("id", prodId);
+
+              // Deduct store availability stock
+              const { data: storeAvail } = await supabase
+                .from("product_store_availability")
+                .select("stock_quantity")
+                .eq("product_id", prodId)
+                .eq("store_id", storeId)
+                .maybeSingle();
+
+              if (storeAvail) {
+                const storeCurrentStock = Number(storeAvail.stock_quantity) || 0;
+                await supabase
+                  .from("product_store_availability")
+                  .update({ stock_quantity: Math.max(0, storeCurrentStock - qty) })
+                  .eq("product_id", prodId)
+                  .eq("store_id", storeId);
+              }
+
+              // Record inventory movement
+              await supabase.from("inventory_movements").insert({
+                product_id: prodId,
+                store_id: storeId,
+                quantity: -qty,
+                movement_type: "SALE",
+                reference_id: actualOrderId,
+                previous_stock: currentStock,
+                new_stock: newStock,
+              });
+            }
+          }
+        }
+
+        // Record Activity
+        await supabase.from("order_activity").insert({
+          order_id: actualOrderId,
+          actor_name: "Payment Gateway",
+          action: "PAYMENT_CONFIRMED",
+          details: `Payment confirmed via ${paymentData?.channel?.type || 'Snippe'}. Amount: ${orderRecord.total_amount} ${orderRecord.currency || 'TZS'}`
+        });
+      }
     }
 
     // Operational sync: append confirmed orders to the Google Sheet (non-blocking).

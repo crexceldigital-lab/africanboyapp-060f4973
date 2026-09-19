@@ -160,8 +160,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
   const handleGuestSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guestName.trim() || !guestPhone.trim()) {
-      setAuthError('Please fill in your name and phone number');
+    if (!guestName.trim()) {
+      setAuthError('Please enter your full name');
+      return;
+    }
+    const cleanPhone = guestPhone.replace(/[\s\-\(\)]/g, '');
+    if (!cleanPhone || cleanPhone.length < 7 || !/^\+?\d+$/.test(cleanPhone)) {
+      setAuthError('Please enter a valid phone number (e.g., +255 700 000 000 or 0700000000)');
       return;
     }
     setAuthError('');
