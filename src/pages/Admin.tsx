@@ -200,7 +200,7 @@ export default function Admin() {
         // Populate store availability so storefront immediately lists it for all stores
         if (newProd && newProd.id) {
           try {
-            await fromAny('product_store_availability').upsert([
+            await supabase.from('product_store_availability').upsert([
               { product_id: newProd.id, store_id: 1, is_available: true, stock_quantity: productData.stock_quantity },
               { product_id: newProd.id, store_id: 2, is_available: true, stock_quantity: productData.stock_quantity },
             ], { onConflict: 'product_id,store_id' });
