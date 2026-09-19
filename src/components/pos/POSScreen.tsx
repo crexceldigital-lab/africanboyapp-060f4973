@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Product, CartItem, Store, StoreStaff, Order } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { castProducts, executePosSale } from '@/lib/supabase-helpers';
+import { castProducts, executePosSale, fromAny } from '@/lib/supabase-helpers';
 import { useCountry } from '@/context/CountryContext';
 import { PRODUCT_CATEGORIES } from '@/constants';
 import BarcodeScannerInput from './BarcodeScannerInput';
@@ -25,7 +25,18 @@ import {
   ShoppingBag,
   Store as StoreIcon,
   Tag,
-  AlertCircle
+  AlertTriangle,
+  Maximize2,
+  Minimize2,
+  Clock,
+  Scan,
+  User,
+  X,
+  ChevronRight,
+  Zap,
+  Command,
+  Package,
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,6 +47,14 @@ interface POSScreenProps {
 export default function POSScreen({ staffAssignment }: POSScreenProps) {
   const { formatPrice, user } = useCountry();
   const storeId = staffAssignment.store_id;
+
+  // Live Clock & Date
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Catalog State
   const [products, setProducts] = useState<Product[]>([]);
@@ -74,7 +93,21 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
 
   // Held Sales Modal State
   const [isHeldSalesModalOpen, setIsHeldSalesModalOpen] = useState(false);
+  const [heldSalesCount, setHeldSalesCount] = useState(0);
   const [holdingSale, setHoldingSale] = useState(false);
+
+  // UI Control State (Fullscreen & Mobile Cart Drawer)
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
 
   // Fetch product catalog
   const fetchProducts = async () => {
@@ -96,11 +129,58 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
     }
   };
 
+  // Fetch count of held sales for store badge
+  const fetchHeldSalesCount = async () => {
+    try {
+      const { count } = await fromAny('held_sales')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', storeId);
+      setHeldSalesCount(count || 0);
+    } catch (err) {
+      console.error('Fetch held sales count error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
-  }, []);
+    fetchHeldSalesCount();
+  }, [storeId]);
 
-  // Filter Catalog
+  // Keyboard Shortcuts (Cmd+K for search, F2 for customer, F4 for payment, F8 for hold)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K -> Focus Search Input
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('pos-search-input');
+        searchInput?.focus();
+      }
+      // Esc -> Clear search
+      if (e.key === 'Escape') {
+        setSearchQuery('');
+      }
+      // F2 -> Open Customer Selector
+      if (e.key === 'F2') {
+        e.preventDefault();
+        setIsCustomerModalOpen(true);
+      }
+      // F4 -> Checkout / Payment
+      if (e.key === 'F4' && cart.length > 0) {
+        e.preventDefault();
+        setIsPaymentModalOpen(true);
+      }
+      // F8 -> Hold Sale
+      if (e.key === 'F8' && cart.length > 0) {
+        e.preventDefault();
+        handleHoldSale();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cart]);
+
+  // Filter Catalog Products
   const filteredProducts = products.filter((p) => {
     const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
     const q = searchQuery.toLowerCase().trim();
@@ -113,7 +193,7 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
     return matchesCategory && matchesSearch;
   });
 
-  // Handle SKU Scanner or Search Scan
+  // Handle Barcode Scan or SKU Lookup
   const handleBarcodeScan = (scannedText: string) => {
     const matched = products.find(
       (p) => p.sku && p.sku.toLowerCase() === scannedText.toLowerCase()
@@ -126,7 +206,7 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
     }
   };
 
-  // Add Product to Cart (Checking variants)
+  // Add Product to Cart (Trigger variant modal if sizes exist)
   const handleAddProductToCart = (product: Product) => {
     if (product.stock_quantity <= 0) {
       return toast.error(`"${product.name}" is OUT OF STOCK.`);
@@ -197,9 +277,10 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
   };
 
   // Cart Calculations
+  const totalCartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // Recalculate discount amount dynamically if subtotal changes
+  // Dynamic discount calculation
   const discountAmount =
     discount.type === 'percent'
       ? Math.round((subtotal * discount.value) / 100)
@@ -209,7 +290,7 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
 
   const totalAmount = Math.max(0, subtotal - discountAmount);
 
-  // Complete POS Sale (Invokes process_pos_sale RPC)
+  // Complete POS Sale
   const handleCompleteSale = async (payments: PaymentLine[]) => {
     if (cart.length === 0) {
       toast.error('Cart is empty');
@@ -301,8 +382,9 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
       setIsPaymentModalOpen(false);
       setIsReceiptModalOpen(true);
 
-      // Refresh product stock
+      // Refresh product stock & held sales count
       fetchProducts();
+      fetchHeldSalesCount();
     } catch (err: any) {
       console.error('Complete sale error:', err);
       const msg = err?.message || '';
@@ -344,6 +426,7 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
       if (error) throw error;
       toast.success(`Sale saved as ${holdNumber}`);
       resetPosCart();
+      fetchHeldSalesCount();
     } catch (err: any) {
       toast.error('Failed to hold sale');
     } finally {
@@ -355,299 +438,463 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
     setCart(heldSale.items || []);
     if (heldSale.customer_data) setCustomer(heldSale.customer_data);
     toast.success(`Resumed sale ${heldSale.hold_number}`);
+    fetchHeldSalesCount();
   };
 
-  return (
-    <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-100px)]">
-      {/* LEFT / MAIN CATALOG AREA */}
-      <div className="flex-1 space-y-6 flex flex-col min-w-0">
-        {/* Top Header Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-card p-4 rounded-[28px] border border-foreground/5 shadow-md">
-          <BarcodeScannerInput onScan={handleBarcodeScan} />
+  // Format header time string
+  const timeFormatted = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const dateFormatted = currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 
+  return (
+    <div className="space-y-4 max-w-[1600px] mx-auto">
+      {/* ========================================================================= */}
+      {/* 1. COMPACT POS TERMINAL HEADER */}
+      {/* ========================================================================= */}
+      <div className="bg-card border border-foreground/10 rounded-[28px] p-4 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        {/* Left: Brand & Terminal Title */}
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-amber-600 text-primary-foreground flex items-center justify-center font-black italic shadow-lg shadow-primary/20 shrink-0">
+            <Zap size={22} className="fill-current" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="font-black text-lg italic tracking-tighter uppercase text-foreground">
+                AFRICAN <span className="text-primary">BOY</span> POS
+              </h1>
+              <span className="px-2 py-0.5 bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-widest rounded-full">
+                RETAIL TERMINAL
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground font-bold mt-0.5">
+              <span className="flex items-center gap-1">
+                <StoreIcon size={12} className="text-primary" />
+                {staffAssignment.store?.name || `Store #${storeId}`}
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <User size={12} className="text-primary" />
+                {user?.email ? user.email.split('@')[0] : 'Cashier'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Center: Live Digital Clock & Shortcuts Badge */}
+        <div className="hidden xl:flex items-center gap-6 px-6 py-2 bg-background/60 border border-foreground/5 rounded-2xl">
+          <div className="flex items-center gap-2 font-mono">
+            <Clock size={16} className="text-primary animate-pulse" />
+            <span className="text-sm font-black text-foreground">{timeFormatted}</span>
+            <span className="text-xs text-muted-foreground font-bold">{dateFormatted}</span>
+          </div>
+          <div className="h-4 w-px bg-foreground/10" />
+          <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
+            <span className="px-1.5 py-0.5 bg-foreground/10 rounded font-bold">⌘K</span> Search
+            <span className="px-1.5 py-0.5 bg-foreground/10 rounded font-bold ml-1">F2</span> Customer
+            <span className="px-1.5 py-0.5 bg-foreground/10 rounded font-bold ml-1">F4</span> Checkout
+          </div>
+        </div>
+
+        {/* Right: Quick POS Action Buttons */}
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          {/* Held Sales Button */}
+          <button
+            onClick={() => setIsHeldSalesModalOpen(true)}
+            className="px-3.5 py-2.5 bg-background border border-foreground/10 hover:border-amber-500/50 rounded-2xl text-amber-400 font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all relative shadow-sm"
+            title="View Held Carts (F8)"
+          >
+            <PauseCircle size={16} />
+            <span>Held Sales</span>
+            {heldSalesCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center font-mono">
+                {heldSalesCount}
+              </span>
+            )}
+          </button>
+
+          {/* New Sale Button */}
+          <button
+            onClick={resetPosCart}
+            className="px-3.5 py-2.5 bg-background border border-foreground/10 hover:border-primary rounded-2xl text-foreground hover:text-primary font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm"
+            title="Clear Cart & Start New Sale"
+          >
+            <Plus size={16} />
+            <span className="hidden sm:inline">New Sale</span>
+          </button>
+
+          {/* Catalog Refresh */}
           <button
             onClick={fetchProducts}
             disabled={loadingProducts}
-            className="p-3 bg-background border border-foreground/10 hover:border-primary rounded-2xl text-muted-foreground hover:text-foreground transition-all flex-shrink-0"
+            className="p-2.5 bg-background border border-foreground/10 hover:border-primary rounded-2xl text-muted-foreground hover:text-foreground transition-all shrink-0"
             title="Refresh Product Catalog"
           >
-            <RefreshCw size={18} className={loadingProducts ? 'animate-spin text-primary' : ''} />
+            <RefreshCw size={16} className={loadingProducts ? 'animate-spin text-primary' : ''} />
+          </button>
+
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2.5 bg-background border border-foreground/10 hover:border-primary rounded-2xl text-muted-foreground hover:text-foreground transition-all shrink-0"
+            title="Toggle Fullscreen Mode"
+          >
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
         </div>
+      </div>
 
-        {/* Category Filters */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {['All', ...PRODUCT_CATEGORIES].map((cat) => {
-            const isSelected = categoryFilter === cat;
-            const count =
-              cat === 'All' ? products.length : products.filter((p) => p.category === cat).length;
-            return (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all border whitespace-nowrap flex items-center gap-2 ${
-                  isSelected
-                    ? 'bg-primary text-primary-foreground border-primary shadow-lg scale-105'
-                    : 'bg-card text-muted-foreground border-foreground/5 hover:text-foreground hover:bg-foreground/5'
-                }`}
-              >
-                <span>{cat}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+      {/* ========================================================================= */}
+      {/* 2. TWO-PANEL WORKSPACE (LEFT CATALOG 65% / RIGHT CART 35%) */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[calc(100vh-180px)]">
+        {/* ======================================================================= */}
+        {/* LEFT PANEL: PRODUCT CATALOG (COL 1 to 7/8) */}
+        {/* ======================================================================= */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4 flex flex-col min-w-0">
+          {/* Product Search & Barcode Scan Bar */}
+          <div className="bg-card border border-foreground/10 rounded-[24px] p-3 shadow-md flex items-center gap-3">
+            <BarcodeScannerInput
+              onScan={handleBarcodeScan}
+              placeholder="Search products by name, SKU or scan barcode... (⌘K)"
+            />
+          </div>
+
+          {/* Horizontal Category Selector Pills */}
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 pt-1">
+            {['All', ...PRODUCT_CATEGORIES].map((cat) => {
+              const isSelected = categoryFilter === cat;
+              const count =
+                cat === 'All' ? products.length : products.filter((p) => p.category === cat).length;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`px-4 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all border whitespace-nowrap flex items-center gap-2 ${
                     isSelected
-                      ? 'bg-black/20 text-primary-foreground'
-                      : 'bg-foreground/10 text-muted-foreground'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-lg scale-105'
+                      : 'bg-card text-muted-foreground border-foreground/5 hover:text-foreground hover:bg-foreground/5'
                   }`}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Product Catalog Grid */}
-        <div className="flex-1 overflow-y-auto min-h-[400px]">
-          {loadingProducts ? (
-            <div className="h-64 flex items-center justify-center">
-              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => {
-                const isOutOfStock = product.stock_quantity <= 0;
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => handleAddProductToCart(product)}
-                    disabled={isOutOfStock}
-                    className={`group bg-card border rounded-[24px] p-3 text-left flex flex-col justify-between transition-all relative overflow-hidden ${
-                      isOutOfStock
-                        ? 'opacity-60 border-destructive/20 cursor-not-allowed bg-destructive/5'
-                        : 'border-foreground/5 hover:border-primary/50 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                  <span>{cat}</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                      isSelected
+                        ? 'bg-black/20 text-primary-foreground'
+                        : 'bg-foreground/10 text-muted-foreground'
                     }`}
                   >
-                    {/* Badge */}
-                    <div className="absolute top-4 right-4 z-10">
-                      {isOutOfStock ? (
-                        <span className="px-2.5 py-1 bg-destructive text-destructive-foreground text-[9px] font-black uppercase tracking-widest rounded-full shadow">
-                          OUT OF STOCK
-                        </span>
-                      ) : (
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow ${
-                            product.stock_quantity <= 3
-                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                              : 'bg-card/80 backdrop-blur-md text-foreground border border-foreground/10'
-                          }`}
-                        >
-                          Stock: {product.stock_quantity}
-                        </span>
-                      )}
-                    </div>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-                    {/* Image */}
-                    <div className="w-full aspect-square rounded-2xl overflow-hidden bg-secondary mb-3 relative">
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
+          {/* Product Grid */}
+          <div className="flex-1 overflow-y-auto min-h-[460px] pr-1">
+            {loadingProducts ? (
+              <div className="h-64 flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredProducts.map((product) => {
+                  const isOutOfStock = product.stock_quantity <= 0;
+                  const isLowStock = product.stock_quantity > 0 && product.stock_quantity <= 5;
+                  const hasVariants = (product.sizes && product.sizes.length > 0) || (product.colors && product.colors.length > 0);
 
-                    {/* Meta */}
-                    <div className="space-y-1">
-                      <h4 className="font-black text-xs italic uppercase truncate group-hover:text-primary transition-colors">
-                        {product.name}
-                      </h4>
-                      {product.sku && (
-                        <p className="text-[10px] text-muted-foreground font-mono truncate">
-                          SKU: {product.sku}
-                        </p>
-                      )}
-                      <div className="flex justify-between items-center pt-1">
-                        <span className="text-primary font-black text-sm">
-                          {formatPrice(product.price)}
-                        </span>
-                        <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                          <Plus size={16} />
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => handleAddProductToCart(product)}
+                      disabled={isOutOfStock}
+                      className={`group bg-card border rounded-[24px] p-3 text-left flex flex-col justify-between transition-all relative overflow-hidden ${
+                        isOutOfStock
+                          ? 'opacity-60 border-destructive/20 cursor-not-allowed bg-destructive/5'
+                          : 'border-foreground/10 hover:border-primary/60 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]'
+                      }`}
+                    >
+                      {/* Top Right Availability Badge */}
+                      <div className="absolute top-4 right-4 z-10">
+                        {isOutOfStock ? (
+                          <span className="px-2.5 py-1 bg-destructive text-destructive-foreground text-[9px] font-black uppercase tracking-widest rounded-full shadow-md">
+                            OUT OF STOCK
+                          </span>
+                        ) : isLowStock ? (
+                          <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-black uppercase tracking-widest rounded-full shadow-md backdrop-blur-md">
+                            LOW — {product.stock_quantity} LEFT
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-card/90 backdrop-blur-md text-foreground border border-foreground/10 text-[9px] font-black uppercase tracking-widest rounded-full shadow-sm font-mono">
+                            {product.stock_quantity} IN STOCK
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Product Image */}
+                      <div className="w-full aspect-square rounded-2xl overflow-hidden bg-secondary mb-3 relative">
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        {hasVariants && (
+                          <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 backdrop-blur-md text-[9px] font-black uppercase tracking-widest text-primary rounded-md flex items-center gap-1">
+                            <Sparkles size={10} /> Sizes
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Product Metadata */}
+                      <div className="space-y-1">
+                        <h4 className="font-black text-xs italic uppercase truncate group-hover:text-primary transition-colors">
+                          {product.name}
+                        </h4>
+                        {product.sku && (
+                          <p className="text-[10px] text-muted-foreground font-mono truncate">
+                            SKU: {product.sku}
+                          </p>
+                        )}
+                        <div className="flex justify-between items-center pt-2 border-t border-foreground/5 mt-2">
+                          <span className="text-primary font-black text-sm font-mono">
+                            {formatPrice(product.price)}
+                          </span>
+                          <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-sm">
+                            <Plus size={16} />
+                          </div>
                         </div>
                       </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-64 flex flex-col items-center justify-center text-center space-y-3 text-muted-foreground bg-card rounded-[32px] border border-foreground/5 p-8">
+                <ShoppingBag size={40} className="opacity-40 text-primary" />
+                <p className="text-sm font-bold uppercase tracking-widest">No matching products found</p>
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCategoryFilter('All');
+                  }}
+                  className="px-4 py-2 bg-primary/10 text-primary font-black text-xs uppercase tracking-widest rounded-xl hover:bg-primary/20 transition-all"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ======================================================================= */}
+        {/* RIGHT PANEL: CURRENT SALE / CART (COL 8 to 12) */}
+        {/* ======================================================================= */}
+        <div className="lg:col-span-5 xl:col-span-4 bg-card border border-foreground/10 rounded-[36px] p-6 flex flex-col justify-between shadow-2xl space-y-5 flex-shrink-0">
+          {/* Cart Header */}
+          <div className="flex items-center justify-between border-b border-foreground/5 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm">
+                <ShoppingBag size={20} />
+              </div>
+              <div>
+                <h3 className="font-black text-base italic uppercase tracking-tight">
+                  CURRENT SALE
+                </h3>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                  {totalCartItemsCount} item{totalCartItemsCount === 1 ? '' : 's'} in transaction
+                </p>
+              </div>
+            </div>
+
+            {cart.length > 0 && (
+              <button
+                onClick={resetPosCart}
+                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                title="Clear Cart"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Compact Customer Selector */}
+          <button
+            onClick={() => setIsCustomerModalOpen(true)}
+            className="p-3 bg-background border border-foreground/10 hover:border-primary rounded-2xl flex items-center justify-between transition-all group shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <UserCheck size={16} />
+              </div>
+              <div className="text-left">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block">
+                  Customer (F2)
+                </span>
+                <span className="text-xs font-black uppercase truncate block group-hover:text-primary transition-colors">
+                  {customer.name}
+                </span>
+              </div>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary underline">
+              Change
+            </span>
+          </button>
+
+          {/* Cart Items List */}
+          <div className="flex-1 overflow-y-auto space-y-3 max-h-[380px] min-h-[220px] pr-1 no-scrollbar">
+            {cart.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-3 text-muted-foreground py-12">
+                <div className="w-16 h-16 rounded-full bg-foreground/5 flex items-center justify-center text-muted-foreground/40">
+                  <ShoppingBag size={32} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest">POS Cart is Empty</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 max-w-[200px] mx-auto">
+                    Click products or scan barcode to add items to current sale
+                  </p>
+                </div>
+              </div>
+            ) : (
+              cart.map((item) => {
+                const key = `${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}`;
+                const itemLineTotal = item.price * item.quantity;
+                return (
+                  <div
+                    key={key}
+                    className="bg-background rounded-2xl p-3 border border-foreground/5 flex gap-3 items-center hover:border-foreground/10 transition-all shadow-sm"
+                  >
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="w-14 h-14 object-cover rounded-xl bg-secondary flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <h5 className="font-bold text-xs truncate">{item.name}</h5>
+                      {(item.selectedSize || item.selectedColor) && (
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                          {[item.selectedColor, item.selectedSize].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary font-black text-xs font-mono">{formatPrice(item.price)}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-bold">× {item.quantity}</span>
+                      </div>
                     </div>
-                  </button>
+
+                    {/* Quantity Tap Controls */}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="font-mono font-black text-xs text-foreground">
+                        {formatPrice(itemLineTotal)}
+                      </span>
+                      <div className="flex items-center gap-1.5 bg-card border border-foreground/10 rounded-xl p-1">
+                        <button
+                          onClick={() => updateCartQuantity(key, -1)}
+                          className="w-6 h-6 rounded-lg bg-background hover:bg-foreground/10 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="text-xs font-black font-mono w-4 text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => updateCartQuantity(key, 1)}
+                          className="w-6 h-6 rounded-lg bg-background hover:bg-foreground/10 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground"
+                        >
+                          <Plus size={12} />
+                        </button>
+                        <button
+                          onClick={() => removeCartItem(key)}
+                          className="p-1 text-muted-foreground hover:text-destructive transition-colors ml-0.5"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 );
-              })}
+              })
+            )}
+          </div>
+
+          {/* Sale Totals & Checkout Panel */}
+          <div className="space-y-4 pt-4 border-t border-foreground/10">
+            {/* Subtotal & Discount rows */}
+            <div className="space-y-2 text-xs font-bold">
+              <div className="flex justify-between items-center text-muted-foreground">
+                <span>Subtotal</span>
+                <span className="font-mono text-foreground">{formatPrice(subtotal)}</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <button
+                  onClick={() => setIsDiscountModalOpen(true)}
+                  className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1"
+                >
+                  <Percent size={12} />
+                  {discount.type !== 'none' ? `Discount (${discount.value}${discount.type === 'percent' ? '%' : ''})` : 'Apply Discount'}
+                </button>
+                {discountAmount > 0 && (
+                  <span className="font-mono text-destructive font-black">-{formatPrice(discountAmount)}</span>
+                )}
+              </div>
+
+              {/* Total Due Prominent Display */}
+              <div className="flex justify-between items-center pt-3 border-t border-foreground/10">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                    TOTAL DUE
+                  </span>
+                  <span className="text-3xl font-black text-primary font-mono italic tracking-tight">
+                    {formatPrice(totalAmount)}
+                  </span>
+                </div>
+
+                <span className="px-3 py-1 bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest rounded-full font-mono">
+                  {staffAssignment.store?.currency_code || 'TZS'}
+                </span>
+              </div>
             </div>
-          ) : (
-            <div className="h-64 flex flex-col items-center justify-center text-center space-y-3 text-muted-foreground bg-card rounded-[32px] border border-foreground/5 p-8">
-              <ShoppingBag size={40} className="opacity-40" />
-              <p className="text-sm font-bold uppercase tracking-widest">No products found</p>
+
+            {/* Action Buttons Bar */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={handleHoldSale}
+                disabled={cart.length === 0 || holdingSale}
+                className="py-3.5 bg-background border border-foreground/10 text-amber-400 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-amber-500/10 transition-all disabled:opacity-40 flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <PauseCircle size={16} /> {holdingSale ? 'Holding...' : 'Hold (F8)'}
+              </button>
+
+              <button
+                onClick={() => setIsPaymentModalOpen(true)}
+                disabled={cart.length === 0}
+                className="py-3.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 size={16} /> CHECKOUT (F4)
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* RIGHT / CART & CHECKOUT PANEL */}
-      <div className="w-full lg:w-[420px] bg-card border border-foreground/10 rounded-[36px] p-6 flex flex-col justify-between shadow-2xl space-y-6 flex-shrink-0">
-        {/* Header Bar */}
-        <div className="flex items-center justify-between border-b border-foreground/5 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <StoreIcon size={20} />
-            </div>
-            <div>
-              <h3 className="font-black text-base italic uppercase tracking-tight">
-                {staffAssignment.store?.name || `STORE #${storeId}`}
-              </h3>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                Active POS Cart ({cart.reduce((s, i) => s + i.quantity, 0)} items)
-              </p>
-            </div>
-          </div>
-
+      {/* ========================================================================= */}
+      {/* 3. MOBILE & TABLET FLOATING BOTTOM CART BAR */}
+      {/* ========================================================================= */}
+      {cart.length > 0 && (
+        <div className="lg:hidden fixed bottom-6 left-6 right-6 z-[70]">
           <button
-            onClick={() => setIsHeldSalesModalOpen(true)}
-            className="p-2.5 bg-background border border-foreground/10 hover:border-amber-500 rounded-2xl text-amber-400 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all"
-            title="View Held Sales"
+            onClick={() => setIsPaymentModalOpen(true)}
+            className="w-full py-4 px-6 bg-primary text-primary-foreground rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl flex items-center justify-between border border-primary/40 animate-in slide-in-from-bottom-5 duration-200"
           >
-            <PauseCircle size={16} /> Held
+            <div className="flex items-center gap-2 font-mono">
+              <ShoppingBag size={18} />
+              <span>CHECKOUT ({totalCartItemsCount})</span>
+            </div>
+            <span className="font-mono text-base italic">{formatPrice(totalAmount)}</span>
           </button>
         </div>
+      )}
 
-        {/* Customer Selector Pill */}
-        <button
-          onClick={() => setIsCustomerModalOpen(true)}
-          className="p-3 bg-background border border-foreground/10 hover:border-primary rounded-2xl flex items-center justify-between transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <UserCheck size={16} />
-            </div>
-            <div className="text-left">
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block">
-                Customer
-              </span>
-              <span className="text-xs font-black uppercase truncate block group-hover:text-primary transition-colors">
-                {customer.name}
-              </span>
-            </div>
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-primary underline">
-            Change
-          </span>
-        </button>
-
-        {/* Cart Items List */}
-        <div className="flex-1 overflow-y-auto space-y-3 max-h-[360px] min-h-[220px] pr-1 no-scrollbar">
-          {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-3 text-muted-foreground py-12">
-              <ShoppingBag size={36} className="opacity-30" />
-              <p className="text-xs font-bold uppercase tracking-widest">POS Cart is empty</p>
-              <p className="text-[10px]">Scan a barcode or select products to start a sale</p>
-            </div>
-          ) : (
-            cart.map((item) => {
-              const key = `${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}`;
-              return (
-                <div
-                  key={key}
-                  className="bg-background rounded-2xl p-3.5 border border-foreground/5 flex gap-3 items-center"
-                >
-                  <img
-                    src={item.image_url}
-                    alt={item.name}
-                    className="w-14 h-14 object-cover rounded-xl bg-secondary flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h5 className="font-bold text-xs truncate">{item.name}</h5>
-                    {(item.selectedSize || item.selectedColor) && (
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                        {[item.selectedColor, item.selectedSize].filter(Boolean).join(' · ')}
-                      </p>
-                    )}
-                    <p className="text-primary font-black text-xs mt-0.5">{formatPrice(item.price)}</p>
-                  </div>
-
-                  {/* Quantity controls */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateCartQuantity(key, -1)}
-                      className="w-7 h-7 rounded-lg bg-card border border-foreground/10 flex items-center justify-center hover:bg-foreground/5"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <span className="text-xs font-black font-mono w-4 text-center">{item.quantity}</span>
-                    <button
-                      onClick={() => updateCartQuantity(key, 1)}
-                      className="w-7 h-7 rounded-lg bg-card border border-foreground/10 flex items-center justify-center hover:bg-foreground/5"
-                    >
-                      <Plus size={14} />
-                    </button>
-                    <button
-                      onClick={() => removeCartItem(key)}
-                      className="p-1.5 text-muted-foreground hover:text-destructive ml-1"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Bottom Totals & Action Controls */}
-        <div className="space-y-4 pt-4 border-t border-foreground/5">
-          {/* Subtotal & Discount rows */}
-          <div className="space-y-2 text-xs font-bold">
-            <div className="flex justify-between items-center text-muted-foreground">
-              <span>Subtotal</span>
-              <span className="font-mono text-foreground">{formatPrice(subtotal)}</span>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <button
-                onClick={() => setIsDiscountModalOpen(true)}
-                className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1"
-              >
-                <Percent size={12} />
-                {discount.type !== 'none' ? `Discount (${discount.value}${discount.type === 'percent' ? '%' : ''})` : 'Apply Discount'}
-              </button>
-              {discountAmount > 0 && (
-                <span className="font-mono text-destructive">-{formatPrice(discountAmount)}</span>
-              )}
-            </div>
-
-            <div className="flex justify-between items-center pt-2 border-t border-foreground/10 text-base font-black">
-              <span className="uppercase tracking-wider">Total Due</span>
-              <span className="text-2xl font-black text-primary font-mono italic">
-                {formatPrice(totalAmount)}
-              </span>
-            </div>
-          </div>
-
-          {/* Buttons Action Bar */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={handleHoldSale}
-              disabled={cart.length === 0 || holdingSale}
-              className="py-3.5 bg-background border border-foreground/10 text-amber-400 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-amber-500/10 transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
-            >
-              <PauseCircle size={16} /> {holdingSale ? 'Holding...' : 'Hold Sale'}
-            </button>
-
-            <button
-              onClick={() => setIsPaymentModalOpen(true)}
-              disabled={cart.length === 0}
-              className="py-3.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 flex items-center justify-center gap-1.5"
-            >
-              <CheckCircle2 size={16} /> Checkout
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* MODALS */}
+      {/* ========================================================================= */}
+      {/* 4. MODALS */}
+      {/* ========================================================================= */}
 
       {/* 1. Variant Selector Modal */}
       <VariantSelectorModal
@@ -657,7 +904,7 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
         onAddToCart={executeAddToCart}
       />
 
-      {/* 2. Customer Modal */}
+      {/* 2. Customer Selector Modal */}
       <CustomerModal
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
