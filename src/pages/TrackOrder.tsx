@@ -397,7 +397,6 @@ export default function TrackOrder() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }
