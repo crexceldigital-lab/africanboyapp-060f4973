@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { castOrders } from '@/lib/supabase-helpers';
 import type { Order, OrderShipment, OrderActivity } from '@/types';
 import Header from '../components/Header';
-import Footer from '../components/Footer';
 
 export default function TrackOrder() {
   const [orderNumberInput, setOrderNumberInput] = useState('');
@@ -398,7 +397,6 @@ export default function TrackOrder() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }
