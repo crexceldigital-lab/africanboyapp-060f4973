@@ -4,7 +4,7 @@ import { X, Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
 import { Product, ProductColor, Category, Subcategory, AttributeSize, AttributeColor } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
-import { PRODUCT_CATEGORIES, AFRICAN_BOY_FASHION_COLORS, LEATHER_COLOR_PRESETS } from '../../constants';
+import { PRODUCT_CATEGORIES, AFRICAN_BOY_FASHION_COLORS, LEATHER_COLOR_PRESETS, PRESET_SIZES_CLOTHING, PRESET_SIZES_JEANS, PRESET_SIZES_FOOTWEAR, isFootwearCategory } from '../../constants';
 
 export interface ProductFormData {
   name: string;
@@ -36,9 +36,6 @@ interface ProductModalProps {
   categories: string[];
   submitting?: boolean;
 }
-
-const PRESET_SIZES_CLOTHING = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
-const PRESET_SIZES_JEANS = ['28', '30', '32', '34', '36', '38'];
 
 export default function ProductModal({ isOpen, onClose, editingProduct, formData, setFormData, onSubmit, submitting = false }: ProductModalProps) {
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
@@ -115,9 +112,18 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
   const currentCategoryObj = dbCategories.find(c => c.name.toLowerCase() === formData.category.toLowerCase());
   const availableSubcategories = dbSubcategories.filter(sc => !currentCategoryObj || sc.category_id === currentCategoryObj.id);
 
-  const availableSizes = dbSizes.length > 0 
-    ? dbSizes.map(s => s.name)
+  const isFootwear = isFootwearCategory(formData.category, formData.subcategory);
+
+  const defaultPresets = isFootwear
+    ? PRESET_SIZES_FOOTWEAR
     : (formData.category === 'Jeans' ? PRESET_SIZES_JEANS : PRESET_SIZES_CLOTHING);
+
+  // Combine database sizes or default presets with any existing numeric sizes on the product
+  const rawAvailable = dbSizes.length > 0 && !isFootwear
+    ? dbSizes.map(s => s.name)
+    : defaultPresets;
+
+  const availableSizes = Array.from(new Set([...rawAvailable, ...(formData.sizes || [])]));
 
   const availableColors = dbColors.length > 0
     ? dbColors.map(c => ({ name: c.name, hex: c.hex }))

@@ -50,6 +50,32 @@ export const LEATHER_COLOR_PRESETS = [
   { name: 'Burgundy', hex: '#800020' },
 ];
 
+export const PRESET_SIZES_CLOTHING = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
+export const PRESET_SIZES_JEANS = ['28', '30', '32', '34', '36', '38'];
+export const PRESET_SIZES_FOOTWEAR = ['38', '39', '40', '41', '42', '43', '44', '45'];
+
+export function isFootwearCategory(category?: string, subcategory?: string): boolean {
+  const text = `${category || ''} ${subcategory || ''}`.toLowerCase();
+  return (
+    text.includes('footwear') ||
+    text.includes('shoe') ||
+    text.includes('sneaker') ||
+    text.includes('slide') ||
+    text.includes('sandal') ||
+    text.includes('kicks') ||
+    text.includes('boots')
+  );
+}
+
+export function formatSizeDisplay(size?: string): string {
+  if (!size) return '';
+  const clean = size.trim();
+  if (/^\d+$/.test(clean)) {
+    return `Size ${clean}`;
+  }
+  return clean;
+}
+
 export const NAV_ITEMS: { id: NavTab; icon: LucideIcon; label: string }[] = [
   { id: 'home', icon: Home, label: 'Home' },
   { id: 'shop', icon: ShoppingBag, label: 'Shop' },
