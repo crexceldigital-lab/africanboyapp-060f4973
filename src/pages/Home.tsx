@@ -142,7 +142,7 @@ export default function Home({ onNavigate }: HomeProps) {
             transition={{ type: 'spring', stiffness: 100, damping: 30 }}
           >
             <motion.img
-              src={heroBg}
+              src={heroBg.url}
               alt="African Boy Collection"
               className="w-full h-full object-cover pointer-events-none"
               initial={shouldReduceMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
