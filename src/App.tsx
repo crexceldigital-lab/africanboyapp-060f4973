@@ -18,11 +18,21 @@ import { useCountry } from './context/CountryContext';
 import SplashScreen from './components/SplashScreen';
 
 
+import TrackOrder from './pages/TrackOrder';
+
 function AppContent() {
   const { loading } = useCountry();
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [showSplash, setShowSplash] = useState(true);
   const [splashMounted, setSplashMounted] = useState(true);
+
+  if (window.location.pathname === '/track-order') {
+    return (
+      <CartProvider>
+        <TrackOrder />
+      </CartProvider>
+    );
+  }
 
   if (loading) {
     return (

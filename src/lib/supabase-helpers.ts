@@ -56,19 +56,49 @@ export function castProducts(data: any[]): Product[] {
   })) as Product[];
 }
 
+export function generateOrderNumber(): string {
+  const randomSixDigits = Math.floor(100000 + Math.random() * 900000);
+  return `AFB-${new Date().getFullYear()}-${randomSixDigits}`;
+}
+
 /**
  * Cast raw order rows from Supabase into the app's Order type,
- * normalising the JSON items field.
+ * normalising the JSON items field and item fulfillment calculations.
  */
 export function castOrders(data: any[]): Order[] {
-  return data.map((o: any) => ({
-    ...o,
-    total_amount: Number(o.total_amount) || 0,
-    delivery_fee: Number(o.delivery_fee) || 0,
-    subtotal: Number(o.subtotal) || 0,
-    discount_amount: Number(o.discount_amount) || 0,
-    items: parseJsonArray<OrderItem>(o.items),
-  })) as Order[];
+  return data.map((o: any) => {
+    const rawItems = parseJsonArray<OrderItem>(o.items);
+    const items = rawItems.map((item) => {
+      const qty = Number(item.quantity) || 1;
+      const shipped = Number(item.quantity_shipped) || 0;
+      const remaining = Math.max(0, qty - shipped);
+      return {
+        ...item,
+        quantity: qty,
+        quantity_shipped: shipped,
+        quantity_remaining: remaining,
+      };
+    });
+
+    const totalAmount = Number(o.total_amount) || 0;
+    const payments = parseJsonArray<any>(o.payments || []);
+    const amountPaid = o.amount_paid != null ? Number(o.amount_paid) : (payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0) || (o.status === 'completed' ? totalAmount : 0));
+    const balance = o.balance != null ? Number(o.balance) : Math.max(0, totalAmount - amountPaid);
+    const paymentStatus = o.payment_status || (amountPaid >= totalAmount ? 'paid' : amountPaid > 0 ? 'partially_paid' : 'unpaid');
+
+    return {
+      ...o,
+      total_amount: totalAmount,
+      delivery_fee: Number(o.delivery_fee) || 0,
+      subtotal: Number(o.subtotal) || 0,
+      discount_amount: Number(o.discount_amount) || 0,
+      amount_paid: amountPaid,
+      balance: balance,
+      payment_status: paymentStatus,
+      items,
+      payments,
+    };
+  }) as Order[];
 }
 
 /**

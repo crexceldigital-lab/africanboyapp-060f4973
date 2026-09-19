@@ -58,6 +58,8 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  quantity_shipped?: number;
+  quantity_remaining?: number;
   size?: string;
   color?: string;
   sku?: string;
@@ -73,8 +75,40 @@ export interface SalePayment {
   created_at?: string;
 }
 
+export interface OrderShipmentItem {
+  id?: string;
+  shipment_id?: string;
+  product_id?: string | null;
+  product_name: string;
+  quantity_shipped: number;
+}
+
+export interface OrderShipment {
+  id: string;
+  order_id: string;
+  carrier: string;
+  tracking_number?: string | null;
+  status: string;
+  shipped_at: string;
+  created_by?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  items?: OrderShipmentItem[];
+}
+
+export interface OrderActivity {
+  id: string;
+  order_id: string;
+  actor_id?: string | null;
+  actor_name: string;
+  action: string;
+  details?: string | null;
+  created_at: string;
+}
+
 export interface Order {
   id: string;
+  order_number?: string | null;
   user_id?: string | null;
   store_id?: number | null;
   staff_user_id?: string | null;
@@ -91,6 +125,10 @@ export interface Order {
   discount_value?: number;
   approved_by?: string | null;
   total_amount: number;
+  payment_status?: 'unpaid' | 'paid' | 'partially_paid' | string;
+  amount_paid?: number;
+  balance?: number;
+  is_guest?: boolean;
   currency?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'refunded' | string;
   payment_method?: string | null;
@@ -98,6 +136,8 @@ export interface Order {
   snippe_checkout_url?: string | null;
   items: OrderItem[];
   payments?: SalePayment[];
+  shipments?: OrderShipment[];
+  activities?: OrderActivity[];
   notes?: string | null;
   is_voided?: boolean;
   voided_at?: string | null;

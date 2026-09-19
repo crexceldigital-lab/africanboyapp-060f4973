@@ -34,8 +34,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [isStoreLocatorOpen, setIsStoreLocatorOpen] = useState(false);
   const [selectedPickupStore, setSelectedPickupStore] = useState<StoreLocation>(STORE_LOCATIONS[0]);
 
-  // Auth form state
-  const [isSignup, setIsSignup] = useState(false);
+  // Auth / Guest form state
+  const [authTab, setAuthTab] = useState<'guest' | 'login' | 'signup'>('guest');
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
@@ -43,6 +47,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [authCountryId, setAuthCountryId] = useState(1);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [lastOrderDetails, setLastOrderDetails] = useState<{ orderId?: string; orderNumber?: string; phone?: string } | null>(null);
 
   // Listen for global open store locator event
   useEffect(() => {
@@ -60,6 +65,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       if (lastOrder) {
         try {
           const parsed = JSON.parse(lastOrder);
+          setLastOrderDetails({ orderId: parsed.orderId, orderNumber: parsed.orderNumber, phone: parsed.phone });
           trackPurchase(parsed.orderId, parsed.items, parsed.value, parsed.currency, parsed.shipping);
         } catch (e) {
           console.error('Purchase tracking failed', e);
@@ -71,7 +77,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     }
   }, []);
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (guestDetails?: { name: string; email: string; phone: string }) => {
     setCheckoutLoading(true);
     setStep('processing');
     const currency = selectedCountry?.currency_code || 'TZS';
@@ -82,6 +88,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       : deliveryAddress;
     const finalLat = deliveryZone === 'pickup' ? selectedPickupStore.coordinates.lat : deliveryCoords.latitude;
     const finalLng = deliveryZone === 'pickup' ? selectedPickupStore.coordinates.lng : deliveryCoords.longitude;
+
+    const cName = user?.full_name || guestDetails?.name || guestName || 'Guest Customer';
+    const cEmail = user?.email || guestDetails?.email || guestEmail || '';
+    const cPhone = user?.phone_number || guestDetails?.phone || guestPhone || '';
 
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -99,9 +109,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           grandTotal,
           deliveryZone,
           currency,
-          customerName: user?.full_name || '',
-          customerEmail: user?.email || '',
-          customerPhone: user?.phone_number || '',
+          customerName: cName,
+          customerEmail: cEmail,
+          customerPhone: cPhone,
+          isGuest: !user,
           deliveryAddress: finalAddress,
           deliveryLatitude: finalLat,
           deliveryLongitude: finalLng,
@@ -116,6 +127,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         'ab_last_order',
         JSON.stringify({
           orderId: data.order_id,
+          orderNumber: data.order_number || data.order_id?.slice(0, 8),
+          phone: cPhone,
           items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, category: i.category, selectedSize: i.selectedSize, selectedColor: i.selectedColor })),
           value: grandTotal,
           currency,
@@ -143,6 +156,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     } else {
       handleCheckout();
     }
+  };
+
+  const handleGuestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guestName.trim() || !guestPhone.trim()) {
+      setAuthError('Please fill in your name and phone number');
+      return;
+    }
+    setAuthError('');
+    handleCheckout({ name: guestName, email: guestEmail, phone: guestPhone });
   };
 
   const handleAuthLogin = async (e: React.FormEvent) => {
@@ -176,7 +199,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     setTimeout(() => {
       setStep('cart');
       setAuthError('');
-      setIsSignup(false);
+      setAuthTab('guest');
     }, 300);
   };
 
@@ -209,9 +232,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   <ShoppingBag className="text-primary" size={24} />
                 )}
                 <h2 className="text-xl font-black italic tracking-tight uppercase">
-                  {step === 'cart' ? 'Your ' : step === 'auth' ? 'Sign ' : step === 'success' ? 'Order ' : 'Processing '}
+                  {step === 'cart' ? 'Your ' : step === 'auth' ? 'Express ' : step === 'success' ? 'Order ' : 'Processing '}
                   <span className="text-primary">
-                    {step === 'cart' ? 'Cart' : step === 'auth' ? 'In' : step === 'success' ? 'Confirmed' : '...'}
+                    {step === 'cart' ? 'Cart' : step === 'auth' ? 'Checkout' : step === 'success' ? 'Confirmed' : '...'}
                   </span>
                 </h2>
               </div>
@@ -269,13 +292,79 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                 {step === 'auth' && (
                   <motion.div key="auth-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                    <div className="text-center space-y-2">
-                      <LogIn size={32} className="text-primary mx-auto" />
-                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Sign in to complete your order</p>
+                    {/* Tab Navigation */}
+                    <div className="grid grid-cols-3 gap-1 bg-secondary/60 p-1 rounded-2xl border border-foreground/5">
+                      <button
+                        onClick={() => { setAuthTab('guest'); setAuthError(''); }}
+                        className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                          authTab === 'guest' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Guest
+                      </button>
+                      <button
+                        onClick={() => { setAuthTab('login'); setAuthError(''); }}
+                        className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                          authTab === 'login' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        onClick={() => { setAuthTab('signup'); setAuthError(''); }}
+                        className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                          authTab === 'signup' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Register
+                      </button>
                     </div>
 
-                    {!isSignup ? (
+                    {authTab === 'guest' && (
+                      <form onSubmit={handleGuestSubmit} className="space-y-4">
+                        <div className="text-center space-y-1 mb-4">
+                          <h4 className="text-sm font-black uppercase tracking-tight">Guest Checkout</h4>
+                          <p className="text-[11px] text-muted-foreground">No account required. Enter details for order updates.</p>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Full Name *"
+                          value={guestName}
+                          onChange={e => setGuestName(e.target.value)}
+                          required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+                        />
+                        <input
+                          type="tel"
+                          placeholder="Phone Number *"
+                          value={guestPhone}
+                          onChange={e => setGuestPhone(e.target.value)}
+                          required
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+                        />
+                        <input
+                          type="email"
+                          placeholder="Email Address (Optional)"
+                          value={guestEmail}
+                          onChange={e => setGuestEmail(e.target.value)}
+                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+                        />
+                        {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
+                        <button
+                          type="submit"
+                          disabled={checkoutLoading}
+                          className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                        >
+                          {checkoutLoading ? 'PROCEEDING...' : 'CONTINUE AS GUEST'}
+                        </button>
+                      </form>
+                    )}
+
+                    {authTab === 'login' && (
                       <form onSubmit={handleAuthLogin} className="space-y-4">
+                        <div className="text-center space-y-1 mb-4">
+                          <h4 className="text-sm font-black uppercase tracking-tight">Sign In to Your Account</h4>
+                        </div>
                         <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
                         <input type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required
@@ -283,11 +372,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
                         <button type="submit" disabled={authLoading}
                           className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
-                          {authLoading ? 'SIGNING IN...' : 'SIGN IN'}
+                          {authLoading ? 'SIGNING IN...' : 'SIGN IN & CHECKOUT'}
                         </button>
                       </form>
-                    ) : (
+                    )}
+
+                    {authTab === 'signup' && (
                       <form onSubmit={handleAuthSignup} className="space-y-4">
+                        <div className="text-center space-y-1 mb-4">
+                          <h4 className="text-sm font-black uppercase tracking-tight">Create an Account</h4>
+                        </div>
                         <input type="text" placeholder="Full Name" value={authName} onChange={e => setAuthName(e.target.value)} required
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
                         <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required
@@ -303,15 +397,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
                         <button type="submit" disabled={authLoading}
                           className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
-                          {authLoading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+                          {authLoading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT & CHECKOUT'}
                         </button>
                       </form>
                     )}
-
-                    <button onClick={() => { setIsSignup(!isSignup); setAuthError(''); }}
-                      className="w-full text-center text-xs font-bold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest">
-                      {isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-                    </button>
                   </motion.div>
                 )}
 
@@ -329,11 +418,26 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     </div>
                     <div className="space-y-2">
                       <h3 className="text-2xl font-black italic uppercase">Payment Successful!</h3>
-                      <p className="text-muted-foreground text-sm">Thank you for your order. You'll receive a confirmation shortly.</p>
+                      <p className="text-muted-foreground text-sm">Thank you for your order. Your tracking details are below.</p>
+                      {lastOrderDetails?.orderNumber && (
+                        <div className="p-3 bg-secondary rounded-xl border border-foreground/10 text-xs font-bold font-mono text-primary">
+                          Order #{lastOrderDetails.orderNumber}
+                        </div>
+                      )}
                     </div>
-                    <button onClick={resetAndClose} className="btn-primary text-sm uppercase tracking-widest">
-                      Continue Shopping
-                    </button>
+                    <div className="w-full space-y-2 pt-4">
+                      {lastOrderDetails?.orderNumber && (
+                        <a
+                          href={`/track-order?order_number=${encodeURIComponent(lastOrderDetails.orderNumber)}&phone=${encodeURIComponent(lastOrderDetails.phone || '')}`}
+                          className="w-full block py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl text-center hover:opacity-90"
+                        >
+                          Track Your Order
+                        </a>
+                      )}
+                      <button onClick={resetAndClose} className="w-full py-3 bg-secondary text-foreground font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-secondary/80">
+                        Continue Shopping
+                      </button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

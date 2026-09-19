@@ -161,6 +161,7 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
               <div className="px-2 space-y-0.5">
                 <MenuItem icon={Home} label="Home" onClick={() => navigate('home')} isActive={activeTab === 'home'} />
                 <MenuItem icon={ShoppingBag} label="Shop" onClick={() => navigate('shop')} isActive={activeTab === 'shop'} />
+                <MenuItem icon={Package} label="Track Order" onClick={() => { window.location.href = '/track-order'; onClose(); }} />
 
                 {/* Categories dropdown */}
                 <button

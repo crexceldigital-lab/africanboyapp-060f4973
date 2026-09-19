@@ -18,23 +18,34 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Get user from auth header
+    // Get user from auth header if present
     const authHeader = req.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) throw new Error("Not authenticated");
+    let userId: string | null = null;
+    let userEmail: string | null = null;
 
-    const supabaseUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const supabaseUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+          global: { headers: { Authorization: authHeader } },
+        });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) throw new Error("Not authenticated");
-
-    const userId = claimsData.claims.sub as string;
-    const userEmail = claimsData.claims.email as string;
+        const token = authHeader.replace("Bearer ", "");
+        const { data: claimsData } = await supabaseUser.auth.getClaims(token);
+        if (claimsData?.claims) {
+          userId = claimsData.claims.sub as string;
+          userEmail = claimsData.claims.email as string;
+        }
+      } catch (e) {
+        console.warn("Guest or invalid auth token in create-payment:", e);
+      }
+    }
 
     const body = await req.json();
-    const { items, totalAmount, deliveryFee, grandTotal, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude } = body;
+    const { items, totalAmount, deliveryFee, grandTotal, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude, isGuest } = body;
+
+    const isGuestOrder = Boolean(isGuest) || !userId;
+    const randomDigits = Math.floor(100000 + Math.random() * 900000);
+    const orderNumber = `AFB-${new Date().getFullYear()}-${randomDigits}`;
 
     // Create order in DB using service role
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -51,9 +62,14 @@ Deno.serve(async (req) => {
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
+        order_number: orderNumber,
         user_id: userId,
         store_id: storeId,
         status: "pending",
+        payment_status: "unpaid",
+        amount_paid: 0,
+        balance: grandTotal,
+        is_guest: isGuestOrder,
         total_amount: grandTotal,
         delivery_fee: deliveryFee,
         currency: orderCurrency,
