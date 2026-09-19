@@ -7,11 +7,11 @@ import SidebarMenu from './SidebarMenu';
 import { NavTab } from '../types';
 
 interface HeaderProps {
-  activeTab: NavTab;
-  setActiveTab: (tab: NavTab) => void;
+  activeTab?: NavTab;
+  setActiveTab?: (tab: NavTab) => void;
 }
 
-export default function Header({ activeTab, setActiveTab }: HeaderProps) {
+export default function Header({ activeTab, setActiveTab = () => {} }: HeaderProps) {
   const { cartCount } = useCart();
   const { selectedCountry } = useCountry();
   const [isCartOpen, setIsCartOpen] = useState(false);
