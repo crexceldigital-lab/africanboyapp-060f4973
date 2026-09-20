@@ -19,11 +19,18 @@ Deno.serve(async (req) => {
 
     const rawBody = await req.text();
 
-    // Verify webhook signature if a secret is configured
+    // Verify webhook signature — an unsigned notification is never proof of payment
     if (WEBHOOK_SECRET) {
       const signature =
         req.headers.get("x-webhook-signature") || req.headers.get("x-snippe-signature");
-      if (signature) {
+      if (!signature) {
+        console.error("Missing webhook signature header");
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      {
         const encoder = new TextEncoder();
         const key = await crypto.subtle.importKey(
           "raw",
@@ -86,7 +93,13 @@ Deno.serve(async (req) => {
     const status = String(paymentData?.status || "").toLowerCase();
     const isPaid = event === "payment.completed" || status === "completed" || status === "paid";
     const isFailed = event === "payment.failed" || status === "failed";
-    const isCancelled = status === "voided" || status === "expired" || status === "cancelled";
+    const isCancelled =
+      event === "payment.voided" ||
+      event === "payment.expired" ||
+      event === "payment.cancelled" ||
+      status === "voided" ||
+      status === "expired" ||
+      status === "cancelled";
 
     let synced = false;
 
