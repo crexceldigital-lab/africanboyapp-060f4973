@@ -897,6 +897,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_order_shipment: {
+        Args: {
+          p_actor_id?: string
+          p_actor_name?: string
+          p_carrier: string
+          p_items: Json
+          p_notes: string
+          p_order_id: string
+          p_tracking_number: string
+        }
+        Returns: string
+      }
       fail_order_payment: {
         Args: { p_order_id: string; p_reference?: string; p_status?: string }
         Returns: Json
@@ -924,6 +936,30 @@ export type Database = {
           p_items?: Json
           p_user_id?: string
         }
+        Returns: Json
+      }
+      process_pos_sale: {
+        Args: {
+          p_approved_by?: string
+          p_customer_email?: string
+          p_customer_id?: string
+          p_customer_name?: string
+          p_customer_phone?: string
+          p_discount_amount?: number
+          p_discount_type?: string
+          p_discount_value?: number
+          p_items?: Json
+          p_notes?: string
+          p_payments?: Json
+          p_staff_user_id: string
+          p_store_id: number
+          p_subtotal?: number
+          p_total_amount?: number
+        }
+        Returns: Json
+      }
+      void_pos_sale: {
+        Args: { p_order_id: string; p_reason: string; p_staff_user_id: string }
         Returns: Json
       }
     }
