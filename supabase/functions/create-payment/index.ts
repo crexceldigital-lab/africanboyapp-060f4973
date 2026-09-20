@@ -123,7 +123,18 @@ Deno.serve(async (req) => {
     const snippeData = await snippeRes.json();
 
     if (!snippeRes.ok) {
-      throw new Error(`Snippe API error [${snippeRes.status}]: ${JSON.stringify(snippeData)}`);
+      // Never leave a stranded pending order behind when the gateway refuses the session.
+      await supabaseAdmin.rpc("fail_order_payment", {
+        p_order_id: orderId,
+        p_status: "cancelled",
+        p_reference: null,
+      }).catch(() => {});
+
+      const gatewayMsg = String(snippeData?.message || "");
+      const friendly = /country we collect in/i.test(gatewayMsg)
+        ? "Payments are currently accepted with a Tanzanian, Kenyan or Ugandan mobile number. Please enter a mobile money number from one of these countries, or contact us on WhatsApp to arrange payment."
+        : `Payment could not be started. ${gatewayMsg || `Gateway error ${snippeRes.status}`}`;
+      throw new Error(friendly);
     }
 
     // Update order with payment reference
