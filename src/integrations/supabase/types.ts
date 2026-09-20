@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      countries: {
+        Row: {
+          code: string
+          currency_code: string
+          currency_symbol: string
+          flag_emoji: string | null
+          id: number
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          code: string
+          currency_code: string
+          currency_symbol: string
+          flag_emoji?: string | null
+          id?: number
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          code?: string
+          currency_code?: string
+          currency_symbol?: string
+          flag_emoji?: string | null
+          id?: number
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      exchange_rates: {
+        Row: {
+          from_currency: string
+          id: number
+          rate: number
+          to_currency: string
+          updated_at: string
+        }
+        Insert: {
+          from_currency: string
+          id?: number
+          rate: number
+          to_currency: string
+          updated_at?: string
+        }
+        Update: {
+          from_currency?: string
+          id?: number
+          rate?: number
+          to_currency?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gallery_items: {
         Row: {
           created_at: string | null
@@ -206,6 +260,45 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      product_store_availability: {
+        Row: {
+          id: string
+          is_available: boolean
+          product_id: string
+          stock_quantity: number
+          store_id: number
+        }
+        Insert: {
+          id?: string
+          is_available?: boolean
+          product_id: string
+          stock_quantity?: number
+          store_id: number
+        }
+        Update: {
+          id?: string
+          is_available?: boolean
+          product_id?: string
+          stock_quantity?: number
+          store_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_store_availability_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_store_availability_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_subcategories: {
         Row: {
@@ -447,6 +540,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_staff_store: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
