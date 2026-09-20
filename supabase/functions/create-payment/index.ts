@@ -44,7 +44,19 @@ Deno.serve(async (req) => {
     const { items, totalAmount, deliveryFee, discountAmount, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude, isGuest } = body;
 
     const isGuestOrder = Boolean(isGuest) || !userId;
-    const orderCurrency = currency || "TZS";
+    // Snippe settles only in TZS (other currencies are rejected with a validation error),
+    // and all product prices in the database are stored in TZS. The storefront may DISPLAY
+    // converted prices, but the charge currency must stay TZS — never silently convert.
+    const orderCurrency = "TZS";
+    const displayCurrency = currency || "TZS";
+    // Snippe hosted checkout currently exposes only "mobile_money". If the merchant account
+    // is later activated for cards, set the SNIPPE_ALLOWED_METHODS secret (e.g. "mobile_money,card")
+    // — no code change needed. Requesting an unsupported method makes checkout show
+    // "This payment method is not available".
+    const allowedMethods = (Deno.env.get("SNIPPE_ALLOWED_METHODS") || "mobile_money")
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean);
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Call atomic RPC: process_online_checkout
