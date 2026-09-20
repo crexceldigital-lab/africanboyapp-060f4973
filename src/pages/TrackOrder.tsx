@@ -46,65 +46,24 @@ export default function TrackOrder() {
     setActivities([]);
 
     try {
-      const cleanOrderNum = orderNum.trim();
-      const cleanContact = contact.trim().toLowerCase();
+      const { data, error } = await supabase.functions.invoke('order-lookup', {
+        body: {
+          action: 'track',
+          orderNumber: orderNum.trim(),
+          contact: contact.trim(),
+        },
+      });
 
-      // Query order matching order_number OR id
-      let query = (supabase as any).from('orders').select('*');
+      if (error) throw error;
 
-      if (cleanOrderNum.startsWith('AFB-')) {
-        query = query.eq('order_number', cleanOrderNum);
-      } else {
-        query = query.or(`order_number.eq.${cleanOrderNum},id.eq.${cleanOrderNum}`);
-      }
-
-      const { data: orderData, error: orderErr } = await query;
-
-      if (orderErr) throw orderErr;
-      if (!orderData || orderData.length === 0) {
-        setErrorMsg('No order found with that Order Number. Please check and try again.');
+      if (!data?.success) {
+        setErrorMsg(data?.error || 'No order found with those details. Please check and try again.');
         return;
       }
 
-      const orderList = castOrders(orderData);
-      let matchedOrder = orderList[0];
-
-      // If contact provided, verify phone or email
-      if (cleanContact) {
-        const matchesPhone = matchedOrder.customer_phone?.toLowerCase().includes(cleanContact);
-        const matchesEmail = matchedOrder.customer_email?.toLowerCase().includes(cleanContact);
-        if (!matchesPhone && !matchesEmail) {
-          setErrorMsg('Verification failed. Phone number or email does not match order records.');
-          return;
-        }
-      }
-
-      setFoundOrder(matchedOrder);
-
-      // Fetch shipments for this order
-      const { data: shipmentData } = await (supabase as any)
-        .from('order_shipments')
-        .select(`
-          *,
-          items:order_shipment_items(*)
-        `)
-        .eq('order_id', matchedOrder.id)
-        .order('created_at', { ascending: false });
-
-      if (shipmentData) {
-        setShipments(shipmentData as OrderShipment[]);
-      }
-
-      // Fetch order activities
-      const { data: activityData } = await (supabase as any)
-        .from('order_activity')
-        .select('*')
-        .eq('order_id', matchedOrder.id)
-        .order('created_at', { ascending: false });
-
-      if (activityData) {
-        setActivities(activityData as OrderActivity[]);
-      }
+      setFoundOrder(castOrders([data.order])[0]);
+      setShipments((data.shipments || []) as OrderShipment[]);
+      setActivities((data.activity || []) as OrderActivity[]);
     } catch (err: any) {
       console.error('Track order error:', err);
       setErrorMsg(err.message || 'Failed to search order. Please try again.');
@@ -112,6 +71,7 @@ export default function TrackOrder() {
       setLoading(false);
     }
   };
+
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
