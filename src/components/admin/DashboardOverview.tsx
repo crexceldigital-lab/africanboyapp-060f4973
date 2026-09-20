@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { castOrders, castProducts, fromAny } from '@/lib/supabase-helpers';
 import { Order, Product, Store, StoreStaff } from '../../types';
-import { MOCK_PRODUCTS } from '../../data/mockData';
 import { ShoppingBag, DollarSign, Users, Clock, Eye, ArrowUpRight, RefreshCw, TrendingUp, Boxes, AlertTriangle, Store as StoreIcon, Package, PackageCheck, PackageX, Calculator, Tag } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import OrderDetailsModal from './OrderDetailsModal';
