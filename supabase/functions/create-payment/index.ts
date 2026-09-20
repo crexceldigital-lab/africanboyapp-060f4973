@@ -44,7 +44,19 @@ Deno.serve(async (req) => {
     const { items, totalAmount, deliveryFee, discountAmount, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude, isGuest } = body;
 
     const isGuestOrder = Boolean(isGuest) || !userId;
-    const orderCurrency = currency || "TZS";
+    // Snippe settles only in TZS (other currencies are rejected with a validation error),
+    // and all product prices in the database are stored in TZS. The storefront may DISPLAY
+    // converted prices, but the charge currency must stay TZS — never silently convert.
+    const orderCurrency = "TZS";
+    const displayCurrency = currency || "TZS";
+    // Snippe hosted checkout currently exposes only "mobile_money". If the merchant account
+    // is later activated for cards, set the SNIPPE_ALLOWED_METHODS secret (e.g. "mobile_money,card")
+    // — no code change needed. Requesting an unsupported method makes checkout show
+    // "This payment method is not available".
+    const allowedMethods = (Deno.env.get("SNIPPE_ALLOWED_METHODS") || "mobile_money")
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean);
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Call atomic RPC: process_online_checkout
@@ -83,8 +95,8 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         amount: Math.round(serverTotalAmount),
-        currency: currency || "TZS",
-        allowed_methods: ["mobile_money", "card"],
+        currency: orderCurrency,
+        allowed_methods: allowedMethods,
         customer: {
           name: customerName || "",
           phone: customerPhone || "",
@@ -97,6 +109,7 @@ Deno.serve(async (req) => {
           order_id: orderId,
           order_number: orderNumber,
           user_id: userId,
+          display_currency: displayCurrency,
         },
         expires_in: 3600,
         line_items: items.map((item: any) => ({
@@ -110,7 +123,22 @@ Deno.serve(async (req) => {
     const snippeData = await snippeRes.json();
 
     if (!snippeRes.ok) {
-      throw new Error(`Snippe API error [${snippeRes.status}]: ${JSON.stringify(snippeData)}`);
+      // Never leave a stranded pending order behind when the gateway refuses the session.
+      try {
+        await supabaseAdmin.rpc("fail_order_payment", {
+          p_order_id: orderId,
+          p_status: "cancelled",
+          p_reference: null,
+        });
+      } catch (_e) {
+        // non-fatal
+      }
+
+      const gatewayMsg = String(snippeData?.message || "");
+      const friendly = /country we collect in/i.test(gatewayMsg)
+        ? "Payments are currently accepted with a Tanzanian, Kenyan or Ugandan mobile number. Please enter a mobile money number from one of these countries, or contact us on WhatsApp to arrange payment."
+        : `Payment could not be started. ${gatewayMsg || `Gateway error ${snippeRes.status}`}`;
+      throw new Error(friendly);
     }
 
     // Update order with payment reference
