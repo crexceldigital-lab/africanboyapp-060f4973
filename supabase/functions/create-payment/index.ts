@@ -124,11 +124,15 @@ Deno.serve(async (req) => {
 
     if (!snippeRes.ok) {
       // Never leave a stranded pending order behind when the gateway refuses the session.
-      await supabaseAdmin.rpc("fail_order_payment", {
-        p_order_id: orderId,
-        p_status: "cancelled",
-        p_reference: null,
-      }).catch(() => {});
+      try {
+        await supabaseAdmin.rpc("fail_order_payment", {
+          p_order_id: orderId,
+          p_status: "cancelled",
+          p_reference: null,
+        });
+      } catch (_e) {
+        // non-fatal
+      }
 
       const gatewayMsg = String(snippeData?.message || "");
       const friendly = /country we collect in/i.test(gatewayMsg)
