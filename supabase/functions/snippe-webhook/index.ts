@@ -19,9 +19,10 @@ Deno.serve(async (req) => {
 
     const rawBody = await req.text();
 
-    // Verify webhook signature if secret is configured
+    // Verify webhook signature if a secret is configured
     if (WEBHOOK_SECRET) {
-      const signature = req.headers.get("x-webhook-signature") || req.headers.get("x-snippe-signature");
+      const signature =
+        req.headers.get("x-webhook-signature") || req.headers.get("x-snippe-signature");
       if (signature) {
         const encoder = new TextEncoder();
         const key = await crypto.subtle.importKey(
@@ -50,12 +51,10 @@ Deno.serve(async (req) => {
 
     const event = body.event || body.type;
     const paymentData = body.data || body;
-
-    // Extract order_id from metadata
-    const orderId = paymentData?.metadata?.order_id;
+    const metadataOrderId = paymentData?.metadata?.order_id;
     const reference = paymentData?.reference;
 
-    if (!orderId && !reference) {
+    if (!metadataOrderId && !reference) {
       console.log("No order_id or reference in webhook payload");
       return new Response(JSON.stringify({ received: true }), {
         status: 200,
@@ -63,126 +62,77 @@ Deno.serve(async (req) => {
       });
     }
 
-    let newStatus = "pending";
-    let paymentStatus = "unpaid";
-
-    if (event === "payment.completed" || paymentData?.status === "completed") {
-      newStatus = "completed";
-      paymentStatus = "paid";
-    } else if (event === "payment.failed" || paymentData?.status === "failed") {
-      newStatus = "cancelled";
-      paymentStatus = "failed";
-    } else if (paymentData?.status === "voided" || paymentData?.status === "expired") {
-      newStatus = "cancelled";
-      paymentStatus = "cancelled";
+    // Resolve the order
+    let orderId: string | undefined = metadataOrderId;
+    if (!orderId && reference) {
+      const { data: found } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("payment_reference", reference)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      orderId = found?.id;
     }
 
-    // Fetch order details for inventory deduction & amount paid
-    let orderRecord: any = null;
-    if (orderId) {
-      const { data } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
-      orderRecord = data;
-    } else if (reference) {
-      const { data } = await supabase.from("orders").select("*").eq("payment_reference", reference).maybeSingle();
-      orderRecord = data;
+    if (!orderId) {
+      console.error("Webhook could not resolve an order", { reference });
+      return new Response(JSON.stringify({ received: true, resolved: false }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const actualOrderId = orderRecord?.id || orderId;
+    const status = String(paymentData?.status || "").toLowerCase();
+    const isPaid = event === "payment.completed" || status === "completed" || status === "paid";
+    const isFailed = event === "payment.failed" || status === "failed";
+    const isCancelled = status === "voided" || status === "expired" || status === "cancelled";
 
-    if (actualOrderId) {
-      const updateData: Record<string, any> = {
-        status: newStatus,
-        payment_status: paymentStatus,
-        updated_at: new Date().toISOString(),
-      };
+    let synced = false;
 
-      if (paymentStatus === "paid" && orderRecord) {
-        updateData.amount_paid = orderRecord.total_amount;
-        updateData.balance = 0;
-      }
+    if (isPaid) {
+      // Atomic + idempotent: marks paid and deducts stock exactly once
+      const { data, error } = await supabase.rpc("confirm_order_payment", {
+        p_order_id: orderId,
+        p_reference: reference || null,
+        p_amount: paymentData?.amount ? Number(paymentData.amount) : null,
+        p_method: paymentData?.channel?.type || paymentData?.method || null,
+      });
 
-      if (paymentData?.channel?.type) {
-        updateData.payment_method = paymentData.channel.type;
-      }
-
-      await supabase.from("orders").update(updateData).eq("id", actualOrderId);
-
-      // Inventory deduction & activity log on payment completion
-      if (paymentStatus === "paid" && orderRecord && orderRecord.payment_status !== "paid") {
-        const storeId = orderRecord.store_id || 1;
-        const items = Array.isArray(orderRecord.items) ? orderRecord.items : [];
-
-        for (const item of items) {
-          const prodId = item.product_id || item.id;
-          const qty = Number(item.quantity) || 1;
-
-          if (prodId) {
-            // Deduct master stock
-            const { data: prod } = await supabase.from("products").select("stock_quantity").eq("id", prodId).maybeSingle();
-            if (prod) {
-              const currentStock = Number(prod.stock_quantity) || 0;
-              const newStock = Math.max(0, currentStock - qty);
-              await supabase.from("products").update({ stock_quantity: newStock }).eq("id", prodId);
-
-              // Deduct store availability stock
-              const { data: storeAvail } = await supabase
-                .from("product_store_availability")
-                .select("stock_quantity")
-                .eq("product_id", prodId)
-                .eq("store_id", storeId)
-                .maybeSingle();
-
-              if (storeAvail) {
-                const storeCurrentStock = Number(storeAvail.stock_quantity) || 0;
-                await supabase
-                  .from("product_store_availability")
-                  .update({ stock_quantity: Math.max(0, storeCurrentStock - qty) })
-                  .eq("product_id", prodId)
-                  .eq("store_id", storeId);
-              }
-
-              // Record inventory movement
-              await supabase.from("inventory_movements").insert({
-                product_id: prodId,
-                store_id: storeId,
-                quantity: -qty,
-                movement_type: "SALE",
-                reference_id: actualOrderId,
-                previous_stock: currentStock,
-                new_stock: newStock,
-              });
-            }
-          }
-        }
-
-        // Record Activity
-        await supabase.from("order_activity").insert({
-          order_id: actualOrderId,
-          actor_name: "Payment Gateway",
-          action: "PAYMENT_CONFIRMED",
-          details: `Payment confirmed via ${paymentData?.channel?.type || 'Snippe'}. Amount: ${orderRecord.total_amount} ${orderRecord.currency || 'TZS'}`
+      if (error) {
+        // Return a non-2xx so the gateway retries instead of losing the payment
+        console.error("confirm_order_payment failed:", error);
+        return new Response(JSON.stringify({ received: true, error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      synced = !data?.already_processed;
+    } else if (isFailed || isCancelled) {
+      const { error } = await supabase.rpc("fail_order_payment", {
+        p_order_id: orderId,
+        p_status: isCancelled ? "cancelled" : "failed",
+        p_reference: reference || null,
+      });
+      if (error) {
+        console.error("fail_order_payment failed:", error);
+        return new Response(JSON.stringify({ received: true, error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      console.log("Webhook event ignored (no terminal payment state):", event, status);
     }
 
-    // Operational sync: append confirmed orders to the Google Sheet (non-blocking).
-    if (newStatus === "completed") {
+    // Operational sync: append newly confirmed orders to the Google Sheet (never blocks the webhook)
+    if (synced) {
       try {
-        let syncOrderId = orderId as string | undefined;
-        if (!syncOrderId && reference) {
-          const { data: found } = await supabase
-            .from("orders")
-            .select("id")
-            .eq("payment_reference", reference)
-            .maybeSingle();
-          syncOrderId = found?.id;
-        }
-        if (syncOrderId) {
-          const { error: syncError } = await supabase.functions.invoke("sync-order-to-sheet", {
-            body: { orderId: syncOrderId },
-          });
-          if (syncError) console.error("Sheet sync failed:", syncError);
-        }
+        const { error: syncError } = await supabase.functions.invoke("sync-order-to-sheet", {
+          body: { orderId },
+        });
+        if (syncError) console.error("Sheet sync failed:", syncError);
       } catch (syncErr) {
         console.error("Sheet sync error:", syncErr);
       }
@@ -194,6 +144,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Webhook error:", error);
+    // Signature/parse problems are permanent — acknowledge to avoid infinite retries
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

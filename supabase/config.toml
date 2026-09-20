@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.sync-order-to-sheet]
 verify_jwt = false
+
+[functions.order-lookup]
+verify_jwt = false
+
+[functions.pos-operations]
+verify_jwt = false
