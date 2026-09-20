@@ -131,9 +131,8 @@ export default function DashboardOverview({ onNavigateTab, staffAssignment }: Da
       // -------------------------------------------------------------
       // INVENTORY STOCK VALUATION CALCULATION
       // -------------------------------------------------------------
-      const productsList: Product[] = productsData && productsData.length > 0
-        ? castProducts(productsData)
-        : MOCK_PRODUCTS;
+      // Inventory figures must always come from the real catalogue
+      const productsList: Product[] = productsData ? castProducts(productsData) : [];
 
       let calcTotalStockValue = 0;       // Inventory Cost Value = stock_qty * cost_price
       let calcPotentialRetailValue = 0;  // Potential Retail Value = stock_qty * selling_price

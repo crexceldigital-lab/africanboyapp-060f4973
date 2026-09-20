@@ -5,7 +5,6 @@ import ProductDetailModal from '../components/ProductDetailModal';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny, castProducts } from '@/lib/supabase-helpers';
 import { useCountry } from '../context/CountryContext';
-import { MOCK_PRODUCTS } from '../data/mockData';
 import { AFRICAN_BOY_FASHION_COLORS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, RotateCcw } from 'lucide-react';
@@ -61,13 +60,9 @@ export default function Shop() {
           setAvailabilityMap(null);
         }
 
-        let fetchedProducts: Product[] = [];
-        if (!error && data && data.length > 0) {
-          fetchedProducts = castProducts(data);
-        } else {
-          // Fallback to rich mock products if database is unpopulated
-          fetchedProducts = MOCK_PRODUCTS;
-        }
+        if (error) throw error;
+        // Always use real catalogue data — never placeholder products in production
+        const fetchedProducts: Product[] = data ? castProducts(data) : [];
 
         setProducts(fetchedProducts);
 
@@ -91,7 +86,7 @@ export default function Shop() {
         }
       } catch (err) {
         console.error('Error fetching shop products:', err);
-        setProducts(MOCK_PRODUCTS);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
