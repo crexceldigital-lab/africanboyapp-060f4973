@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Trash2, ShoppingBag, CheckCircle2, ArrowLeft, Loader2, LogIn, MapPin, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCountry } from '../context/CountryContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -60,25 +60,81 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   // Check for payment success redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-      setStep('success');
-      const lastOrder = sessionStorage.getItem('ab_last_order');
-      if (lastOrder) {
-        try {
-          const parsed = JSON.parse(lastOrder);
-          setLastOrderDetails({ orderId: parsed.orderId, orderNumber: parsed.orderNumber, phone: parsed.phone });
-          trackPurchase(parsed.orderId, parsed.items, parsed.value, parsed.currency, parsed.shipping);
-        } catch (e) {
-          console.error('Purchase tracking failed', e);
-        }
-        sessionStorage.removeItem('ab_last_order');
-      }
-      // Clean URL
-      window.history.replaceState({}, '', window.location.pathname);
+    if (params.get('payment') !== 'success') return;
+
+    const lastOrder = sessionStorage.getItem('ab_last_order');
+    sessionStorage.removeItem('ab_last_order');
+    // Clean URL immediately so a refresh cannot replay this state
+    window.history.replaceState({}, '', window.location.pathname);
+
+    let parsed: any = null;
+    try {
+      parsed = lastOrder ? JSON.parse(lastOrder) : null;
+    } catch {
+      parsed = null;
     }
+
+    if (!parsed?.orderId) {
+      setStep('cart');
+      return;
+    }
+
+    setStep('processing');
+    setPaymentVerifying(true);
+
+    // Never claim success on the gateway redirect alone — confirm with our own records
+    const verify = async () => {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const { data, error } = await (supabase as any).rpc('get_order_public_status', {
+          p_order_id: parsed.orderId,
+        });
+        if (!error && data) {
+          const paymentStatus = String(data.payment_status || '').toLowerCase();
+          if (paymentStatus === 'paid') {
+            setLastOrderDetails({
+              orderId: parsed.orderId,
+              orderNumber: data.order_number || parsed.orderNumber,
+              phone: parsed.phone,
+            });
+            try {
+              trackPurchase(parsed.orderId, parsed.items, parsed.value, parsed.currency, parsed.shipping);
+            } catch (e) {
+              console.error('Purchase tracking failed', e);
+            }
+            setPaymentVerifying(false);
+            setStep('success');
+            return;
+          }
+          if (['failed', 'cancelled'].includes(paymentStatus)) {
+            setPaymentVerifying(false);
+            setStep('cart');
+            toast({
+              title: 'Payment not completed',
+              description: 'We did not receive your payment. Nothing has been charged — please try again.',
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      // Still pending after retries: confirmation is in progress, never shown as paid
+      setPaymentVerifying(false);
+      setLastOrderDetails({
+        orderId: parsed.orderId,
+        orderNumber: parsed.orderNumber,
+        phone: parsed.phone,
+      });
+      setStep('pending');
+    };
+
+    verify();
   }, []);
 
   const handleCheckout = async (guestDetails?: { name: string; email: string; phone: string }) => {
+    // Hard guard against double submission (refs update synchronously, state does not)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setCheckoutLoading(true);
     setStep('processing');
     const currency = selectedCountry?.currency_code || 'TZS';
