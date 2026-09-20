@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
           order_id: orderId,
           order_number: orderNumber,
           user_id: userId,
+          display_currency: displayCurrency,
         },
         expires_in: 3600,
         line_items: items.map((item: any) => ({
