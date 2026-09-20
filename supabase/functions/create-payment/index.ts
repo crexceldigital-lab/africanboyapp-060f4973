@@ -95,8 +95,8 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         amount: Math.round(serverTotalAmount),
-        currency: currency || "TZS",
-        allowed_methods: ["mobile_money", "card"],
+        currency: orderCurrency,
+        allowed_methods: allowedMethods,
         customer: {
           name: customerName || "",
           phone: customerPhone || "",
