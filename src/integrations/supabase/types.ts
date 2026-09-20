@@ -86,8 +86,229 @@ export type Database = {
         }
         Relationships: []
       }
+      held_sales: {
+        Row: {
+          created_at: string
+          customer_data: Json | null
+          discount_amount: number | null
+          hold_number: string
+          id: string
+          items: Json
+          staff_user_id: string
+          store_id: number
+          subtotal: number
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          customer_data?: Json | null
+          discount_amount?: number | null
+          hold_number: string
+          id?: string
+          items?: Json
+          staff_user_id: string
+          store_id: number
+          subtotal?: number
+          total_amount?: number
+        }
+        Update: {
+          created_at?: string
+          customer_data?: Json | null
+          discount_amount?: number | null
+          hold_number?: string
+          id?: string
+          items?: Json
+          staff_user_id?: string
+          store_id?: number
+          subtotal?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "held_sales_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          created_at: string
+          id: string
+          movement_type: string
+          new_stock: number
+          previous_stock: number
+          product_id: string
+          quantity: number
+          reference_id: string | null
+          staff_user_id: string | null
+          store_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movement_type: string
+          new_stock: number
+          previous_stock: number
+          product_id: string
+          quantity: number
+          reference_id?: string | null
+          staff_user_id?: string | null
+          store_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movement_type?: string
+          new_stock?: number
+          previous_stock?: number
+          product_id?: string
+          quantity?: number
+          reference_id?: string | null
+          staff_user_id?: string | null
+          store_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_activity: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string
+          created_at: string
+          details: string | null
+          id: string
+          order_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          order_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_activity_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_shipment_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string | null
+          product_name: string
+          quantity_shipped: number
+          shipment_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name: string
+          quantity_shipped: number
+          shipment_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity_shipped?: number
+          shipment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_shipment_items_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "order_shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_shipments: {
+        Row: {
+          carrier: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          shipped_at: string
+          status: string
+          tracking_number: string | null
+        }
+        Insert: {
+          carrier: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          shipped_at?: string
+          status?: string
+          tracking_number?: string | null
+        }
+        Update: {
+          carrier?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          shipped_at?: string
+          status?: string
+          tracking_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_shipments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
+          amount_paid: number | null
+          approved_by: string | null
+          balance: number | null
           created_at: string | null
           currency: string
           customer_email: string | null
@@ -98,18 +319,37 @@ export type Database = {
           delivery_latitude: number | null
           delivery_longitude: number | null
           delivery_zone: string | null
+          discount_amount: number | null
+          discount_type: string | null
+          discount_value: number | null
           id: string
+          is_guest: boolean | null
+          is_voided: boolean | null
           items: Json
+          notes: string | null
+          order_number: string | null
           payment_method: string | null
           payment_reference: string | null
+          payment_status: string | null
+          receipt_number: string | null
+          sale_type: string
           snippe_checkout_url: string | null
+          staff_user_id: string | null
           status: string
+          stock_deducted_at: string | null
           store_id: number | null
+          subtotal: number | null
           total_amount: number
           updated_at: string | null
           user_id: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
+          amount_paid?: number | null
+          approved_by?: string | null
+          balance?: number | null
           created_at?: string | null
           currency?: string
           customer_email?: string | null
@@ -120,18 +360,37 @@ export type Database = {
           delivery_latitude?: number | null
           delivery_longitude?: number | null
           delivery_zone?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
+          is_guest?: boolean | null
+          is_voided?: boolean | null
           items?: Json
+          notes?: string | null
+          order_number?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          payment_status?: string | null
+          receipt_number?: string | null
+          sale_type?: string
           snippe_checkout_url?: string | null
+          staff_user_id?: string | null
           status?: string
+          stock_deducted_at?: string | null
           store_id?: number | null
+          subtotal?: number | null
           total_amount?: number
           updated_at?: string | null
           user_id?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
+          amount_paid?: number | null
+          approved_by?: string | null
+          balance?: number | null
           created_at?: string | null
           currency?: string
           customer_email?: string | null
@@ -142,20 +401,74 @@ export type Database = {
           delivery_latitude?: number | null
           delivery_longitude?: number | null
           delivery_zone?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
+          is_guest?: boolean | null
+          is_voided?: boolean | null
           items?: Json
+          notes?: string | null
+          order_number?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          payment_status?: string | null
+          receipt_number?: string | null
+          sale_type?: string
           snippe_checkout_url?: string | null
+          staff_user_id?: string | null
           status?: string
+          stock_deducted_at?: string | null
           store_id?: number | null
+          subtotal?: number | null
           total_amount?: number
           updated_at?: string | null
           user_id?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          reference: string | null
+          store_id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          reference?: string | null
+          store_id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          reference?: string | null
+          store_id?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_audit_logs_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -424,6 +737,41 @@ export type Database = {
           vip_tier?: string | null
         }
         Relationships: []
+      }
+      sale_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_id: string
+          payment_method: string
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          order_id: string
+          payment_method: string
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          payment_method?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_staff: {
         Row: {
