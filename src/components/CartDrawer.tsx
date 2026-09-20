@@ -472,7 +472,41 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 {step === 'processing' && (
                   <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
                     <Loader2 className="text-primary animate-spin" size={48} />
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Setting up your payment...</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                      {paymentVerifying ? 'Confirming your payment...' : 'Setting up your payment...'}
+                    </p>
+                  </motion.div>
+                )}
+
+                {step === 'pending' && (
+                  <motion.div key="pending" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
+                    <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center border border-foreground/10">
+                      <Loader2 size={36} className="text-primary animate-spin" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-black italic uppercase">Awaiting Confirmation</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Your order has been placed and we are still waiting for the payment confirmation. You will receive an update shortly — do not pay again.
+                      </p>
+                      {lastOrderDetails?.orderNumber && (
+                        <div className="p-3 bg-secondary rounded-xl border border-foreground/10 text-xs font-bold font-mono text-primary">
+                          Order #{lastOrderDetails.orderNumber}
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-full space-y-2 pt-4">
+                      {lastOrderDetails?.orderNumber && (
+                        <a
+                          href={`/track-order?order_number=${encodeURIComponent(lastOrderDetails.orderNumber)}&phone=${encodeURIComponent(lastOrderDetails.phone || '')}`}
+                          className="w-full block py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl text-center hover:opacity-90"
+                        >
+                          Check Order Status
+                        </a>
+                      )}
+                      <button onClick={resetAndClose} className="w-full py-3 bg-secondary text-foreground font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-secondary/80">
+                        Continue Shopping
+                      </button>
+                    </div>
                   </motion.div>
                 )}
 
