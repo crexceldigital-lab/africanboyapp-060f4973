@@ -888,6 +888,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_order_payment: {
+        Args: {
+          p_amount?: number
+          p_method?: string
+          p_order_id: string
+          p_reference?: string
+        }
+        Returns: Json
+      }
+      fail_order_payment: {
+        Args: { p_order_id: string; p_reference?: string; p_status?: string }
+        Returns: Json
+      }
       get_staff_store: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
@@ -897,6 +910,22 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      process_online_checkout: {
+        Args: {
+          p_currency?: string
+          p_customer_email?: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_delivery_address?: string
+          p_delivery_fee?: number
+          p_delivery_zone?: string
+          p_discount_amount?: number
+          p_is_guest?: boolean
+          p_items?: Json
+          p_user_id?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "user"
