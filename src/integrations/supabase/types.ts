@@ -109,6 +109,136 @@ export type Database = {
           },
         ]
       }
+      product_categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      product_colors: {
+        Row: {
+          created_at: string | null
+          hex: string
+          id: string
+          name: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          hex: string
+          id?: string
+          name: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          hex?: string
+          id?: string
+          name?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      product_of_the_day: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          set_for_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          set_for_date?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          set_for_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_of_the_day_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_sizes: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          sort_order: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
+      product_subcategories: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          id: string
+          name: string
+          status: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          status?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
