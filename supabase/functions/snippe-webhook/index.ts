@@ -93,7 +93,13 @@ Deno.serve(async (req) => {
     const status = String(paymentData?.status || "").toLowerCase();
     const isPaid = event === "payment.completed" || status === "completed" || status === "paid";
     const isFailed = event === "payment.failed" || status === "failed";
-    const isCancelled = status === "voided" || status === "expired" || status === "cancelled";
+    const isCancelled =
+      event === "payment.voided" ||
+      event === "payment.expired" ||
+      event === "payment.cancelled" ||
+      status === "voided" ||
+      status === "expired" ||
+      status === "cancelled";
 
     let synced = false;
 
