@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Trash2, ShoppingBag, CheckCircle2, ArrowLeft, Loader2, LogIn, MapPin, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCountry } from '../context/CountryContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -16,7 +16,7 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-type CheckoutStep = 'cart' | 'auth' | 'processing' | 'success';
+type CheckoutStep = 'cart' | 'auth' | 'processing' | 'success' | 'pending';
 
 function getCartKey(id: string, size?: string, color?: string) {
   return `${id}-${size || ''}-${color || ''}`;
@@ -27,6 +27,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [paymentVerifying, setPaymentVerifying] = useState(false);
+  const submittingRef = useRef(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCoords, setDeliveryCoords] = useState<{ latitude: number | null; longitude: number | null }>({
     latitude: null,
@@ -60,25 +62,81 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   // Check for payment success redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-      setStep('success');
-      const lastOrder = sessionStorage.getItem('ab_last_order');
-      if (lastOrder) {
-        try {
-          const parsed = JSON.parse(lastOrder);
-          setLastOrderDetails({ orderId: parsed.orderId, orderNumber: parsed.orderNumber, phone: parsed.phone });
-          trackPurchase(parsed.orderId, parsed.items, parsed.value, parsed.currency, parsed.shipping);
-        } catch (e) {
-          console.error('Purchase tracking failed', e);
-        }
-        sessionStorage.removeItem('ab_last_order');
-      }
-      // Clean URL
-      window.history.replaceState({}, '', window.location.pathname);
+    if (params.get('payment') !== 'success') return;
+
+    const lastOrder = sessionStorage.getItem('ab_last_order');
+    sessionStorage.removeItem('ab_last_order');
+    // Clean URL immediately so a refresh cannot replay this state
+    window.history.replaceState({}, '', window.location.pathname);
+
+    let parsed: any = null;
+    try {
+      parsed = lastOrder ? JSON.parse(lastOrder) : null;
+    } catch {
+      parsed = null;
     }
+
+    if (!parsed?.orderId) {
+      setStep('cart');
+      return;
+    }
+
+    setStep('processing');
+    setPaymentVerifying(true);
+
+    // Never claim success on the gateway redirect alone — confirm with our own records
+    const verify = async () => {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const { data, error } = await (supabase as any).rpc('get_order_public_status', {
+          p_order_id: parsed.orderId,
+        });
+        if (!error && data) {
+          const paymentStatus = String(data.payment_status || '').toLowerCase();
+          if (paymentStatus === 'paid') {
+            setLastOrderDetails({
+              orderId: parsed.orderId,
+              orderNumber: data.order_number || parsed.orderNumber,
+              phone: parsed.phone,
+            });
+            try {
+              trackPurchase(parsed.orderId, parsed.items, parsed.value, parsed.currency, parsed.shipping);
+            } catch (e) {
+              console.error('Purchase tracking failed', e);
+            }
+            setPaymentVerifying(false);
+            setStep('success');
+            return;
+          }
+          if (['failed', 'cancelled'].includes(paymentStatus)) {
+            setPaymentVerifying(false);
+            setStep('cart');
+            toast({
+              title: 'Payment not completed',
+              description: 'We did not receive your payment. Nothing has been charged — please try again.',
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      // Still pending after retries: confirmation is in progress, never shown as paid
+      setPaymentVerifying(false);
+      setLastOrderDetails({
+        orderId: parsed.orderId,
+        orderNumber: parsed.orderNumber,
+        phone: parsed.phone,
+      });
+      setStep('pending');
+    };
+
+    verify();
   }, []);
 
   const handleCheckout = async (guestDetails?: { name: string; email: string; phone: string }) => {
+    // Hard guard against double submission (refs update synchronously, state does not)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setCheckoutLoading(true);
     setStep('processing');
     const currency = selectedCountry?.currency_code || 'TZS';
@@ -140,6 +198,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       window.location.href = data.checkout_url;
     } catch (err: any) {
       console.error('Checkout error:', err);
+      submittingRef.current = false;
       setStep('cart');
       toast({
         title: 'Payment Error',
@@ -413,7 +472,41 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 {step === 'processing' && (
                   <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
                     <Loader2 className="text-primary animate-spin" size={48} />
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Setting up your payment...</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                      {paymentVerifying ? 'Confirming your payment...' : 'Setting up your payment...'}
+                    </p>
+                  </motion.div>
+                )}
+
+                {step === 'pending' && (
+                  <motion.div key="pending" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
+                    <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center border border-foreground/10">
+                      <Loader2 size={36} className="text-primary animate-spin" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-black italic uppercase">Awaiting Confirmation</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Your order has been placed and we are still waiting for the payment confirmation. You will receive an update shortly — do not pay again.
+                      </p>
+                      {lastOrderDetails?.orderNumber && (
+                        <div className="p-3 bg-secondary rounded-xl border border-foreground/10 text-xs font-bold font-mono text-primary">
+                          Order #{lastOrderDetails.orderNumber}
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-full space-y-2 pt-4">
+                      {lastOrderDetails?.orderNumber && (
+                        <a
+                          href={`/track-order?order_number=${encodeURIComponent(lastOrderDetails.orderNumber)}&phone=${encodeURIComponent(lastOrderDetails.phone || '')}`}
+                          className="w-full block py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl text-center hover:opacity-90"
+                        >
+                          Check Order Status
+                        </a>
+                      )}
+                      <button onClick={resetAndClose} className="w-full py-3 bg-secondary text-foreground font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-secondary/80">
+                        Continue Shopping
+                      </button>
+                    </div>
                   </motion.div>
                 )}
 
