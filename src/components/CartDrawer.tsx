@@ -16,7 +16,7 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-type CheckoutStep = 'cart' | 'auth' | 'processing' | 'success';
+type CheckoutStep = 'cart' | 'auth' | 'processing' | 'success' | 'pending';
 
 function getCartKey(id: string, size?: string, color?: string) {
   return `${id}-${size || ''}-${color || ''}`;
@@ -27,6 +27,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [paymentVerifying, setPaymentVerifying] = useState(false);
+  const submittingRef = useRef(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCoords, setDeliveryCoords] = useState<{ latitude: number | null; longitude: number | null }>({
     latitude: null,
@@ -196,6 +198,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       window.location.href = data.checkout_url;
     } catch (err: any) {
       console.error('Checkout error:', err);
+      submittingRef.current = false;
       setStep('cart');
       toast({
         title: 'Payment Error',
