@@ -19,11 +19,18 @@ Deno.serve(async (req) => {
 
     const rawBody = await req.text();
 
-    // Verify webhook signature if a secret is configured
+    // Verify webhook signature — an unsigned notification is never proof of payment
     if (WEBHOOK_SECRET) {
       const signature =
         req.headers.get("x-webhook-signature") || req.headers.get("x-snippe-signature");
-      if (signature) {
+      if (!signature) {
+        console.error("Missing webhook signature header");
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      {
         const encoder = new TextEncoder();
         const key = await crypto.subtle.importKey(
           "raw",
