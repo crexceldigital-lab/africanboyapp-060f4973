@@ -87,10 +87,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     // Never claim success on the gateway redirect alone — confirm with our own records
     const verify = async () => {
       for (let attempt = 0; attempt < 6; attempt++) {
-        const { data, error } = await (supabase as any).rpc('get_order_public_status', {
-          p_order_id: parsed.orderId,
+        const { data, error } = await supabase.functions.invoke('order-lookup', {
+          body: { action: 'status', orderId: parsed.orderId },
         });
-        if (!error && data) {
+        if (!error && data?.success) {
+
           const paymentStatus = String(data.payment_status || '').toLowerCase();
           if (paymentStatus === 'paid') {
             setLastOrderDetails({

@@ -104,16 +104,21 @@ export default function OrderDetailsModal({ order, isOpen, onClose, onOrderUpdat
         return;
       }
 
-      const { data, error } = await (supabase as any).rpc('create_order_shipment', {
-        p_order_id: order.id,
-        p_carrier: carrier,
-        p_tracking_number: trackingNumber || null,
-        p_notes: shipmentNotes || null,
-        p_items: itemsToShip,
-        p_actor_name: 'Admin / Staff',
+      const { data, error } = await supabase.functions.invoke('pos-operations', {
+        body: {
+          action: 'create_shipment',
+          orderId: order.id,
+          carrier,
+          trackingNumber: trackingNumber || null,
+          notes: shipmentNotes || null,
+          items: itemsToShip,
+          actorName: 'Admin / Staff',
+        },
       });
 
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to create shipment');
+
 
       toast.success('Shipment successfully created!');
       setIsShipmentModalOpen(false);
