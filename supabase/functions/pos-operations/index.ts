@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
     const [{ data: roleRows }, { data: staffRows }] = await Promise.all([
       admin.from("user_roles").select("role").eq("user_id", userId),
-      admin.from("store_staff").select("store_id, staff_role, status, permissions").eq("user_id", userId),
+      admin.from("store_staff").select("store_id, staff_role, status").eq("user_id", userId),
     ]);
 
     const isAdmin = (roleRows || []).some((r: any) => r.role === "admin");

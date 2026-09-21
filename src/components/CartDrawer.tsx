@@ -10,6 +10,7 @@ import DeliveryMapPreview from './DeliveryMapPreview';
 import StoreLocator, { STORE_LOCATIONS, StoreLocation } from './StoreLocator';
 import DeliveryAvailabilityNotice from './DeliveryAvailabilityNotice';
 import { SHIPPING_AVAILABILITY } from '@/lib/deliveryZones';
+import { normalizePhoneE164 } from '@/lib/phone';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 import { formatSizeDisplay } from '../constants';
 
@@ -25,7 +26,7 @@ function getCartKey(id: string, size?: string, color?: string) {
 }
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal } = useCart();
+  const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal, discountAmount } = useCart();
   const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -153,7 +154,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
     const cName = user?.full_name || guestDetails?.name || guestName || 'Guest Customer';
     const cEmail = user?.email || guestDetails?.email || guestEmail || '';
-    const cPhone = user?.phone_number || guestDetails?.phone || guestPhone || '';
+    const rawPhone = user?.phone_number || guestDetails?.phone || guestPhone || '';
+    const cPhone = normalizePhoneE164(rawPhone) || rawPhone;
 
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -167,6 +169,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             selectedColor: item.selectedColor,
           })),
           totalAmount: cartTotal,
+          discountAmount,
           deliveryFee,
           grandTotal,
           deliveryZone,
@@ -227,13 +230,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       setAuthError('Please enter your full name');
       return;
     }
-    const cleanPhone = guestPhone.replace(/[\s\-\(\)]/g, '');
-    if (!cleanPhone || cleanPhone.length < 7 || !/^\+?\d+$/.test(cleanPhone)) {
-      setAuthError('Please enter a valid phone number (e.g., +255 700 000 000 or 0700000000)');
+    const normalizedPhone = normalizePhoneE164(guestPhone);
+    if (!normalizedPhone) {
+      setAuthError('Please enter a Tanzanian, Kenyan or Ugandan mobile money number (e.g., 0712 345 678)');
       return;
     }
     setAuthError('');
-    handleCheckout({ name: guestName, email: guestEmail, phone: guestPhone });
+    handleCheckout({ name: guestName, email: guestEmail, phone: normalizedPhone });
   };
 
   const handleAuthLogin = async (e: React.FormEvent) => {
@@ -642,6 +645,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subtotal ({cartCount} items)</span>
                     <span className="text-sm font-bold">{formatPrice(cartTotal)}</span>
                   </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">Combo Saving</span>
+                      <span className="text-sm font-bold text-primary">-{formatPrice(discountAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery</span>
                     <span className="text-sm font-bold">{deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}</span>
