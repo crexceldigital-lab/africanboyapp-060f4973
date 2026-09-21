@@ -10,9 +10,13 @@ const DELIVERY_PRICES: Record<DeliveryZone, number> = {
   pickup: 0,
 };
 
+export const COMBO_DISCOUNT_RATE = 0.05;
+
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product, size?: string, color?: string, quantityToAdd?: number) => void;
+  addComboToCart: (products: Product[]) => void;
+  discountAmount: number;
   addTicket: (event: AppEvent) => void;
   removeFromCart: (cartKey: string) => void;
   updateQuantity: (cartKey: string, delta: number) => void;
