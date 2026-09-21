@@ -8,6 +8,8 @@ import { toast } from '@/hooks/use-toast';
 import AddressAutocomplete from './AddressAutocomplete';
 import DeliveryMapPreview from './DeliveryMapPreview';
 import StoreLocator, { STORE_LOCATIONS, StoreLocation } from './StoreLocator';
+import DeliveryAvailabilityNotice from './DeliveryAvailabilityNotice';
+import { SHIPPING_AVAILABILITY } from '@/lib/deliveryZones';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 import { formatSizeDisplay } from '../constants';
 
@@ -400,14 +402,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           required
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
                         />
-                        <input
-                          type="tel"
-                          placeholder="Phone Number *"
-                          value={guestPhone}
-                          onChange={e => setGuestPhone(e.target.value)}
-                          required
-                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
-                        />
+                        <div>
+                          <input
+                            type="tel"
+                            placeholder="Phone Number *"
+                            value={guestPhone}
+                            onChange={e => setGuestPhone(e.target.value)}
+                            required
+                            className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+                          />
+                          <div className="mt-1.5">
+                            <DeliveryAvailabilityNotice variant="compact" />
+                          </div>
+                        </div>
                         <input
                           type="email"
                           placeholder="Email Address (Optional)"
@@ -458,6 +465,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all appearance-none">
                           {countries.map(c => <option key={c.id} value={c.id}>{c.flag_emoji} {c.name} ({c.currency_code})</option>)}
                         </select>
+                        {selectedCountry && !SHIPPING_AVAILABILITY.shippingCountries.some((c) =>
+                          (selectedCountry.name || '').toLowerCase().includes(c.toLowerCase())
+                        ) && (
+                          <DeliveryAvailabilityNotice variant="compact" />
+                        )}
                         <input type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
                         {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
@@ -639,6 +651,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <span className="text-xl font-black text-primary">{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
+
+                {/* Tanzania-only delivery notice — shown right before payment */}
+                <DeliveryAvailabilityNotice />
+
                 <button
                   onClick={handleCheckoutClick}
                   disabled={checkoutLoading}
