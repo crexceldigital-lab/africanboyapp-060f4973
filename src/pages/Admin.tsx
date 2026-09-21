@@ -291,7 +291,7 @@ export default function Admin() {
 
       {/* Main Navigation Pill Bar */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar p-1.5 bg-card border border-foreground/5 rounded-full">
-        {(['dashboard', 'pos', 'products', 'orders', 'customers', 'attributes', 'gallery', 'reports', 'staff'] as AdminTab[]).map(tab => (
+        {(['dashboard', 'pos', 'products', 'orders', 'customers', 'attributes', 'gallery', 'reports', 'staff', 'fitme'] as AdminTab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -441,6 +441,8 @@ export default function Admin() {
       {activeTab === 'reports' && <ReportsPanel />}
 
       {activeTab === 'staff' && <StaffManager />}
+
+      {activeTab === 'fitme' && <FitMeCreditsManager />}
     </div>
   );
 }
