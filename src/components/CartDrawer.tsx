@@ -10,6 +10,7 @@ import DeliveryMapPreview from './DeliveryMapPreview';
 import StoreLocator, { STORE_LOCATIONS, StoreLocation } from './StoreLocator';
 import DeliveryAvailabilityNotice from './DeliveryAvailabilityNotice';
 import { SHIPPING_AVAILABILITY } from '@/lib/deliveryZones';
+import { normalizePhoneE164 } from '@/lib/phone';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 import { formatSizeDisplay } from '../constants';
 
