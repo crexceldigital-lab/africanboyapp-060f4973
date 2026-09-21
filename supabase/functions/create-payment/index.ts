@@ -6,6 +6,39 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// The gateway only accepts E.164 mobile numbers for Tanzania (255), Kenya (254) and Uganda (256).
+// Customers type local formats such as 0712345678, so normalise before calling the gateway.
+const SUPPORTED_CODES = ["255", "254", "256"];
+const NATIONAL_LENGTH = 9;
+
+function normalizePhoneE164(raw: unknown, defaultCode = "255"): string | null {
+  if (!raw) return null;
+  let digits = String(raw).replace(/[^\d+]/g, "");
+  if (digits.startsWith("+")) digits = digits.slice(1);
+  digits = digits.replace(/\D/g, "");
+  if (!digits) return null;
+
+  for (const code of SUPPORTED_CODES) {
+    if (digits.startsWith(code) && digits.length === code.length + NATIONAL_LENGTH) {
+      return `+${digits}`;
+    }
+    if (digits.startsWith(`${code}0`) && digits.length === code.length + NATIONAL_LENGTH + 1) {
+      return `+${code}${digits.slice(code.length + 1)}`;
+    }
+  }
+
+  if (digits.startsWith("0") && digits.length === NATIONAL_LENGTH + 1) {
+    return `+${defaultCode}${digits.slice(1)}`;
+  }
+  if (digits.length === NATIONAL_LENGTH) {
+    return `+${defaultCode}${digits}`;
+  }
+  return null;
+}
+
+const UNSUPPORTED_PHONE_MESSAGE =
+  "Please enter a Tanzanian, Kenyan or Ugandan mobile money number (for example 0712 345 678). International cards are not available yet — contact us on WhatsApp to arrange payment.";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
