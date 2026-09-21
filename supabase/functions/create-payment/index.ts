@@ -77,6 +77,14 @@ Deno.serve(async (req) => {
     const { items, totalAmount, deliveryFee, discountAmount, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude, isGuest } = body;
 
     const isGuestOrder = Boolean(isGuest) || !userId;
+    // Reject unusable numbers BEFORE creating an order, so no stranded order is left behind.
+    const normalizedPhone = normalizePhoneE164(customerPhone);
+    if (!normalizedPhone) {
+      return new Response(
+        JSON.stringify({ success: false, error: UNSUPPORTED_PHONE_MESSAGE }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     // Snippe settles only in TZS (other currencies are rejected with a validation error),
     // and all product prices in the database are stored in TZS. The storefront may DISPLAY
     // converted prices, but the charge currency must stay TZS — never silently convert.
