@@ -44,18 +44,9 @@ export default function VIP() {
 
   const handleAddComboToCart = () => {
     if (selectedTop && selectedBottom && selectedFootwear) {
-      const comboItem: Product = {
-        id: `combo-${Date.now()}`,
-        name: `COMBO: ${selectedTop.name} + ${selectedBottom.name} + ${selectedFootwear.name}`,
-        price: comboPrice,
-        category: 'Combo',
-        image_url: selectedTop.image_url,
-        description: `Exclusive Combo Kit including ${selectedTop.name}, ${selectedBottom.name}, and ${selectedFootwear.name}.`,
-        stock_quantity: 1,
-        sizes: [],
-        colors: [],
-      };
-      addToCart(comboItem);
+      // Add the three REAL products so checkout, stock and pricing work.
+      // The 5% combo saving is applied as a cart discount.
+      addComboToCart([selectedTop, selectedBottom, selectedFootwear]);
       setIsAdded(true);
       setTimeout(() => {
         setIsAdded(false);
