@@ -41,3 +41,20 @@ export function getDeliveryZoneDetails(zoneId: string): DeliveryZoneOption {
     DELIVERY_ZONE_OPTIONS.find(z => z.id === zoneId) || DELIVERY_ZONE_OPTIONS[0]
   );
 }
+
+/**
+ * Single source of truth for where we currently ship.
+ * When international shipping launches, flip `internationalShippingActive`
+ * to true (and list the regions) — every notice in the checkout updates
+ * automatically, no checkout changes needed.
+ */
+export const SHIPPING_AVAILABILITY = {
+  internationalShippingActive: false,
+  shippingCountries: ['Tanzania'],
+  notice: {
+    emoji: '🇹🇿',
+    title: 'Currently delivering within Tanzania only.',
+    body: "We currently accept orders and offer delivery within Tanzania. International shipping will be available soon — we'll announce the countries and regions as they become available.",
+  },
+  internationalHint: 'International delivery is not available yet — Tanzania only for now.',
+} as const;
