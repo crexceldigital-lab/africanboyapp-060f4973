@@ -402,14 +402,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           required
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
                         />
-                        <input
-                          type="tel"
-                          placeholder="Phone Number *"
-                          value={guestPhone}
-                          onChange={e => setGuestPhone(e.target.value)}
-                          required
-                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
-                        />
+                        <div>
+                          <input
+                            type="tel"
+                            placeholder="Phone Number *"
+                            value={guestPhone}
+                            onChange={e => setGuestPhone(e.target.value)}
+                            required
+                            className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+                          />
+                          <div className="mt-1.5">
+                            <DeliveryAvailabilityNotice variant="compact" />
+                          </div>
+                        </div>
                         <input
                           type="email"
                           placeholder="Email Address (Optional)"
