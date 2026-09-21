@@ -59,6 +59,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Combo kits are added as their REAL products (real ids) so checkout and stock work.
+  const addComboToCart = (products: Product[]) => {
+    const comboId = `combo-${Date.now()}`;
+    setCart(prevCart => [
+      ...prevCart,
+      ...products.map(p => ({ ...p, quantity: 1, comboId } as CartItem)),
+    ]);
+    products.forEach(p =>
+      trackAddToCart({ id: p.id, name: p.name, price: p.price, quantity: 1, category: p.category }, 'TZS')
+    );
+  };
+
   const addTicket = (event: AppEvent) => {
     const ticketProduct: Product = {
       id: `ticket-${event.id}`,
