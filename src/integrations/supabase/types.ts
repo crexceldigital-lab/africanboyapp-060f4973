@@ -1018,6 +1018,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          permissions: Json
           staff_role: string
           status: string
           store_id: number
@@ -1027,6 +1028,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          permissions?: Json
           staff_role?: string
           status?: string
           store_id: number
@@ -1036,6 +1038,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          permissions?: Json
           staff_role?: string
           status?: string
           store_id?: number
