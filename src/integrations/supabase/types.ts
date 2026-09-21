@@ -68,6 +68,247 @@ export type Database = {
         }
         Relationships: []
       }
+      fitme_credit_packages: {
+        Row: {
+          badge: string | null
+          code: string
+          created_at: string
+          credits: number
+          currency: string
+          id: string
+          is_active: boolean
+          is_free: boolean
+          name: string
+          once_per_user: boolean
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          badge?: string | null
+          code: string
+          created_at?: string
+          credits: number
+          currency?: string
+          id?: string
+          is_active?: boolean
+          is_free?: boolean
+          name: string
+          once_per_user?: boolean
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          badge?: string | null
+          code?: string
+          created_at?: string
+          credits?: number
+          currency?: string
+          id?: string
+          is_active?: boolean
+          is_free?: boolean
+          name?: string
+          once_per_user?: boolean
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fitme_credit_purchases: {
+        Row: {
+          amount: number
+          checkout_url: string | null
+          created_at: string
+          credited_at: string | null
+          credits: number
+          currency: string
+          id: string
+          package_id: string | null
+          payment_reference: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          checkout_url?: string | null
+          created_at?: string
+          credited_at?: string | null
+          credits: number
+          currency?: string
+          id?: string
+          package_id?: string | null
+          payment_reference?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          checkout_url?: string | null
+          created_at?: string
+          credited_at?: string | null
+          credits?: number
+          currency?: string
+          id?: string
+          package_id?: string | null
+          payment_reference?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fitme_credit_purchases_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "fitme_credit_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fitme_credit_transactions: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          credits: number
+          currency: string
+          description: string | null
+          id: string
+          package_id: string | null
+          payment_reference: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid?: number
+          created_at?: string
+          credits: number
+          currency?: string
+          description?: string | null
+          id?: string
+          package_id?: string | null
+          payment_reference?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          credits?: number
+          currency?: string
+          description?: string | null
+          id?: string
+          package_id?: string | null
+          payment_reference?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fitme_credit_transactions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "fitme_credit_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fitme_generations: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          credit_transaction_id: string | null
+          error_message: string | null
+          generation_status: string
+          id: string
+          input_hash: string
+          product_id: string | null
+          product_ids: Json
+          provider: string | null
+          provider_generation_id: string | null
+          result_url: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          credit_transaction_id?: string | null
+          error_message?: string | null
+          generation_status?: string
+          id?: string
+          input_hash: string
+          product_id?: string | null
+          product_ids?: Json
+          provider?: string | null
+          provider_generation_id?: string | null
+          result_url?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          credit_transaction_id?: string | null
+          error_message?: string | null
+          generation_status?: string
+          id?: string
+          input_hash?: string
+          product_id?: string | null
+          product_ids?: Json
+          provider?: string | null
+          provider_generation_id?: string | null
+          result_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fitme_generations_credit_transaction_id_fkey"
+            columns: ["credit_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "fitme_credit_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fitme_generations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fitme_wallets: {
+        Row: {
+          created_at: string
+          current_balance: number
+          lifetime_credits_purchased: number
+          lifetime_credits_used: number
+          lifetime_free_credits: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_balance?: number
+          lifetime_credits_purchased?: number
+          lifetime_credits_used?: number
+          lifetime_free_credits?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_balance?: number
+          lifetime_credits_purchased?: number
+          lifetime_credits_used?: number
+          lifetime_free_credits?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       gallery_items: {
         Row: {
           created_at: string | null
@@ -911,6 +1152,54 @@ export type Database = {
       }
       fail_order_payment: {
         Args: { p_order_id: string; p_reference?: string; p_status?: string }
+        Returns: Json
+      }
+      fitme_admin_adjust_credits: {
+        Args: {
+          p_credits: number
+          p_description?: string
+          p_transaction_type?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      fitme_admin_stats: { Args: { p_unit_cost?: number }; Returns: Json }
+      fitme_admin_users: {
+        Args: { p_query?: string }
+        Returns: {
+          current_balance: number
+          full_name: string
+          generations: number
+          lifetime_credits_purchased: number
+          lifetime_credits_used: number
+          lifetime_free_credits: number
+          phone_number: string
+          user_id: string
+        }[]
+      }
+      fitme_complete_generation: {
+        Args: {
+          p_generation_id: string
+          p_provider_generation_id?: string
+          p_result_url: string
+        }
+        Returns: Json
+      }
+      fitme_credit_purchase_failed: {
+        Args: { p_reference: string; p_status: string }
+        Returns: Json
+      }
+      fitme_credit_purchase_paid: {
+        Args: { p_amount?: number; p_reference: string }
+        Returns: Json
+      }
+      fitme_fail_generation: {
+        Args: { p_error: string; p_generation_id: string }
+        Returns: Json
+      }
+      fitme_get_wallet: { Args: never; Returns: Json }
+      fitme_reserve_credit: {
+        Args: { p_input_hash: string; p_product_ids: Json; p_user_id: string }
         Returns: Json
       }
       get_staff_store: { Args: { _user_id: string }; Returns: number }
