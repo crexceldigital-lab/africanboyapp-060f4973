@@ -13,7 +13,7 @@ export default function VIP() {
   const [selectedFootwear, setSelectedFootwear] = useState<Product | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
-  const { addToCart } = useCart();
+  const { addComboToCart } = useCart();
   const { formatPrice } = useCountry();
 
   useEffect(() => {
