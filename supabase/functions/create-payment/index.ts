@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     // Call atomic RPC: process_online_checkout
     const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc("process_online_checkout", {
       p_customer_name: customerName || "Guest Customer",
-      p_customer_phone: customerPhone || "",
+      p_customer_phone: normalizedPhone,
       p_customer_email: customerEmail || userEmail || null,
       p_delivery_address: typeof deliveryAddress === "string" ? deliveryAddress.slice(0, 400) : null,
       p_delivery_zone: deliveryZone || "inside_dar",
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
         allowed_methods: allowedMethods,
         customer: {
           name: customerName || "",
-          phone: customerPhone || "",
+          phone: normalizedPhone,
           email: customerEmail || userEmail || "",
         },
         redirect_url: redirectUrl || "",
