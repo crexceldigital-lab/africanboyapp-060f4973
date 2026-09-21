@@ -61,6 +61,70 @@ Deno.serve(async (req) => {
     const metadataOrderId = paymentData?.metadata?.order_id;
     const reference = paymentData?.reference;
 
+    const rawStatus = String(paymentData?.status || "").toLowerCase();
+    const paid = event === "payment.completed" || rawStatus === "completed" || rawStatus === "paid";
+    const failed = event === "payment.failed" || rawStatus === "failed";
+    const cancelled =
+      event === "payment.voided" ||
+      event === "payment.expired" ||
+      event === "payment.cancelled" ||
+      rawStatus === "voided" ||
+      rawStatus === "expired" ||
+      rawStatus === "cancelled";
+
+    // ---- Fit Me Credits purchases ----
+    // Credits are added only here, after the gateway has verified the payment.
+    let fitmePurchase: { id: string } | null = null;
+    if (reference) {
+      const { data: found } = await supabase
+        .from("fitme_credit_purchases")
+        .select("id")
+        .eq("payment_reference", reference)
+        .maybeSingle();
+      fitmePurchase = found || null;
+    }
+
+    if (paymentData?.metadata?.type === "fitme_credits" || fitmePurchase) {
+      if (!reference) {
+        return new Response(JSON.stringify({ received: true, resolved: false }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (paid) {
+        const { error } = await supabase.rpc("fitme_credit_purchase_paid", {
+          p_reference: reference,
+          p_amount: paymentData?.amount ? Number(paymentData.amount) : null,
+        });
+        if (error) {
+          console.error("fitme_credit_purchase_paid failed:", error);
+          return new Response(JSON.stringify({ received: true, error: error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else if (failed || cancelled) {
+        const { error } = await supabase.rpc("fitme_credit_purchase_failed", {
+          p_reference: reference,
+          p_status: cancelled ? "cancelled" : "failed",
+        });
+        if (error) {
+          console.error("fitme_credit_purchase_failed failed:", error);
+          return new Response(JSON.stringify({ received: true, error: error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({ received: true, kind: "fitme_credits" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     if (!metadataOrderId && !reference) {
       console.log("No order_id or reference in webhook payload");
       return new Response(JSON.stringify({ received: true }), {
