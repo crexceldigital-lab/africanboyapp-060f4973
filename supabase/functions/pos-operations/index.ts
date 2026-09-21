@@ -13,6 +13,30 @@ function json(body: unknown, status = 200) {
   });
 }
 
+const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  sales_rep: ["pos_sale"],
+  store_manager: ["pos_sale", "void_sale", "create_shipment"],
+};
+
+function parsePermissions(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((item) => typeof item === "string");
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function staffPermissions(assignment: any): string[] {
+  const explicit = parsePermissions(assignment?.permissions);
+  if (explicit.length > 0) return explicit;
+  return ROLE_DEFAULT_PERMISSIONS[String(assignment?.staff_role || "")] || [];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,7 +67,7 @@ Deno.serve(async (req) => {
 
     const [{ data: roleRows }, { data: staffRows }] = await Promise.all([
       admin.from("user_roles").select("role").eq("user_id", userId),
-      admin.from("store_staff").select("store_id, staff_role, status").eq("user_id", userId),
+      admin.from("store_staff").select("store_id, staff_role, status, permissions").eq("user_id", userId),
     ]);
 
     const isAdmin = (roleRows || []).some((r: any) => r.role === "admin");
@@ -59,10 +83,16 @@ Deno.serve(async (req) => {
     const canUseStore = (storeId: number) =>
       isAdmin || activeAssignments.some((s: any) => Number(s.store_id) === Number(storeId));
 
+    const canOperate = (storeId: number, permission: string) =>
+      isAdmin ||
+      activeAssignments.some(
+        (s: any) => Number(s.store_id) === Number(storeId) && staffPermissions(s).includes(permission)
+      );
+
     // ---------------- Complete an in-store sale ----------------
     if (action === "pos_sale") {
       const storeId = Number(body.storeId);
-      if (!storeId || !canUseStore(storeId)) {
+      if (!storeId || !canOperate(storeId, "pos_sale")) {
         return json({ success: false, error: "You cannot sell for this store." }, 403);
       }
 
@@ -96,12 +126,7 @@ Deno.serve(async (req) => {
       const { data: order } = await admin.from("orders").select("id, store_id").eq("id", orderId).maybeSingle();
       if (!order) return json({ success: false, error: "Order not found." }, 404);
 
-      const managerOrAdmin =
-        isAdmin ||
-        activeAssignments.some(
-          (s: any) => Number(s.store_id) === Number(order.store_id) && s.staff_role === "store_manager"
-        );
-      if (!managerOrAdmin) {
+      if (!canOperate(Number(order.store_id), "void_sale")) {
         return json({ success: false, error: "Only a store manager or administrator can void a sale." }, 403);
       }
 
@@ -121,7 +146,7 @@ Deno.serve(async (req) => {
 
       const { data: order } = await admin.from("orders").select("id, store_id").eq("id", orderId).maybeSingle();
       if (!order) return json({ success: false, error: "Order not found." }, 404);
-      if (!canUseStore(Number(order.store_id))) {
+      if (!canOperate(Number(order.store_id), "create_shipment")) {
         return json({ success: false, error: "You cannot fulfil orders for this store." }, 403);
       }
 
