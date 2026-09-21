@@ -12,6 +12,7 @@ import OrdersManager from '../components/admin/OrdersManager';
 import CustomersManager from '../components/admin/CustomersManager';
 import AttributesManager from '../components/admin/AttributesManager';
 import ReportsPanel from '../components/admin/ReportsPanel';
+import FitMeCreditsManager from '../components/admin/FitMeCreditsManager';
 import StaffManager from '../components/admin/StaffManager';
 import POSScreen from '../components/pos/POSScreen';
 import { supabase } from '@/integrations/supabase/client';
@@ -261,6 +262,7 @@ export default function Admin() {
     gallery: 'Gallery',
     reports: 'Reports',
     staff: 'Staff',
+    fitme: 'Fit Me Credits',
   };
 
   const adminStaffAssignment = {
