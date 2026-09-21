@@ -49,6 +49,38 @@ const SUPPORTED_COUNTRIES: CountryMeta[] = [
   { name: 'South Africa', code: 'ZA', currency: 'ZAR', flag: '🇿🇦' },
 ];
 
+const STORE_OPERATION_PERMISSIONS = [
+  { key: 'pos_sale', label: 'Complete Sales' },
+  { key: 'void_sale', label: 'Void Sales' },
+  { key: 'create_shipment', label: 'Create Shipments' },
+];
+
+const DEFAULT_ROLE_PERMISSIONS: Record<'sales_rep' | 'store_manager', string[]> = {
+  sales_rep: ['pos_sale'],
+  store_manager: ['pos_sale', 'void_sale', 'create_shipment'],
+};
+
+const normalizePermissions = (value: unknown, role: 'sales_rep' | 'store_manager' | string = 'sales_rep') => {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string');
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.filter((item): item is string => typeof item === 'string');
+    } catch {
+      return [];
+    }
+  }
+  return DEFAULT_ROLE_PERMISSIONS[role as 'sales_rep' | 'store_manager'] || [];
+};
+
+const formatPermissionList = (permissions?: string[]) => {
+  const active = normalizePermissions(permissions);
+  if (active.length === 0) return 'No store operations';
+  return STORE_OPERATION_PERMISSIONS.filter((permission) => active.includes(permission.key))
+    .map((permission) => permission.label)
+    .join(', ');
+};
+
 export default function StaffManager() {
   const [staffList, setStaffList] = useState<EnrichedStaff[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -67,6 +99,7 @@ export default function StaffManager() {
   // Form State for Assigning Staff
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<'sales_rep' | 'store_manager'>('sales_rep');
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(DEFAULT_ROLE_PERMISSIONS.sales_rep);
   const [inlineAlert, setInlineAlert] = useState<{ type: 'error' | 'warning' | 'success'; message: string } | null>(null);
 
   // Create Store Modal State
@@ -104,6 +137,7 @@ export default function StaffManager() {
   const [editingStaff, setEditingStaff] = useState<EnrichedStaff | null>(null);
   const [editStoreId, setEditStoreId] = useState<number>(1);
   const [editRole, setEditRole] = useState<'sales_rep' | 'store_manager'>('sales_rep');
+  const [editPermissions, setEditPermissions] = useState<string[]>(DEFAULT_ROLE_PERMISSIONS.sales_rep);
   const [editStatus, setEditStatus] = useState<string>('active');
   const [updatingStaff, setUpdatingStaff] = useState(false);
 
@@ -122,6 +156,11 @@ export default function StaffManager() {
     );
     return match ? match.flag : '🌍';
   };
+
+  const togglePermission = (current: string[], permission: string) =>
+    current.includes(permission)
+      ? current.filter((item) => item !== permission)
+      : [...current, permission];
 
   // 1. Fetch stores dynamically from database & compute staff counts
   const fetchStores = async (currentStaff?: EnrichedStaff[]) => {
@@ -531,6 +570,7 @@ export default function StaffManager() {
         user_id: selectedUser.user_id,
         store_id: selectedStoreId,
         staff_role: selectedRole,
+        permissions: selectedPermissions,
         status: 'active',
       });
 
@@ -548,7 +588,7 @@ export default function StaffManager() {
 
           if (updateConfirm) {
             const { error: updateErr } = await fromAny('store_staff')
-              .update({ staff_role: selectedRole, status: 'active' })
+              .update({ staff_role: selectedRole, permissions: selectedPermissions, status: 'active' })
               .eq('user_id', selectedUser.user_id)
               .eq('store_id', selectedStoreId);
 
@@ -574,6 +614,7 @@ export default function StaffManager() {
         );
         setSelectedUser(null);
         setUserQuery('');
+        setSelectedPermissions(DEFAULT_ROLE_PERMISSIONS[selectedRole]);
         setInlineAlert(null);
         fetchStaffData();
       }
@@ -590,6 +631,7 @@ export default function StaffManager() {
     setEditingStaff(staff);
     setEditStoreId(staff.store_id);
     setEditRole((staff.staff_role as any) || 'sales_rep');
+    setEditPermissions(normalizePermissions(staff.permissions, staff.staff_role));
     setEditStatus(staff.status || 'active');
   };
 
@@ -604,6 +646,7 @@ export default function StaffManager() {
         .update({
           store_id: editStoreId,
           staff_role: editRole,
+          permissions: editPermissions,
           status: editStatus,
           updated_at: new Date().toISOString(),
         })
@@ -900,7 +943,11 @@ export default function StaffManager() {
               </label>
               <select
                 value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as any)}
+                onChange={(e) => {
+                  const nextRole = e.target.value as 'sales_rep' | 'store_manager';
+                  setSelectedRole(nextRole);
+                  setSelectedPermissions(DEFAULT_ROLE_PERMISSIONS[nextRole]);
+                }}
                 className="w-full px-5 py-3.5 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
               >
                 <option value="sales_rep" className="bg-card text-foreground font-bold">
@@ -910,6 +957,35 @@ export default function StaffManager() {
                   Store Manager
                 </option>
               </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">
+              Store Operations Access
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {STORE_OPERATION_PERMISSIONS.map((permission) => {
+                const checked = selectedPermissions.includes(permission.key);
+                return (
+                  <label
+                    key={permission.key}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-xs font-black uppercase tracking-wider cursor-pointer transition-all ${
+                      checked
+                        ? 'bg-primary/10 border-primary/30 text-primary'
+                        : 'bg-background/50 border-foreground/10 text-muted-foreground'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => setSelectedPermissions((current) => togglePermission(current, permission.key))}
+                      className="accent-primary"
+                    />
+                    <span>{permission.label}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
 
@@ -1118,6 +1194,7 @@ export default function StaffManager() {
                   <th className="px-6 py-4">Assigned Store</th>
                   <th className="px-6 py-4">Country</th>
                   <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Access</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Assigned Date</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -1126,7 +1203,7 @@ export default function StaffManager() {
               <tbody className="divide-y divide-foreground/5 text-xs">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground font-bold">
+                    <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground font-bold">
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                         <span>Loading staff records...</span>
@@ -1135,7 +1212,7 @@ export default function StaffManager() {
                   </tr>
                 ) : filteredStaff.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground font-bold">
+                    <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground font-bold">
                       {searchQuery || storeFilter !== 'all' || roleFilter !== 'all' || statusFilter !== 'all'
                         ? 'No staff members match the selected filters.'
                         : 'No store staff members assigned yet. Use the form above to assign store reps.'}
@@ -1206,6 +1283,13 @@ export default function StaffManager() {
                         </td>
 
                         {/* Column 5: Status */}
+                        <td className="px-6 py-4 max-w-[220px]">
+                          <p className="text-[10px] font-bold text-muted-foreground leading-relaxed">
+                            {formatPermissionList(st.permissions)}
+                          </p>
+                        </td>
+
+                        {/* Column 6: Status */}
                         <td className="px-6 py-4">
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
@@ -1218,12 +1302,12 @@ export default function StaffManager() {
                           </span>
                         </td>
 
-                        {/* Column 6: Assigned Date */}
+                        {/* Column 7: Assigned Date */}
                         <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
                           {formattedDate}
                         </td>
 
-                        {/* Column 7: Actions */}
+                        {/* Column 8: Actions */}
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
@@ -1605,7 +1689,11 @@ export default function StaffManager() {
                 </label>
                 <select
                   value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as any)}
+                onChange={(e) => {
+                  const nextRole = e.target.value as 'sales_rep' | 'store_manager';
+                  setEditRole(nextRole);
+                  setEditPermissions(DEFAULT_ROLE_PERMISSIONS[nextRole]);
+                }}
                   className="w-full px-4 py-3 bg-background/50 border border-foreground/10 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
                 >
                   <option value="sales_rep" className="bg-card text-foreground font-bold">
@@ -1615,6 +1703,35 @@ export default function StaffManager() {
                     Store Manager
                   </option>
                 </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                  Store Operations Access
+                </label>
+                <div className="space-y-2">
+                  {STORE_OPERATION_PERMISSIONS.map((permission) => {
+                    const checked = editPermissions.includes(permission.key);
+                    return (
+                      <label
+                        key={permission.key}
+                        className={`flex items-center gap-3 p-3 rounded-2xl border text-xs font-black uppercase tracking-wider cursor-pointer transition-all ${
+                          checked
+                            ? 'bg-primary/10 border-primary/30 text-primary'
+                            : 'bg-background/50 border-foreground/10 text-muted-foreground'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => setEditPermissions((current) => togglePermission(current, permission.key))}
+                          className="accent-primary"
+                        />
+                        <span>{permission.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Status Selection */}

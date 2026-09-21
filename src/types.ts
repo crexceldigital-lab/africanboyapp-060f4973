@@ -243,6 +243,7 @@ export interface StoreStaff {
   user_id: string;
   store_id: number;
   staff_role: 'sales_rep' | 'store_manager' | string;
+  permissions?: string[];
   status?: string;
   created_at?: string;
   updated_at?: string;
