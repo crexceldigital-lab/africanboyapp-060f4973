@@ -169,6 +169,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             selectedColor: item.selectedColor,
           })),
           totalAmount: cartTotal,
+          discountAmount,
           deliveryFee,
           grandTotal,
           deliveryZone,
