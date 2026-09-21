@@ -227,13 +227,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       setAuthError('Please enter your full name');
       return;
     }
-    const cleanPhone = guestPhone.replace(/[\s\-\(\)]/g, '');
-    if (!cleanPhone || cleanPhone.length < 7 || !/^\+?\d+$/.test(cleanPhone)) {
-      setAuthError('Please enter a valid phone number (e.g., +255 700 000 000 or 0700000000)');
+    const normalizedPhone = normalizePhoneE164(guestPhone);
+    if (!normalizedPhone) {
+      setAuthError('Please enter a Tanzanian, Kenyan or Ugandan mobile money number (e.g., 0712 345 678)');
       return;
     }
     setAuthError('');
-    handleCheckout({ name: guestName, email: guestEmail, phone: guestPhone });
+    handleCheckout({ name: guestName, email: guestEmail, phone: normalizedPhone });
   };
 
   const handleAuthLogin = async (e: React.FormEvent) => {
