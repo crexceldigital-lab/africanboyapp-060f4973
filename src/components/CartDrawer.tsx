@@ -644,6 +644,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subtotal ({cartCount} items)</span>
                     <span className="text-sm font-bold">{formatPrice(cartTotal)}</span>
                   </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">Combo Saving</span>
+                      <span className="text-sm font-bold text-primary">-{formatPrice(discountAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery</span>
                     <span className="text-sm font-bold">{deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}</span>
