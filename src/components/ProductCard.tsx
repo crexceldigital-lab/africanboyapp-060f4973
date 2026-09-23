@@ -1,9 +1,10 @@
 import { Product } from '../types';
 import { motion } from 'framer-motion';
-import { Plus, Check, Eye } from 'lucide-react';
+import { Plus, Check, Eye, Share2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useState } from 'react';
 import { useCountry } from '../context/CountryContext';
+import ShareProductModal from './ShareProductModal';
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +15,7 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
   const { addToCart } = useCart();
   const { formatPrice } = useCountry();
   const [added, setAdded] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] || '');
   const [selectedColor, setSelectedColor] = useState<string>(product.colors[0]?.name || '');
 
@@ -47,31 +49,47 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsShareOpen(true);
+  };
+
   const selectedColorObj = product.colors?.find(c => c.name === selectedColor);
   const displayedImage = selectedColorObj?.image_url || product.image_url;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      whileHover={{ y: -6 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      onClick={handleCardClick}
-      className={`group relative bg-card rounded-2xl overflow-hidden border border-foreground/10 shadow-lg hover:shadow-2xl hover:border-primary/40 transition-all duration-300 cursor-pointer flex flex-col justify-between ${
-        isOutOfStock ? 'opacity-65' : ''
-      }`}
-    >
-      <div>
-        {/* Product Image Box */}
-        <div className="aspect-[3/4] overflow-hidden relative bg-neutral-950/80 p-2 flex items-center justify-center">
-          {product.on_sale && (
-            <div className="absolute top-3 left-3 z-10">
-              <span className="bg-primary text-black font-black text-[10px] px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg border border-primary-foreground/20 flex items-center gap-1">
-                -{product.discount_percent || 10}%
-              </span>
-            </div>
-          )}
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        whileHover={{ y: -6 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        onClick={handleCardClick}
+        className={`group relative bg-card rounded-2xl overflow-hidden border border-foreground/10 shadow-lg hover:shadow-2xl hover:border-primary/40 transition-all duration-300 cursor-pointer flex flex-col justify-between ${
+          isOutOfStock ? 'opacity-65' : ''
+        }`}
+      >
+        <div>
+          {/* Product Image Box */}
+          <div className="aspect-[3/4] overflow-hidden relative bg-neutral-950/80 p-2 flex items-center justify-center">
+            {product.on_sale && (
+              <div className="absolute top-3 left-3 z-10">
+                <span className="bg-primary text-black font-black text-[10px] px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg border border-primary-foreground/20 flex items-center gap-1">
+                  -{product.discount_percent || 10}%
+                </span>
+              </div>
+            )}
+
+            {/* Unobtrusive Share Button */}
+            <button
+              onClick={handleShareClick}
+              title="Share product"
+              aria-label={`Share ${product.name}`}
+              className="absolute top-3 right-3 z-20 p-2 bg-black/60 hover:bg-primary text-foreground/80 hover:text-black rounded-full border border-foreground/10 shadow-lg backdrop-blur-md transition-all hover:scale-110 active:scale-95"
+            >
+              <Share2 size={13} />
+            </button>
 
           {/* Image object-contain to display full product clearly */}
           <img
@@ -222,5 +240,12 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
         </button>
       </div>
     </motion.div>
+
+    <ShareProductModal
+      product={product}
+      isOpen={isShareOpen}
+      onClose={() => setIsShareOpen(false)}
+    />
+  </>
   );
 }

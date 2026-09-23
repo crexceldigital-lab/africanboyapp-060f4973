@@ -245,14 +245,16 @@ export function trackFitMe(event: FitMeEvent, params: Record<string, unknown> = 
   trackEvent(event, params);
 }
 
-/** Records which products customers most often try on in Fit Me */
-export function trackFitMeProductSelected(product: { id: string; name: string; category?: string; sku?: string }) {
+/** Records product_share event when a customer shares a product */
+export function trackProductShare(product: { id: string; name: string }, platform: string, productUrl: string) {
   initAnalytics();
-  trackEvent('fitme_product_selected', {
-    item_id: product.sku || product.id,
-    item_name: product.name,
-    item_category: product.category || 'General',
+  trackEvent('product_share', {
+    product_id: product.id,
+    product_name: product.name,
+    platform,
+    product_url: productUrl,
   });
 }
+
 
 

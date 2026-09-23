@@ -13,11 +13,13 @@ import {
   Sparkles,
   Tag,
   Hash,
+  Share2,
 } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { useCountry } from '../context/CountryContext';
 import ProductLightboxModal from './ProductLightboxModal';
+import ShareProductModal from './ShareProductModal';
 import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock';
 import { isFootwearCategory } from '../constants';
 
@@ -43,6 +45,7 @@ export default function ProductDetailModal({
   const [added, setAdded] = useState<boolean>(false);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
+  const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
   const [sizeError, setSizeError] = useState<boolean>(false);
 
   // Derive gallery images list dynamically
@@ -238,6 +241,16 @@ export default function ProductDetailModal({
                     </button>
                   </div>
                 )}
+
+                <button
+                  onClick={() => setIsShareOpen(true)}
+                  aria-label="Share product"
+                  title="Share product"
+                  className="p-2.5 bg-foreground/5 hover:bg-primary hover:text-black rounded-full text-foreground/80 transition-all border border-foreground/10 shadow-sm flex items-center justify-center gap-1.5 text-xs font-bold"
+                >
+                  <Share2 size={16} />
+                  <span className="hidden sm:inline">SHARE</span>
+                </button>
 
                 <button
                   onClick={onClose}
@@ -598,6 +611,13 @@ export default function ProductDetailModal({
         initialIndex={activeImageIndex}
         productName={product.name}
         onClose={() => setIsLightboxOpen(false)}
+      />
+
+      {/* Share Product Modal */}
+      <ShareProductModal
+        product={product}
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
       />
     </>
   );
