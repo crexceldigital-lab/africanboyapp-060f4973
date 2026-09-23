@@ -138,10 +138,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
   const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   const deliveryFee = cart.length > 0 ? DELIVERY_PRICES[deliveryZone] : 0;
-  const comboSubtotal = cart.reduce(
-    (total, item) => total + (item.comboId ? item.price * item.quantity : 0),
-    0
-  );
+  const comboSubtotal = cart.reduce((total, item) => {
+    if (!item.comboId) return total;
+    const comboUnits = Math.min(item.comboQty ?? item.quantity, item.quantity);
+    return total + item.price * comboUnits;
+  }, 0);
   const discountAmount = Math.round(comboSubtotal * COMBO_DISCOUNT_RATE);
   const grandTotal = Math.max(0, cartTotal - discountAmount) + deliveryFee;
 

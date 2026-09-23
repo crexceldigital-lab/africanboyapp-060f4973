@@ -42,17 +42,35 @@ export default function VIP() {
     ? (selectedTop.price + selectedBottom.price + selectedFootwear.price) * 0.95
     : 0;
 
+  const needsSize = (p: Product | null) => Boolean(p && Array.isArray(p.sizes) && p.sizes.length > 0);
+  const sizeMissing =
+    (needsSize(selectedTop) && !topSize) ||
+    (needsSize(selectedBottom) && !bottomSize) ||
+    (needsSize(selectedFootwear) && !footwearSize);
+
   const handleAddComboToCart = () => {
     if (selectedTop && selectedBottom && selectedFootwear) {
-      // Add the three REAL products so checkout, stock and pricing work.
+      if (sizeMissing) {
+        setSizeError('Please choose a size for each item in your combo.');
+        return;
+      }
+      setSizeError('');
+      // Add the three REAL products (with their chosen sizes) so checkout, stock and pricing work.
       // The 5% combo saving is applied as a cart discount.
-      addComboToCart([selectedTop, selectedBottom, selectedFootwear]);
+      addComboToCart([
+        { product: selectedTop, size: topSize || undefined },
+        { product: selectedBottom, size: bottomSize || undefined },
+        { product: selectedFootwear, size: footwearSize || undefined },
+      ]);
       setIsAdded(true);
       setTimeout(() => {
         setIsAdded(false);
         setSelectedTop(null);
         setSelectedBottom(null);
         setSelectedFootwear(null);
+        setTopSize('');
+        setBottomSize('');
+        setFootwearSize('');
         setCurrentStep(1);
       }, 2000);
     }
