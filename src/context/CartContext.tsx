@@ -12,10 +12,16 @@ const DELIVERY_PRICES: Record<DeliveryZone, number> = {
 
 export const COMBO_DISCOUNT_RATE = 0.05;
 
+export interface ComboSelection {
+  product: Product;
+  size?: string;
+  color?: string;
+}
+
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product, size?: string, color?: string, quantityToAdd?: number) => void;
-  addComboToCart: (products: Product[]) => void;
+  addComboToCart: (selections: ComboSelection[]) => void;
   discountAmount: number;
   addTicket: (event: AppEvent) => void;
   removeFromCart: (cartKey: string) => void;
