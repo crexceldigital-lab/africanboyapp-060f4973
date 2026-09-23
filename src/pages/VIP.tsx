@@ -137,7 +137,7 @@ export default function VIP() {
                         key={product.id}
                         product={product}
                         isSelected={selectedTop?.id === product.id}
-                        onSelect={() => { setSelectedTop(product); setCurrentStep(2); }}
+                        onSelect={() => { setSelectedTop(product); setTopSize(''); setSizeError(''); setCurrentStep(2); }}
                       />
                     ))}
                   </div>
@@ -159,7 +159,7 @@ export default function VIP() {
                         key={product.id}
                         product={product}
                         isSelected={selectedBottom?.id === product.id}
-                        onSelect={() => { setSelectedBottom(product); setCurrentStep(3); }}
+                        onSelect={() => { setSelectedBottom(product); setBottomSize(''); setSizeError(''); setCurrentStep(3); }}
                       />
                     ))}
                   </div>
@@ -181,7 +181,7 @@ export default function VIP() {
                         key={product.id}
                         product={product}
                         isSelected={selectedFootwear?.id === product.id}
-                        onSelect={() => setSelectedFootwear(product)}
+                        onSelect={() => { setSelectedFootwear(product); setFootwearSize(''); setSizeError(''); }}
                       />
                     ))}
                   </div>
@@ -198,11 +198,11 @@ export default function VIP() {
               </h3>
 
               <div className="space-y-4">
-                <ComboSlot item={selectedTop} placeholder="Select a top" formatPrice={formatPrice} />
+                <ComboSlot item={selectedTop} placeholder="Select a top" formatPrice={formatPrice} size={topSize} onSizeChange={(s) => { setTopSize(s); setSizeError(''); }} />
                 <div className="flex justify-center"><Plus size={16} className="text-muted-foreground" /></div>
-                <ComboSlot item={selectedBottom} placeholder="Select a bottom" formatPrice={formatPrice} />
+                <ComboSlot item={selectedBottom} placeholder="Select a bottom" formatPrice={formatPrice} size={bottomSize} onSizeChange={(s) => { setBottomSize(s); setSizeError(''); }} />
                 <div className="flex justify-center"><Plus size={16} className="text-muted-foreground" /></div>
-                <ComboSlot item={selectedFootwear} placeholder="Select footwear" formatPrice={formatPrice} />
+                <ComboSlot item={selectedFootwear} placeholder="Select footwear" formatPrice={formatPrice} size={footwearSize} onSizeChange={(s) => { setFootwearSize(s); setSizeError(''); }} />
               </div>
 
               {selectedTop && selectedBottom && selectedFootwear && (
