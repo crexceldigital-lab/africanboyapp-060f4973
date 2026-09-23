@@ -66,14 +66,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Combo kits are added as their REAL products (real ids) so checkout and stock work.
-  const addComboToCart = (products: Product[]) => {
+  // Each garment keeps its chosen size/colour and merges with any matching line already in the cart,
+  // so cart keys stay unique and quantity / remove controls only affect one row.
+  const addComboToCart = (selections: ComboSelection[]) => {
     const comboId = `combo-${Date.now()}`;
-    setCart(prevCart => [
-      ...prevCart,
-      ...products.map(p => ({ ...p, quantity: 1, comboId } as CartItem)),
-    ]);
-    products.forEach(p =>
-      trackAddToCart({ id: p.id, name: p.name, price: p.price, quantity: 1, category: p.category }, 'TZS')
+    setCart(prevCart => {
+      let next = [...prevCart];
+      selections.forEach(({ product, size, color }) => {
+        const key = getCartKey(product.id, size, color);
+        const index = next.findIndex(
+          item => getCartKey(item.id, item.selectedSize, item.selectedColor) === key
+        );
+        if (index >= 0) {
+          const existing = next[index];
+          next[index] = {
+            ...existing,
+            quantity: existing.quantity + 1,
+            comboId: existing.comboId || comboId,
+            comboQty: (existing.comboQty || 0) + 1,
+          };
+        } else {
+          next = [
+            ...next,
+            { ...product, quantity: 1, selectedSize: size, selectedColor: color, comboId, comboQty: 1 } as CartItem,
+          ];
+        }
+      });
+      return next;
+    });
+    selections.forEach(({ product, size, color }) =>
+      trackAddToCart(
+        { id: product.id, name: product.name, price: product.price, quantity: 1, category: product.category, selectedSize: size, selectedColor: color },
+        'TZS'
+      )
     );
   };
 
