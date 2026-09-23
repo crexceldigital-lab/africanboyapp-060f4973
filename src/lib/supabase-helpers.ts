@@ -134,39 +134,42 @@ export async function executePosSale(payload: {
   }>;
   notes?: string | null;
 }) {
-  const { data, error } = await (supabase as any).rpc('process_pos_sale', {
-    p_store_id: payload.storeId,
-    p_staff_user_id: payload.staffUserId,
-    p_customer_id: payload.customerId || null,
-    p_customer_name: payload.customerName || 'Walk-in Customer',
-    p_customer_phone: payload.customerPhone || null,
-    p_customer_email: payload.customerEmail || null,
-    p_items: payload.items,
-    p_subtotal: payload.subtotal,
-    p_discount_amount: payload.discountAmount,
-    p_discount_type: payload.discountType || 'none',
-    p_discount_value: payload.discountValue || 0,
-    p_approved_by: payload.approvedBy || null,
-    p_total_amount: payload.totalAmount,
-    p_payments: payload.payments,
-    p_notes: payload.notes || null,
+  const { data, error } = await supabase.functions.invoke('pos-operations', {
+    body: {
+      action: 'pos_sale',
+      storeId: payload.storeId,
+      customerId: payload.customerId || null,
+      customerName: payload.customerName || 'Walk-in Customer',
+      customerPhone: payload.customerPhone || null,
+      customerEmail: payload.customerEmail || null,
+      items: payload.items,
+      subtotal: payload.subtotal,
+      discountAmount: payload.discountAmount,
+      discountType: payload.discountType || 'none',
+      discountValue: payload.discountValue || 0,
+      approvedBy: payload.approvedBy || null,
+      totalAmount: payload.totalAmount,
+      payments: payload.payments,
+      notes: payload.notes || null,
+    },
   });
 
   if (error) throw error;
+  if (!data?.success) throw new Error(data?.error || 'Sale could not be completed');
   return data;
 }
 
 /**
- * Void a POS sale via RPC void_pos_sale
+ * Void a POS sale (server-side authorisation: store manager or admin only)
  */
 export async function executeVoidSale(orderId: string, staffUserId: string, reason: string) {
-  const { data, error } = await (supabase as any).rpc('void_pos_sale', {
-    p_order_id: orderId,
-    p_staff_user_id: staffUserId,
-    p_reason: reason,
+  const { data, error } = await supabase.functions.invoke('pos-operations', {
+    body: { action: 'void_sale', orderId, reason },
   });
 
   if (error) throw error;
+  if (!data?.success) throw new Error(data?.error || 'Sale could not be voided');
   return data;
 }
+
 

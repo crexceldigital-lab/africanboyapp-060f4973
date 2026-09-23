@@ -1,9 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Sparkles, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Camera, Sparkles, X, ChevronLeft, Download, Wallet, Loader2 } from 'lucide-react';
 import { Product } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import FitMeCreditsModal from '../components/FitMeCreditsModal';
+import { fetchWallet, FitMeWallet } from '@/lib/fitmeCredits';
+import { trackFitMe, trackFitMeProductSelected } from '@/lib/analytics';
 
 export default function FitMe() {
   const [userImage, setUserImage] = useState<string | null>(null);
@@ -14,7 +17,33 @@ export default function FitMe() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'upload' | 'select' | 'result'>('upload');
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [wallet, setWallet] = useState<FitMeWallet>({ authenticated: false, current_balance: 0 });
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [creditsOpen, setCreditsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const generatingRef = useRef(false);
+
+  const refreshWallet = useCallback(async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth?.user) {
+      setWallet({ authenticated: false, current_balance: 0 });
+      setWalletLoading(false);
+      return;
+    }
+    const w = await fetchWallet();
+    setWallet(w);
+    setWalletLoading(false);
+  }, []);
+
+  useEffect(() => {
+    trackFitMe('fitme_opened');
+    refreshWallet();
+
+    // Coming back from a credit payment — pick up the new balance
+    const onFocus = () => refreshWallet();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refreshWallet]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -47,18 +76,34 @@ export default function FitMe() {
     reader.onloadend = () => {
       setUserImage(reader.result as string);
       setStep('select');
+      trackFitMe('fitme_photo_uploaded');
     };
     reader.readAsDataURL(file);
   };
 
   const handleGenerate = async () => {
     if (!userImage || selectedProducts.length === 0) return;
+    if (generatingRef.current || loading) return;
 
+    if (!wallet.authenticated) {
+      toast.error('Please sign in to create your look with Fit Me Credits.');
+      return;
+    }
+
+    if (wallet.current_balance < 1) {
+      trackFitMe('fitme_out_of_credits');
+      setCreditsOpen(true);
+      return;
+    }
+
+    generatingRef.current = true;
     setLoading(true);
     setResultImage(null);
+    trackFitMe('fitme_generation_started', { items: selectedProducts.length });
 
     try {
       const productsPayload = selectedProducts.map(p => ({
+        id: p.id,
         imageUrl: p.image_url,
         name: p.name,
         color: selectedColors[p.id] || undefined,
@@ -71,38 +116,66 @@ export default function FitMe() {
         },
       });
 
-      if (error) throw error;
+      // Edge function returned a non-2xx status: read the real reason from the body
+      let payload: any = data;
+      if (error && !payload) {
+        try {
+          payload = await (error as any)?.context?.json?.();
+        } catch {
+          payload = null;
+        }
+      }
 
-      if (data?.error) {
-        toast.error(data.error);
+      if (payload?.code === 'auth_required') {
+        toast.error('Please sign in to use Fit Me AI.');
         return;
       }
 
-      if (data?.image) {
-        setResultImage(data.image);
+      if (payload?.code === 'insufficient_credits') {
+        trackFitMe('fitme_out_of_credits');
+        setWallet((w) => ({ ...w, current_balance: payload.current_balance ?? 0 }));
+        setCreditsOpen(true);
+        return;
+      }
+
+      if (payload?.error) {
+        if (payload.refunded) trackFitMe('fitme_credit_refunded');
+        trackFitMe('fitme_generation_failed', { reason: payload.error });
+        toast.error(payload.error);
+        return;
+      }
+
+      if (error) throw error;
+
+      if (payload?.image) {
+        setResultImage(payload.image);
         setStep('result');
+        trackFitMe('fitme_generation_completed', {
+          cached: Boolean(payload.cached),
+          credits_charged: payload.credits_charged ?? 1,
+        });
+        if (payload.credits_charged > 0) trackFitMe('fitme_credit_used', { credits: payload.credits_charged });
+        if (payload.cached) toast.success('Same look as before — no credit used.');
       } else {
+        trackFitMe('fitme_generation_failed', { reason: 'no_image' });
         toast.error('Could not generate image. Try a different photo.');
       }
     } catch (err: any) {
       console.error('Fit Me AI error:', err);
+      trackFitMe('fitme_generation_failed', { reason: err?.message });
       toast.error(err.message || 'Something went wrong. Please try again.');
     } finally {
+      generatingRef.current = false;
       setLoading(false);
+      refreshWallet();
     }
   };
 
   const handleDownload = async () => {
     if (!resultImage) return;
     try {
-      let blob: Blob;
-      if (resultImage.startsWith('data:')) {
-        const res = await fetch(resultImage);
-        blob = await res.blob();
-      } else {
-        const res = await fetch(resultImage);
-        blob = await res.blob();
-      }
+      const res = await fetch(resultImage);
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -130,10 +203,11 @@ export default function FitMe() {
   // Derive unique categories
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
   const filteredProducts = activeCategory === 'All' ? products : products.filter(p => p.category === activeCategory);
+  const outOfCredits = wallet.authenticated && wallet.current_balance < 1;
 
   return (
     <div className="pb-24 pt-20 px-6 max-w-2xl mx-auto">
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <span className="text-primary text-xs font-bold tracking-widest uppercase">AI Powered</span>
         <h1 className="text-4xl font-black tracking-tighter italic uppercase">
           FIT ME <span className="text-primary">AI</span>
@@ -141,6 +215,34 @@ export default function FitMe() {
         <p className="text-muted-foreground text-xs mt-2 uppercase tracking-widest">
           Upload your photo • Pick a product • See yourself wearing it
         </p>
+      </div>
+
+      {/* Fit Me Credit wallet */}
+      <div className="mb-8 flex items-center justify-between gap-3 p-4 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-card to-card">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+            <Wallet size={16} className="text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Fit Me Wallet</p>
+            {walletLoading ? (
+              <p className="text-sm font-black flex items-center gap-2"><Loader2 size={13} className="animate-spin text-primary" /> Loading…</p>
+            ) : wallet.authenticated ? (
+              <p className="text-sm font-black tracking-tight truncate">
+                <span className="text-primary">✨ {wallet.current_balance}</span>{' '}
+                Fit Me {wallet.current_balance === 1 ? 'Credit' : 'Credits'}
+              </p>
+            ) : (
+              <p className="text-sm font-black tracking-tight">Sign in to see your credits</p>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => setCreditsOpen(true)}
+          className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-black text-[10px] uppercase tracking-widest flex-shrink-0 hover:scale-[1.03] active:scale-[0.97] transition-all"
+        >
+          Get Credits
+        </button>
       </div>
 
       {/* Progress Steps */}
@@ -268,6 +370,7 @@ export default function FitMe() {
                         setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
                       } else if (selectedProducts.length < 5) {
                         setSelectedProducts(prev => [...prev, product]);
+                        trackFitMeProductSelected(product);
                       } else {
                         toast.error('Max 5 items at a time');
                       }
@@ -293,29 +396,51 @@ export default function FitMe() {
               })}
             </div>
 
-            {/* Selection count + Try It On button at bottom */}
+            {/* Generation confirmation + credit cost */}
             <div className="space-y-3 pb-4">
               {selectedProducts.length > 0 && (
                 <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest">
                   {selectedProducts.length}/5 items selected
                 </p>
               )}
-              <button
-                onClick={handleGenerate}
-                disabled={selectedProducts.length === 0 || loading}
-                className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} /> Try It On
-                  </>
-                )}
-              </button>
+
+              {outOfCredits ? (
+                <div className="p-5 rounded-2xl border border-primary/30 bg-card text-center space-y-2">
+                  <p className="text-sm font-black uppercase tracking-widest">You're out of Fit Me Credits</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Get more credits to continue creating your looks.
+                  </p>
+                  <button
+                    onClick={() => { trackFitMe('fitme_out_of_credits'); setCreditsOpen(true); }}
+                    className="w-full mt-2 py-4 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl uppercase hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    Get Credits
+                  </button>
+                </div>
+              ) : (
+                <div className="p-5 rounded-2xl border border-foreground/10 bg-card space-y-3 text-center">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-widest">Create Your Look</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">This will use 1 Fit Me Credit.</p>
+                  </div>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={selectedProducts.length === 0 || loading}
+                    className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 uppercase disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} /> Generate Look
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -352,9 +477,18 @@ export default function FitMe() {
                 <Sparkles size={16} /> Try Again
               </button>
             </div>
+            <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest">
+              {wallet.current_balance} Fit Me {wallet.current_balance === 1 ? 'Credit' : 'Credits'} left
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <FitMeCreditsModal
+        open={creditsOpen}
+        onClose={() => { setCreditsOpen(false); refreshWallet(); }}
+        balance={wallet.current_balance}
+      />
     </div>
   );
 }

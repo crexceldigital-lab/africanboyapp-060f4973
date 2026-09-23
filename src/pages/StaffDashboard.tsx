@@ -297,7 +297,7 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
               </table>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'customers' ? (
           <div className="bg-card border border-foreground/5 rounded-[32px] overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -338,7 +338,7 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
               </table>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Order Details Modal */}

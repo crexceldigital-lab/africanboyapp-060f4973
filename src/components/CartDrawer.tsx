@@ -1,13 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Trash2, ShoppingBag, CheckCircle2, ArrowLeft, Loader2, LogIn, MapPin, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCountry } from '../context/CountryContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import AddressAutocomplete from './AddressAutocomplete';
 import DeliveryMapPreview from './DeliveryMapPreview';
 import StoreLocator, { STORE_LOCATIONS, StoreLocation } from './StoreLocator';
+import DeliveryAvailabilityNotice from './DeliveryAvailabilityNotice';
+import { SHIPPING_AVAILABILITY } from '@/lib/deliveryZones';
+import { normalizePhoneE164 } from '@/lib/phone';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 import { formatSizeDisplay } from '../constants';
 
@@ -16,17 +19,19 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-type CheckoutStep = 'cart' | 'auth' | 'processing' | 'success';
+type CheckoutStep = 'cart' | 'auth' | 'processing' | 'success' | 'pending';
 
 function getCartKey(id: string, size?: string, color?: string) {
   return `${id}-${size || ''}-${color || ''}`;
 }
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal } = useCart();
+  const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, clearCart, deliveryZone, setDeliveryZone, deliveryFee, grandTotal, discountAmount } = useCart();
   const { formatPrice, selectedCountry, user, login, signup, countries } = useCountry();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [paymentVerifying, setPaymentVerifying] = useState(false);
+  const submittingRef = useRef(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCoords, setDeliveryCoords] = useState<{ latitude: number | null; longitude: number | null }>({
     latitude: null,
@@ -60,25 +65,94 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   // Check for payment success redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-      setStep('success');
-      const lastOrder = sessionStorage.getItem('ab_last_order');
-      if (lastOrder) {
-        try {
-          const parsed = JSON.parse(lastOrder);
-          setLastOrderDetails({ orderId: parsed.orderId, orderNumber: parsed.orderNumber, phone: parsed.phone });
-          trackPurchase(parsed.orderId, parsed.items, parsed.value, parsed.currency, parsed.shipping);
-        } catch (e) {
-          console.error('Purchase tracking failed', e);
-        }
-        sessionStorage.removeItem('ab_last_order');
-      }
-      // Clean URL
-      window.history.replaceState({}, '', window.location.pathname);
+    if (params.get('payment') !== 'success') return;
+
+    const lastOrder = sessionStorage.getItem('ab_last_order');
+    sessionStorage.removeItem('ab_last_order');
+    // Clean URL immediately so a refresh cannot replay this state
+    window.history.replaceState({}, '', window.location.pathname);
+
+    let parsed: any = null;
+    try {
+      parsed = lastOrder ? JSON.parse(lastOrder) : null;
+    } catch {
+      parsed = null;
     }
+
+    if (!parsed?.orderId) {
+      setStep('cart');
+      return;
+    }
+
+    setStep('processing');
+    setPaymentVerifying(true);
+
+    // Never claim success on the gateway redirect alone — confirm with our own records
+    const verify = async () => {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const { data, error } = await supabase.functions.invoke('order-lookup', {
+          body: { action: 'status', orderId: parsed.orderId },
+        });
+        if (!error && data?.success) {
+
+          const paymentStatus = String(data.payment_status || '').toLowerCase();
+          if (paymentStatus === 'paid') {
+            setLastOrderDetails({
+              orderId: parsed.orderId,
+              orderNumber: data.order_number || parsed.orderNumber,
+              phone: parsed.phone,
+            });
+            try {
+              trackPurchase(parsed.orderId, parsed.items, parsed.value, parsed.currency, parsed.shipping);
+            } catch (e) {
+              console.error('Purchase tracking failed', e);
+            }
+            setPaymentVerifying(false);
+            setStep('success');
+            return;
+          }
+          if (['failed', 'cancelled'].includes(paymentStatus)) {
+            setPaymentVerifying(false);
+            setStep('cart');
+            toast({
+              title: 'Payment not completed',
+              description: 'We did not receive your payment. Nothing has been charged — please try again.',
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      // Still pending after retries: confirmation is in progress, never shown as paid
+      setPaymentVerifying(false);
+      setLastOrderDetails({
+        orderId: parsed.orderId,
+        orderNumber: parsed.orderNumber,
+        phone: parsed.phone,
+      });
+      setStep('pending');
+    };
+
+    verify();
   }, []);
 
   const handleCheckout = async (guestDetails?: { name: string; email: string; phone: string }) => {
+    // Hard guard against double submission (refs update synchronously, state does not)
+    if (submittingRef.current) return;
+    // The gateway only accepts valid TZ/KE/UG mobile money numbers — collect a usable one
+    // before creating an order, so no payment attempt (or stranded order) is wasted.
+    const phoneCandidate = user?.phone_number || guestDetails?.phone || guestPhone || '';
+    if (!normalizePhoneE164(phoneCandidate)) {
+      setAuthTab('guest');
+      setGuestName(prev => prev || user?.full_name || '');
+      setGuestEmail(prev => prev || user?.email || '');
+      setGuestPhone(prev => prev || phoneCandidate);
+      setAuthError('Please enter a valid Tanzanian, Kenyan or Ugandan mobile money number (e.g., 0712 345 678)');
+      setStep('auth');
+      return;
+    }
+    submittingRef.current = true;
     setCheckoutLoading(true);
     setStep('processing');
     const currency = selectedCountry?.currency_code || 'TZS';
@@ -92,7 +166,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
     const cName = user?.full_name || guestDetails?.name || guestName || 'Guest Customer';
     const cEmail = user?.email || guestDetails?.email || guestEmail || '';
-    const cPhone = user?.phone_number || guestDetails?.phone || guestPhone || '';
+    const rawPhone = user?.phone_number || guestDetails?.phone || guestPhone || '';
+    const cPhone = normalizePhoneE164(rawPhone)!;
 
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -106,6 +181,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             selectedColor: item.selectedColor,
           })),
           totalAmount: cartTotal,
+          discountAmount,
           deliveryFee,
           grandTotal,
           deliveryZone,
@@ -140,6 +216,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       window.location.href = data.checkout_url;
     } catch (err: any) {
       console.error('Checkout error:', err);
+      submittingRef.current = false;
       setStep('cart');
       toast({
         title: 'Payment Error',
@@ -165,13 +242,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       setAuthError('Please enter your full name');
       return;
     }
-    const cleanPhone = guestPhone.replace(/[\s\-\(\)]/g, '');
-    if (!cleanPhone || cleanPhone.length < 7 || !/^\+?\d+$/.test(cleanPhone)) {
-      setAuthError('Please enter a valid phone number (e.g., +255 700 000 000 or 0700000000)');
+    const normalizedPhone = normalizePhoneE164(guestPhone);
+    if (!normalizedPhone) {
+      setAuthError('Please enter a Tanzanian, Kenyan or Ugandan mobile money number (e.g., 0712 345 678)');
       return;
     }
     setAuthError('');
-    handleCheckout({ name: guestName, email: guestEmail, phone: guestPhone });
+    handleCheckout({ name: guestName, email: guestEmail, phone: normalizedPhone });
   };
 
   const handleAuthLogin = async (e: React.FormEvent) => {
@@ -340,14 +417,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           required
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
                         />
-                        <input
-                          type="tel"
-                          placeholder="Phone Number *"
-                          value={guestPhone}
-                          onChange={e => setGuestPhone(e.target.value)}
-                          required
-                          className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
-                        />
+                        <div>
+                          <input
+                            type="tel"
+                            placeholder="Phone Number *"
+                            value={guestPhone}
+                            onChange={e => setGuestPhone(e.target.value)}
+                            required
+                            className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all"
+                          />
+                          <div className="mt-1.5">
+                            <DeliveryAvailabilityNotice variant="compact" />
+                          </div>
+                        </div>
                         <input
                           type="email"
                           placeholder="Email Address (Optional)"
@@ -398,6 +480,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all appearance-none">
                           {countries.map(c => <option key={c.id} value={c.id}>{c.flag_emoji} {c.name} ({c.currency_code})</option>)}
                         </select>
+                        {selectedCountry && !SHIPPING_AVAILABILITY.shippingCountries.some((c) =>
+                          (selectedCountry.name || '').toLowerCase().includes(c.toLowerCase())
+                        ) && (
+                          <DeliveryAvailabilityNotice variant="compact" />
+                        )}
                         <input type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required
                           className="w-full px-6 py-4 bg-card border border-foreground/10 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
                         {authError && <p className="text-destructive text-xs font-bold text-center">{authError}</p>}
@@ -413,7 +500,41 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 {step === 'processing' && (
                   <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
                     <Loader2 className="text-primary animate-spin" size={48} />
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Setting up your payment...</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                      {paymentVerifying ? 'Confirming your payment...' : 'Setting up your payment...'}
+                    </p>
+                  </motion.div>
+                )}
+
+                {step === 'pending' && (
+                  <motion.div key="pending" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
+                    <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center border border-foreground/10">
+                      <Loader2 size={36} className="text-primary animate-spin" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-black italic uppercase">Awaiting Confirmation</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Your order has been placed and we are still waiting for the payment confirmation. You will receive an update shortly — do not pay again.
+                      </p>
+                      {lastOrderDetails?.orderNumber && (
+                        <div className="p-3 bg-secondary rounded-xl border border-foreground/10 text-xs font-bold font-mono text-primary">
+                          Order #{lastOrderDetails.orderNumber}
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-full space-y-2 pt-4">
+                      {lastOrderDetails?.orderNumber && (
+                        <a
+                          href={`/track-order?order_number=${encodeURIComponent(lastOrderDetails.orderNumber)}&phone=${encodeURIComponent(lastOrderDetails.phone || '')}`}
+                          className="w-full block py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl text-center hover:opacity-90"
+                        >
+                          Check Order Status
+                        </a>
+                      )}
+                      <button onClick={resetAndClose} className="w-full py-3 bg-secondary text-foreground font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-secondary/80">
+                        Continue Shopping
+                      </button>
+                    </div>
                   </motion.div>
                 )}
 
@@ -536,6 +657,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subtotal ({cartCount} items)</span>
                     <span className="text-sm font-bold">{formatPrice(cartTotal)}</span>
                   </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">Combo Saving</span>
+                      <span className="text-sm font-bold text-primary">-{formatPrice(discountAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Delivery</span>
                     <span className="text-sm font-bold">{deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}</span>
@@ -545,6 +672,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <span className="text-xl font-black text-primary">{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
+
+                {/* Tanzania-only delivery notice — shown right before payment */}
+                <DeliveryAvailabilityNotice />
+
                 <button
                   onClick={handleCheckoutClick}
                   disabled={checkoutLoading}

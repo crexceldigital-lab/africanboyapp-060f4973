@@ -2,7 +2,32 @@ import { LucideIcon } from 'lucide-react';
 
 export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin';
 
-export type AdminTab = 'dashboard' | 'pos' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery' | 'reports' | 'staff';
+export type AdminTab = 'dashboard' | 'pos' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery' | 'reports' | 'staff' | 'fitme';
+
+export interface FitMeCreditTransaction {
+  id: string;
+  user_id: string;
+  transaction_type: 'FREE_CREDIT' | 'PURCHASE' | 'GENERATION' | 'REFUND' | 'ADMIN_ADJUSTMENT' | 'BONUS' | string;
+  credits: number;
+  package_id?: string | null;
+  amount_paid?: number;
+  currency?: string;
+  payment_reference?: string | null;
+  description?: string | null;
+  created_at: string;
+}
+
+export interface FitMeGenerationRecord {
+  id: string;
+  user_id: string;
+  product_id?: string | null;
+  generation_status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | string;
+  provider?: string | null;
+  result_url?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  completed_at?: string | null;
+}
 
 export interface ProductColor {
   id?: string;
@@ -50,6 +75,10 @@ export interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
   selectedColor?: string;
+  /** Set when the item was added as part of a combo kit (gets the combo discount). */
+  comboId?: string;
+  /** How many units of this line came from combo kits (discount only applies to these). */
+  comboQty?: number;
 }
 
 export interface OrderItem {
@@ -216,6 +245,7 @@ export interface StoreStaff {
   user_id: string;
   store_id: number;
   staff_role: 'sales_rep' | 'store_manager' | string;
+  permissions?: string[];
   status?: string;
   created_at?: string;
   updated_at?: string;

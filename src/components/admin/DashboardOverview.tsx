@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { castOrders, castProducts, fromAny } from '@/lib/supabase-helpers';
 import { Order, Product, Store, StoreStaff } from '../../types';
-import { MOCK_PRODUCTS } from '../../data/mockData';
 import { ShoppingBag, DollarSign, Users, Clock, Eye, ArrowUpRight, RefreshCw, TrendingUp, Boxes, AlertTriangle, Store as StoreIcon, Package, PackageCheck, PackageX, Calculator, Tag } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import OrderDetailsModal from './OrderDetailsModal';
@@ -131,9 +130,8 @@ export default function DashboardOverview({ onNavigateTab, staffAssignment }: Da
       // -------------------------------------------------------------
       // INVENTORY STOCK VALUATION CALCULATION
       // -------------------------------------------------------------
-      const productsList: Product[] = productsData && productsData.length > 0
-        ? castProducts(productsData)
-        : MOCK_PRODUCTS;
+      // Inventory figures must always come from the real catalogue
+      const productsList: Product[] = productsData ? castProducts(productsData) : [];
 
       let calcTotalStockValue = 0;       // Inventory Cost Value = stock_qty * cost_price
       let calcPotentialRetailValue = 0;  // Potential Retail Value = stock_qty * selling_price

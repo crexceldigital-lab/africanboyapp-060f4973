@@ -224,3 +224,35 @@ export function trackPosSaleCompleted(
   }, `pos_sale:${receiptNumber}`);
 }
 
+/** Fit Me AI + Fit Me Credits funnel events */
+export type FitMeEvent =
+  | 'fitme_opened'
+  | 'fitme_photo_uploaded'
+  | 'fitme_product_selected'
+  | 'fitme_generation_started'
+  | 'fitme_generation_completed'
+  | 'fitme_generation_failed'
+  | 'fitme_credit_used'
+  | 'fitme_credit_refunded'
+  | 'fitme_credit_purchase_started'
+  | 'fitme_credit_purchase_completed'
+  | 'fitme_credit_purchase_failed'
+  | 'fitme_out_of_credits'
+  | 'fitme_shop_this_look_clicked';
+
+export function trackFitMe(event: FitMeEvent, params: Record<string, unknown> = {}) {
+  initAnalytics();
+  trackEvent(event, params);
+}
+
+/** Records which products customers most often try on in Fit Me */
+export function trackFitMeProductSelected(product: { id: string; name: string; category?: string; sku?: string }) {
+  initAnalytics();
+  trackEvent('fitme_product_selected', {
+    item_id: product.sku || product.id,
+    item_name: product.name,
+    item_category: product.category || 'General',
+  });
+}
+
+

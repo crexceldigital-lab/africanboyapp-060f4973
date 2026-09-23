@@ -12,6 +12,7 @@ import OrdersManager from '../components/admin/OrdersManager';
 import CustomersManager from '../components/admin/CustomersManager';
 import AttributesManager from '../components/admin/AttributesManager';
 import ReportsPanel from '../components/admin/ReportsPanel';
+import FitMeCreditsManager from '../components/admin/FitMeCreditsManager';
 import StaffManager from '../components/admin/StaffManager';
 import POSScreen from '../components/pos/POSScreen';
 import { supabase } from '@/integrations/supabase/client';
@@ -261,6 +262,7 @@ export default function Admin() {
     gallery: 'Gallery',
     reports: 'Reports',
     staff: 'Staff',
+    fitme: 'Fit Me Credits',
   };
 
   const adminStaffAssignment = {
@@ -289,7 +291,7 @@ export default function Admin() {
 
       {/* Main Navigation Pill Bar */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar p-1.5 bg-card border border-foreground/5 rounded-full">
-        {(['dashboard', 'pos', 'products', 'orders', 'customers', 'attributes', 'gallery', 'reports', 'staff'] as AdminTab[]).map(tab => (
+        {(['dashboard', 'pos', 'products', 'orders', 'customers', 'attributes', 'gallery', 'reports', 'staff', 'fitme'] as AdminTab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -439,6 +441,8 @@ export default function Admin() {
       {activeTab === 'reports' && <ReportsPanel />}
 
       {activeTab === 'staff' && <StaffManager />}
+
+      {activeTab === 'fitme' && <FitMeCreditsManager />}
     </div>
   );
 }

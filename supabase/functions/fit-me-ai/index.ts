@@ -1,18 +1,71 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-serve(async (req) => {
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+/** Stable fingerprint of the generation inputs (photo bytes + products + colours). */
+async function fingerprint(userImageBase64: string, products: any[]) {
+  const normalised = products
+    .map((p: any) => `${p.id || p.imageUrl || p.name}|${(p.color || '').toLowerCase()}`)
+    .sort()
+    .join(';');
+  const data = new TextEncoder().encode(`${userImageBase64}::${normalised}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; contentType: string } {
+  const match = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl);
+  const contentType = match?.[1] || "image/png";
+  const base64 = match?.[2] || dataUrl.replace(/^data:[^,]+,/, "");
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { bytes, contentType };
+}
+
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+  let generationId: string | null = null;
+
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // ---- 1. Authentication (credits belong to a registered user) ----
+    const authHeader = req.headers.get("authorization") || "";
+    let userId: string | null = null;
+    if (authHeader.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.replace("Bearer ", "");
+        const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: claimsData } = await userClient.auth.getClaims(token);
+        if (claimsData?.claims) userId = claimsData.claims.sub as string;
+      } catch (_e) {
+        userId = null;
+      }
+    }
+    if (!userId) {
+      return json({ error: "Please sign in to use Fit Me AI.", code: "auth_required" }, 401);
+    }
 
     const { userImageBase64, products: productsList, productImageUrl, productName, selectedColor } = await req.json();
 
@@ -20,13 +73,52 @@ serve(async (req) => {
     const products = productsList || [{ imageUrl: productImageUrl, name: productName, color: selectedColor }];
 
     if (!userImageBase64 || !products?.length) {
-      return new Response(JSON.stringify({ error: "User image and at least one product are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json({ error: "User image and at least one product are required" }, 400);
+    }
+
+    // ---- 2. Reserve exactly 1 credit atomically (or reuse a cached result) ----
+    const inputHash = await fingerprint(userImageBase64, products);
+    const productIds = products.map((p: any) => p.id).filter(Boolean);
+
+    const { data: reservation, error: reserveError } = await admin.rpc("fitme_reserve_credit", {
+      p_user_id: userId,
+      p_input_hash: inputHash,
+      p_product_ids: productIds,
+    });
+
+    if (reserveError) {
+      console.error("fitme_reserve_credit failed:", reserveError);
+      return json({ error: "Could not check your Fit Me Credits. Please try again." }, 500);
+    }
+
+    if (!reservation?.allowed) {
+      if (reservation?.reason === "insufficient_credits") {
+        return json({
+          error: "You're out of Fit Me Credits",
+          code: "insufficient_credits",
+          current_balance: reservation?.current_balance ?? 0,
+        }, 402);
+      }
+      return json({ error: "Fit Me is unavailable for this account.", code: reservation?.reason }, 403);
+    }
+
+    // Identical look already generated → serve it again for free
+    if (reservation.cached && reservation.result_url) {
+      const { data: signed } = await admin.storage
+        .from("fitme-results")
+        .createSignedUrl(reservation.result_url, 60 * 60 * 24);
+      return json({
+        image: signed?.signedUrl || null,
+        cached: true,
+        credits_charged: 0,
+        generation_id: reservation.generation_id,
       });
     }
 
-    const productDescriptions = products.map((p: any, i: number) => 
+    generationId = reservation.generation_id as string;
+
+    // ---- 3. Existing AI provider integration (unchanged) ----
+    const productDescriptions = products.map((p: any, i: number) =>
       `Item ${i + 1}: "${p.name}"${p.color ? ` in ${p.color}` : ''}`
     ).join(', ');
 
@@ -45,68 +137,110 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3.1-flash-image-preview",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: prompt },
-                ...imageContents,
-              ]
-            }
-          ],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              ...imageContents,
+            ]
+          }
+        ],
         modalities: ["image", "text"]
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds to continue." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "AI processing failed. Please try again." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      await admin.rpc("fitme_fail_generation", {
+        p_generation_id: generationId,
+        p_error: `Provider error ${response.status}`,
       });
+
+      if (response.status === 429) {
+        return json({ error: "Too many requests right now. Your credit was refunded — please try again in a moment.", refunded: true }, 429);
+      }
+      if (response.status === 402) {
+        return json({ error: "The AI service is temporarily unavailable. Your credit was refunded.", refunded: true }, 402);
+      }
+      return json({ error: "AI processing failed. Your credit was refunded — please try again.", refunded: true }, 500);
     }
 
     const data = await response.json();
-    console.log("AI response structure:", JSON.stringify(data?.choices?.[0]?.message, null, 2)?.substring(0, 500));
-    
-    // Try multiple possible response formats
     const message = data.choices?.[0]?.message;
-    const generatedImage = message?.images?.[0]?.image_url?.url 
+    const generatedImage = message?.images?.[0]?.image_url?.url
       || message?.images?.[0]?.url
       || message?.images?.[0]
       || (typeof message?.content === 'string' && message.content.startsWith('data:') ? message.content : null);
     const textResponse = typeof message?.content === 'string' && !message.content.startsWith('data:') ? message.content : null;
 
-    if (!generatedImage) {
-      return new Response(JSON.stringify({ error: "AI could not generate the image. Try a different photo.", text: textResponse }), {
-        status: 422,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!generatedImage || typeof generatedImage !== "string") {
+      await admin.rpc("fitme_fail_generation", {
+        p_generation_id: generationId,
+        p_error: "No image returned by provider",
+      });
+      return json({
+        error: "AI could not generate the image. Your credit was refunded — try a different photo.",
+        refunded: true,
+        text: textResponse,
+      }, 422);
+    }
+
+    // ---- 4. Persist the result so repeats are free ----
+    let storedPath: string | null = null;
+    let signedUrl: string | null = null;
+    try {
+      const { bytes, contentType } = dataUrlToBytes(generatedImage);
+      const ext = contentType.includes("jpeg") ? "jpg" : "png";
+      storedPath = `${userId}/${generationId}.${ext}`;
+      const { error: uploadError } = await admin.storage
+        .from("fitme-results")
+        .upload(storedPath, bytes, { contentType, upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: signed } = await admin.storage
+        .from("fitme-results")
+        .createSignedUrl(storedPath, 60 * 60 * 24);
+      signedUrl = signed?.signedUrl || null;
+    } catch (storeErr) {
+      console.error("Fit Me result storage failed (serving inline):", storeErr);
+      storedPath = null;
+    }
+
+    if (storedPath) {
+      await admin.rpc("fitme_complete_generation", {
+        p_generation_id: generationId,
+        p_result_url: storedPath,
+        p_provider_generation_id: data?.id || null,
+      });
+    } else {
+      // Result produced but not cacheable — still a successful, consumed generation
+      await admin.rpc("fitme_complete_generation", {
+        p_generation_id: generationId,
+        p_result_url: null,
+        p_provider_generation_id: data?.id || null,
       });
     }
 
-    return new Response(JSON.stringify({ image: generatedImage, text: textResponse }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return json({
+      image: signedUrl || generatedImage,
+      text: textResponse,
+      cached: false,
+      credits_charged: 1,
+      generation_id: generationId,
     });
   } catch (error) {
     console.error("fit-me-ai error:", error);
+    if (generationId) {
+      try {
+        await admin.rpc("fitme_fail_generation", {
+          p_generation_id: generationId,
+          p_error: error instanceof Error ? error.message : "Unknown error",
+        });
+      } catch (_e) { /* non-fatal */ }
+    }
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: errorMessage, refunded: Boolean(generationId) }, 500);
   }
 });

@@ -6,6 +6,53 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// The gateway only accepts E.164 mobile numbers for Tanzania (255), Kenya (254) and Uganda (256).
+// Customers type local formats such as 0712345678, so normalise before calling the gateway.
+// The gateway also rejects numbers with non-mobile prefixes, so the prefix is validated too.
+const SUPPORTED: { code: string; nationalLength: number; mobilePrefixes: string[] }[] = [
+  { code: "255", nationalLength: 9, mobilePrefixes: ["6", "7"] }, // Tanzania
+  { code: "254", nationalLength: 9, mobilePrefixes: ["7", "1"] }, // Kenya
+  { code: "256", nationalLength: 9, mobilePrefixes: ["7"] }, // Uganda
+];
+
+function isValidNational(country: { nationalLength: number; mobilePrefixes: string[] }, national: string) {
+  return (
+    national.length === country.nationalLength &&
+    country.mobilePrefixes.some((prefix) => national.startsWith(prefix))
+  );
+}
+
+function normalizePhoneE164(raw: unknown, defaultCode = "255"): string | null {
+  if (!raw) return null;
+  let digits = String(raw).replace(/[^\d+]/g, "");
+  if (digits.startsWith("+")) digits = digits.slice(1);
+  digits = digits.replace(/\D/g, "");
+  if (!digits) return null;
+
+  for (const country of SUPPORTED) {
+    if (digits.startsWith(country.code)) {
+      let national = digits.slice(country.code.length);
+      if (national.startsWith("0") && national.length === country.nationalLength + 1) {
+        national = national.slice(1);
+      }
+      if (isValidNational(country, national)) return `+${country.code}${national}`;
+    }
+  }
+
+  const fallback = SUPPORTED.find((c) => c.code === defaultCode) || SUPPORTED[0];
+
+  if (digits.startsWith("0")) {
+    const national = digits.slice(1);
+    if (isValidNational(fallback, national)) return `+${fallback.code}${national}`;
+  }
+  if (isValidNational(fallback, digits)) return `+${fallback.code}${digits}`;
+
+  return null;
+}
+
+const UNSUPPORTED_PHONE_MESSAGE =
+  "Please enter a valid Tanzanian, Kenyan or Ugandan mobile money number (for example 0712 345 678). International cards are not available yet — contact us on WhatsApp to arrange payment.";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -44,13 +91,33 @@ Deno.serve(async (req) => {
     const { items, totalAmount, deliveryFee, discountAmount, deliveryZone, currency, customerName, customerEmail, customerPhone, redirectUrl, deliveryAddress, deliveryLatitude, deliveryLongitude, isGuest } = body;
 
     const isGuestOrder = Boolean(isGuest) || !userId;
-    const orderCurrency = currency || "TZS";
+    // Reject unusable numbers BEFORE creating an order, so no stranded order is left behind.
+    const normalizedPhone = normalizePhoneE164(customerPhone);
+    if (!normalizedPhone) {
+      return new Response(
+        JSON.stringify({ success: false, error: UNSUPPORTED_PHONE_MESSAGE }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    // Snippe settles only in TZS (other currencies are rejected with a validation error),
+    // and all product prices in the database are stored in TZS. The storefront may DISPLAY
+    // converted prices, but the charge currency must stay TZS — never silently convert.
+    const orderCurrency = "TZS";
+    const displayCurrency = currency || "TZS";
+    // Snippe hosted checkout currently exposes only "mobile_money". If the merchant account
+    // is later activated for cards, set the SNIPPE_ALLOWED_METHODS secret (e.g. "mobile_money,card")
+    // — no code change needed. Requesting an unsupported method makes checkout show
+    // "This payment method is not available".
+    const allowedMethods = (Deno.env.get("SNIPPE_ALLOWED_METHODS") || "mobile_money")
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean);
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Call atomic RPC: process_online_checkout
     const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc("process_online_checkout", {
       p_customer_name: customerName || "Guest Customer",
-      p_customer_phone: customerPhone || "",
+      p_customer_phone: normalizedPhone,
       p_customer_email: customerEmail || userEmail || null,
       p_delivery_address: typeof deliveryAddress === "string" ? deliveryAddress.slice(0, 400) : null,
       p_delivery_zone: deliveryZone || "inside_dar",
@@ -83,11 +150,11 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         amount: Math.round(serverTotalAmount),
-        currency: currency || "TZS",
-        allowed_methods: ["mobile_money", "card"],
+        currency: orderCurrency,
+        allowed_methods: allowedMethods,
         customer: {
           name: customerName || "",
-          phone: customerPhone || "",
+          phone: normalizedPhone,
           email: customerEmail || userEmail || "",
         },
         redirect_url: redirectUrl || "",
@@ -97,6 +164,7 @@ Deno.serve(async (req) => {
           order_id: orderId,
           order_number: orderNumber,
           user_id: userId,
+          display_currency: displayCurrency,
         },
         expires_in: 3600,
         line_items: items.map((item: any) => ({
@@ -110,7 +178,31 @@ Deno.serve(async (req) => {
     const snippeData = await snippeRes.json();
 
     if (!snippeRes.ok) {
-      throw new Error(`Snippe API error [${snippeRes.status}]: ${JSON.stringify(snippeData)}`);
+      // Never leave a stranded pending order behind when the gateway refuses the session.
+      try {
+        await supabaseAdmin.rpc("fail_order_payment", {
+          p_order_id: orderId,
+          p_status: "cancelled",
+          p_reference: null,
+        });
+      } catch (_e) {
+        // non-fatal
+      }
+
+      const gatewayMsg = String(snippeData?.message || "");
+      // Phone/country rejections are customer-correctable: answer 400 with clear guidance
+      // instead of a raw 500 gateway message.
+      if (/phone|country we collect in/i.test(gatewayMsg)) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "That mobile number was not accepted. Please enter a valid Tanzanian, Kenyan or Ugandan mobile money number (for example 0712 345 678), or contact us on WhatsApp to arrange payment.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      throw new Error(`Payment could not be started. ${gatewayMsg || `Gateway error ${snippeRes.status}`}`);
     }
 
     // Update order with payment reference
