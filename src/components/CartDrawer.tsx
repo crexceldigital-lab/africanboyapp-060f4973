@@ -167,7 +167,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const cName = user?.full_name || guestDetails?.name || guestName || 'Guest Customer';
     const cEmail = user?.email || guestDetails?.email || guestEmail || '';
     const rawPhone = user?.phone_number || guestDetails?.phone || guestPhone || '';
-    const cPhone = normalizePhoneE164(rawPhone) || rawPhone;
+    const cPhone = normalizePhoneE164(rawPhone)!;
 
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {
