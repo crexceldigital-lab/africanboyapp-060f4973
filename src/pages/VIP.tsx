@@ -11,6 +11,10 @@ export default function VIP() {
   const [selectedTop, setSelectedTop] = useState<Product | null>(null);
   const [selectedBottom, setSelectedBottom] = useState<Product | null>(null);
   const [selectedFootwear, setSelectedFootwear] = useState<Product | null>(null);
+  const [topSize, setTopSize] = useState('');
+  const [bottomSize, setBottomSize] = useState('');
+  const [footwearSize, setFootwearSize] = useState('');
+  const [sizeError, setSizeError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const { addComboToCart } = useCart();
