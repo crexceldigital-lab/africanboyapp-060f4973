@@ -8,8 +8,19 @@ const corsHeaders = {
 
 // The gateway only accepts E.164 mobile numbers for Tanzania (255), Kenya (254) and Uganda (256).
 // Customers type local formats such as 0712345678, so normalise before calling the gateway.
-const SUPPORTED_CODES = ["255", "254", "256"];
-const NATIONAL_LENGTH = 9;
+// The gateway also rejects numbers with non-mobile prefixes, so the prefix is validated too.
+const SUPPORTED: { code: string; nationalLength: number; mobilePrefixes: string[] }[] = [
+  { code: "255", nationalLength: 9, mobilePrefixes: ["6", "7"] }, // Tanzania
+  { code: "254", nationalLength: 9, mobilePrefixes: ["7", "1"] }, // Kenya
+  { code: "256", nationalLength: 9, mobilePrefixes: ["7"] }, // Uganda
+];
+
+function isValidNational(country: { nationalLength: number; mobilePrefixes: string[] }, national: string) {
+  return (
+    national.length === country.nationalLength &&
+    country.mobilePrefixes.some((prefix) => national.startsWith(prefix))
+  );
+}
 
 function normalizePhoneE164(raw: unknown, defaultCode = "255"): string | null {
   if (!raw) return null;
@@ -18,26 +29,29 @@ function normalizePhoneE164(raw: unknown, defaultCode = "255"): string | null {
   digits = digits.replace(/\D/g, "");
   if (!digits) return null;
 
-  for (const code of SUPPORTED_CODES) {
-    if (digits.startsWith(code) && digits.length === code.length + NATIONAL_LENGTH) {
-      return `+${digits}`;
-    }
-    if (digits.startsWith(`${code}0`) && digits.length === code.length + NATIONAL_LENGTH + 1) {
-      return `+${code}${digits.slice(code.length + 1)}`;
+  for (const country of SUPPORTED) {
+    if (digits.startsWith(country.code)) {
+      let national = digits.slice(country.code.length);
+      if (national.startsWith("0") && national.length === country.nationalLength + 1) {
+        national = national.slice(1);
+      }
+      if (isValidNational(country, national)) return `+${country.code}${national}`;
     }
   }
 
-  if (digits.startsWith("0") && digits.length === NATIONAL_LENGTH + 1) {
-    return `+${defaultCode}${digits.slice(1)}`;
+  const fallback = SUPPORTED.find((c) => c.code === defaultCode) || SUPPORTED[0];
+
+  if (digits.startsWith("0")) {
+    const national = digits.slice(1);
+    if (isValidNational(fallback, national)) return `+${fallback.code}${national}`;
   }
-  if (digits.length === NATIONAL_LENGTH) {
-    return `+${defaultCode}${digits}`;
-  }
+  if (isValidNational(fallback, digits)) return `+${fallback.code}${digits}`;
+
   return null;
 }
 
 const UNSUPPORTED_PHONE_MESSAGE =
-  "Please enter a Tanzanian, Kenyan or Ugandan mobile money number (for example 0712 345 678). International cards are not available yet — contact us on WhatsApp to arrange payment.";
+  "Please enter a valid Tanzanian, Kenyan or Ugandan mobile money number (for example 0712 345 678). International cards are not available yet — contact us on WhatsApp to arrange payment.";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
