@@ -18,22 +18,25 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
   store_manager: ["pos_sale", "void_sale", "create_shipment"],
 };
 
-function parsePermissions(value: unknown): string[] {
+// Returns null when no permission list was ever saved (so role defaults apply),
+// and an array (possibly empty) when the admin explicitly saved a list.
+function parsePermissions(value: unknown): string[] | null {
   if (Array.isArray(value)) return value.filter((item) => typeof item === "string");
   if (typeof value === "string" && value.trim()) {
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : null;
     } catch {
-      return [];
+      return null;
     }
   }
-  return [];
+  return null;
 }
 
 function staffPermissions(assignment: any): string[] {
   const explicit = parsePermissions(assignment?.permissions);
-  if (explicit.length > 0) return explicit;
+  // An explicitly saved empty list means access was revoked — never fall back to role defaults.
+  if (explicit !== null) return explicit;
   return ROLE_DEFAULT_PERMISSIONS[String(assignment?.staff_role || "")] || [];
 }
 

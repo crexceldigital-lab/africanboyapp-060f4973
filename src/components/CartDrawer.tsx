@@ -140,6 +140,18 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const handleCheckout = async (guestDetails?: { name: string; email: string; phone: string }) => {
     // Hard guard against double submission (refs update synchronously, state does not)
     if (submittingRef.current) return;
+    // The gateway only accepts valid TZ/KE/UG mobile money numbers — collect a usable one
+    // before creating an order, so no payment attempt (or stranded order) is wasted.
+    const phoneCandidate = user?.phone_number || guestDetails?.phone || guestPhone || '';
+    if (!normalizePhoneE164(phoneCandidate)) {
+      setAuthTab('guest');
+      setGuestName(prev => prev || user?.full_name || '');
+      setGuestEmail(prev => prev || user?.email || '');
+      setGuestPhone(prev => prev || phoneCandidate);
+      setAuthError('Please enter a valid Tanzanian, Kenyan or Ugandan mobile money number (e.g., 0712 345 678)');
+      setStep('auth');
+      return;
+    }
     submittingRef.current = true;
     setCheckoutLoading(true);
     setStep('processing');
@@ -155,7 +167,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const cName = user?.full_name || guestDetails?.name || guestName || 'Guest Customer';
     const cEmail = user?.email || guestDetails?.email || guestEmail || '';
     const rawPhone = user?.phone_number || guestDetails?.phone || guestPhone || '';
-    const cPhone = normalizePhoneE164(rawPhone) || rawPhone;
+    const cPhone = normalizePhoneE164(rawPhone)!;
 
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {

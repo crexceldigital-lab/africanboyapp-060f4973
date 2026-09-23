@@ -77,6 +77,8 @@ export interface CartItem extends Product {
   selectedColor?: string;
   /** Set when the item was added as part of a combo kit (gets the combo discount). */
   comboId?: string;
+  /** How many units of this line came from combo kits (discount only applies to these). */
+  comboQty?: number;
 }
 
 export interface OrderItem {

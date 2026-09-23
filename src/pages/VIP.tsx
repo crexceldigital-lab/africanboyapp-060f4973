@@ -11,6 +11,10 @@ export default function VIP() {
   const [selectedTop, setSelectedTop] = useState<Product | null>(null);
   const [selectedBottom, setSelectedBottom] = useState<Product | null>(null);
   const [selectedFootwear, setSelectedFootwear] = useState<Product | null>(null);
+  const [topSize, setTopSize] = useState('');
+  const [bottomSize, setBottomSize] = useState('');
+  const [footwearSize, setFootwearSize] = useState('');
+  const [sizeError, setSizeError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const { addComboToCart } = useCart();
@@ -42,17 +46,35 @@ export default function VIP() {
     ? (selectedTop.price + selectedBottom.price + selectedFootwear.price) * 0.95
     : 0;
 
+  const needsSize = (p: Product | null) => Boolean(p && Array.isArray(p.sizes) && p.sizes.length > 0);
+  const sizeMissing =
+    (needsSize(selectedTop) && !topSize) ||
+    (needsSize(selectedBottom) && !bottomSize) ||
+    (needsSize(selectedFootwear) && !footwearSize);
+
   const handleAddComboToCart = () => {
     if (selectedTop && selectedBottom && selectedFootwear) {
-      // Add the three REAL products so checkout, stock and pricing work.
+      if (sizeMissing) {
+        setSizeError('Please choose a size for each item in your combo.');
+        return;
+      }
+      setSizeError('');
+      // Add the three REAL products (with their chosen sizes) so checkout, stock and pricing work.
       // The 5% combo saving is applied as a cart discount.
-      addComboToCart([selectedTop, selectedBottom, selectedFootwear]);
+      addComboToCart([
+        { product: selectedTop, size: topSize || undefined },
+        { product: selectedBottom, size: bottomSize || undefined },
+        { product: selectedFootwear, size: footwearSize || undefined },
+      ]);
       setIsAdded(true);
       setTimeout(() => {
         setIsAdded(false);
         setSelectedTop(null);
         setSelectedBottom(null);
         setSelectedFootwear(null);
+        setTopSize('');
+        setBottomSize('');
+        setFootwearSize('');
         setCurrentStep(1);
       }, 2000);
     }
@@ -115,7 +137,7 @@ export default function VIP() {
                         key={product.id}
                         product={product}
                         isSelected={selectedTop?.id === product.id}
-                        onSelect={() => { setSelectedTop(product); setCurrentStep(2); }}
+                        onSelect={() => { setSelectedTop(product); setTopSize(''); setSizeError(''); setCurrentStep(2); }}
                       />
                     ))}
                   </div>
@@ -137,7 +159,7 @@ export default function VIP() {
                         key={product.id}
                         product={product}
                         isSelected={selectedBottom?.id === product.id}
-                        onSelect={() => { setSelectedBottom(product); setCurrentStep(3); }}
+                        onSelect={() => { setSelectedBottom(product); setBottomSize(''); setSizeError(''); setCurrentStep(3); }}
                       />
                     ))}
                   </div>
@@ -159,7 +181,7 @@ export default function VIP() {
                         key={product.id}
                         product={product}
                         isSelected={selectedFootwear?.id === product.id}
-                        onSelect={() => setSelectedFootwear(product)}
+                        onSelect={() => { setSelectedFootwear(product); setFootwearSize(''); setSizeError(''); }}
                       />
                     ))}
                   </div>
@@ -176,11 +198,11 @@ export default function VIP() {
               </h3>
 
               <div className="space-y-4">
-                <ComboSlot item={selectedTop} placeholder="Select a top" formatPrice={formatPrice} />
+                <ComboSlot item={selectedTop} placeholder="Select a top" formatPrice={formatPrice} size={topSize} onSizeChange={(s) => { setTopSize(s); setSizeError(''); }} />
                 <div className="flex justify-center"><Plus size={16} className="text-muted-foreground" /></div>
-                <ComboSlot item={selectedBottom} placeholder="Select a bottom" formatPrice={formatPrice} />
+                <ComboSlot item={selectedBottom} placeholder="Select a bottom" formatPrice={formatPrice} size={bottomSize} onSizeChange={(s) => { setBottomSize(s); setSizeError(''); }} />
                 <div className="flex justify-center"><Plus size={16} className="text-muted-foreground" /></div>
-                <ComboSlot item={selectedFootwear} placeholder="Select footwear" formatPrice={formatPrice} />
+                <ComboSlot item={selectedFootwear} placeholder="Select footwear" formatPrice={formatPrice} size={footwearSize} onSizeChange={(s) => { setFootwearSize(s); setSizeError(''); }} />
               </div>
 
               {selectedTop && selectedBottom && selectedFootwear && (
@@ -194,12 +216,18 @@ export default function VIP() {
                       5% Discount Applied
                     </span>
                   </div>
+                  {sizeError && (
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-destructive text-center">{sizeError}</p>
+                  )}
                   <button
                     onClick={handleAddComboToCart}
+                    disabled={sizeMissing && !isAdded}
                     className={`w-full py-4 rounded-2xl font-black tracking-widest text-sm transition-all ${
                       isAdded
                         ? 'bg-emerald-500 text-foreground'
-                        : 'bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98]'
+                        : sizeMissing
+                          ? 'bg-primary/40 text-primary-foreground cursor-not-allowed'
+                          : 'bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98]'
                     }`}
                   >
                     {isAdded ? (
@@ -240,16 +268,39 @@ function ProductSelectCard({ product, isSelected, onSelect }: { product: Product
   );
 }
 
-function ComboSlot({ item, placeholder, formatPrice }: { item: Product | null; placeholder: string; formatPrice: (n: number) => string }) {
+function ComboSlot({ item, placeholder, formatPrice, size, onSizeChange }: { item: Product | null; placeholder: string; formatPrice: (n: number) => string; size?: string; onSizeChange?: (size: string) => void }) {
+  const sizes = item && Array.isArray(item.sizes) ? item.sizes : [];
   return (
     <div className={`p-4 rounded-2xl border transition-all ${item ? 'border-primary/30 bg-primary/5' : 'border-dashed border-foreground/10'}`}>
       {item ? (
-        <div className="flex items-center gap-3">
-          <img src={item.image_url} className="w-12 h-12 rounded-xl object-cover" />
-          <div>
-            <p className="text-xs font-bold">{item.name}</p>
-            <p className="text-[10px] text-primary font-bold">{formatPrice(item.price)}</p>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <img src={item.image_url} className="w-12 h-12 rounded-xl object-cover" />
+            <div>
+              <p className="text-xs font-bold">{item.name}</p>
+              <p className="text-[10px] text-primary font-bold">{formatPrice(item.price)}</p>
+            </div>
           </div>
+          {sizes.length > 0 && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Size</p>
+              <div className="flex flex-wrap gap-2">
+                {sizes.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => onSizeChange?.(s)}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                      size === s
+                        ? 'bg-primary border-primary text-primary-foreground'
+                        : 'border-foreground/10 text-muted-foreground hover:border-foreground/30'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-xs text-muted-foreground text-center italic">{placeholder}</p>

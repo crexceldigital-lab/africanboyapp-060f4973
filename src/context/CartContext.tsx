@@ -12,10 +12,16 @@ const DELIVERY_PRICES: Record<DeliveryZone, number> = {
 
 export const COMBO_DISCOUNT_RATE = 0.05;
 
+export interface ComboSelection {
+  product: Product;
+  size?: string;
+  color?: string;
+}
+
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product, size?: string, color?: string, quantityToAdd?: number) => void;
-  addComboToCart: (products: Product[]) => void;
+  addComboToCart: (selections: ComboSelection[]) => void;
   discountAmount: number;
   addTicket: (event: AppEvent) => void;
   removeFromCart: (cartKey: string) => void;
@@ -60,14 +66,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Combo kits are added as their REAL products (real ids) so checkout and stock work.
-  const addComboToCart = (products: Product[]) => {
+  // Each garment keeps its chosen size/colour and merges with any matching line already in the cart,
+  // so cart keys stay unique and quantity / remove controls only affect one row.
+  const addComboToCart = (selections: ComboSelection[]) => {
     const comboId = `combo-${Date.now()}`;
-    setCart(prevCart => [
-      ...prevCart,
-      ...products.map(p => ({ ...p, quantity: 1, comboId } as CartItem)),
-    ]);
-    products.forEach(p =>
-      trackAddToCart({ id: p.id, name: p.name, price: p.price, quantity: 1, category: p.category }, 'TZS')
+    setCart(prevCart => {
+      let next = [...prevCart];
+      selections.forEach(({ product, size, color }) => {
+        const key = getCartKey(product.id, size, color);
+        const index = next.findIndex(
+          item => getCartKey(item.id, item.selectedSize, item.selectedColor) === key
+        );
+        if (index >= 0) {
+          const existing = next[index];
+          next[index] = {
+            ...existing,
+            quantity: existing.quantity + 1,
+            comboId: existing.comboId || comboId,
+            comboQty: (existing.comboQty || 0) + 1,
+          };
+        } else {
+          next = [
+            ...next,
+            { ...product, quantity: 1, selectedSize: size, selectedColor: color, comboId, comboQty: 1 } as CartItem,
+          ];
+        }
+      });
+      return next;
+    });
+    selections.forEach(({ product, size, color }) =>
+      trackAddToCart(
+        { id: product.id, name: product.name, price: product.price, quantity: 1, category: product.category, selectedSize: size, selectedColor: color },
+        'TZS'
+      )
     );
   };
 
@@ -107,10 +138,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
   const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   const deliveryFee = cart.length > 0 ? DELIVERY_PRICES[deliveryZone] : 0;
-  const comboSubtotal = cart.reduce(
-    (total, item) => total + (item.comboId ? item.price * item.quantity : 0),
-    0
-  );
+  const comboSubtotal = cart.reduce((total, item) => {
+    if (!item.comboId) return total;
+    const comboUnits = Math.min(item.comboQty ?? item.quantity, item.quantity);
+    return total + item.price * comboUnits;
+  }, 0);
   const discountAmount = Math.round(comboSubtotal * COMBO_DISCOUNT_RATE);
   const grandTotal = Math.max(0, cartTotal - discountAmount) + deliveryFee;
 
