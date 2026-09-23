@@ -190,10 +190,19 @@ Deno.serve(async (req) => {
       }
 
       const gatewayMsg = String(snippeData?.message || "");
-      const friendly = /country we collect in/i.test(gatewayMsg)
-        ? "Payments are currently accepted with a Tanzanian, Kenyan or Ugandan mobile number. Please enter a mobile money number from one of these countries, or contact us on WhatsApp to arrange payment."
-        : `Payment could not be started. ${gatewayMsg || `Gateway error ${snippeRes.status}`}`;
-      throw new Error(friendly);
+      // Phone/country rejections are customer-correctable: answer 400 with clear guidance
+      // instead of a raw 500 gateway message.
+      if (/phone|country we collect in/i.test(gatewayMsg)) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "That mobile number was not accepted. Please enter a valid Tanzanian, Kenyan or Ugandan mobile money number (for example 0712 345 678), or contact us on WhatsApp to arrange payment.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      throw new Error(`Payment could not be started. ${gatewayMsg || `Gateway error ${snippeRes.status}`}`);
     }
 
     // Update order with payment reference
