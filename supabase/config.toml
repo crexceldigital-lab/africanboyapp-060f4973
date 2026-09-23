@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.fitme-credits-purchase]
 verify_jwt = false
+
+[functions.verify-fitme-payment]
+verify_jwt = false

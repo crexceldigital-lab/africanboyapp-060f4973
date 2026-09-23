@@ -5,7 +5,7 @@ import { Product } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import FitMeCreditsModal from '../components/FitMeCreditsModal';
-import { fetchWallet, FitMeWallet } from '@/lib/fitmeCredits';
+import { fetchWallet, FitMeWallet, verifyPaymentStatus } from '@/lib/fitmeCredits';
 import { trackFitMe, trackFitMeProductSelected } from '@/lib/analytics';
 
 export default function FitMe() {
@@ -20,6 +20,11 @@ export default function FitMe() {
   const [wallet, setWallet] = useState<FitMeWallet>({ authenticated: false, current_balance: 0 });
   const [walletLoading, setWalletLoading] = useState(true);
   const [creditsOpen, setCreditsOpen] = useState(false);
+  const [paymentBanner, setPaymentBanner] = useState<{
+    type: 'success' | 'info' | 'error';
+    title: string;
+    message: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const generatingRef = useRef(false);
 
@@ -38,6 +43,41 @@ export default function FitMe() {
   useEffect(() => {
     trackFitMe('fitme_opened');
     refreshWallet();
+
+    // Check for Snippe payment callback URL params: ?reference=XXX or ?purchase_id=YYY
+    const urlParams = new URLSearchParams(window.location.search);
+    const refParam = urlParams.get('reference') || urlParams.get('purchase_id');
+    if (refParam) {
+      verifyPaymentStatus(refParam).then((res) => {
+        if (res.status === 'PAID') {
+          setPaymentBanner({
+            type: 'success',
+            title: 'Payment Confirmed!',
+            message: `✨ ${res.credits_added || 'Your'} Fit Me credits have been added to your wallet.`,
+          });
+          toast.success('Payment verified! Credits added.');
+        } else if (res.status === 'PENDING') {
+          setPaymentBanner({
+            type: 'info',
+            title: 'Payment Processing...',
+            message: 'Snippe is processing your payment. Your credits will appear automatically once completed.',
+          });
+          toast.info('Payment is processing. Please check back in a moment.');
+        } else if (res.status === 'FAILED') {
+          setPaymentBanner({
+            type: 'error',
+            title: 'Payment Failed',
+            message: 'The payment was not completed or was cancelled.',
+          });
+          toast.error('Payment was not completed.');
+        }
+        refreshWallet();
+        // Clean URL params without reloading page
+        window.history.replaceState({}, '', window.location.pathname);
+      }).catch((err) => {
+        console.error('Payment verification error:', err);
+      });
+    }
 
     // Coming back from a credit payment — pick up the new balance
     const onFocus = () => refreshWallet();
@@ -216,6 +256,30 @@ export default function FitMe() {
           Upload your photo • Pick a product • See yourself wearing it
         </p>
       </div>
+
+      {/* Verified Payment Status Banner */}
+      {paymentBanner && (
+        <div
+          className={`mb-6 p-4 rounded-2xl border flex items-start justify-between gap-3 ${
+            paymentBanner.type === 'success'
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+              : paymentBanner.type === 'info'
+              ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+              : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+          }`}
+        >
+          <div>
+            <p className="font-bold text-sm tracking-wide uppercase">{paymentBanner.title}</p>
+            <p className="text-xs opacity-90 mt-0.5">{paymentBanner.message}</p>
+          </div>
+          <button
+            onClick={() => setPaymentBanner(null)}
+            className="p-1 opacity-70 hover:opacity-100 rounded-lg"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Fit Me Credit wallet */}
       <div className="mb-8 flex items-center justify-between gap-3 p-4 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-card to-card">

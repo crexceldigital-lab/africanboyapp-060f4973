@@ -71,3 +71,25 @@ export function pricePerCredit(pkg: FitMeCreditPackage) {
 export function formatTZS(amount: number) {
   return `TZS ${Math.round(amount).toLocaleString('en-US')}`;
 }
+
+export interface VerifyPaymentResult {
+  success: boolean;
+  status: 'PAID' | 'PENDING' | 'FAILED' | 'UNKNOWN';
+  already_processed?: boolean;
+  purchase_id?: string;
+  reference?: string;
+  credits_added?: number;
+  message?: string;
+  error?: string;
+}
+
+export async function verifyPaymentStatus(referenceOrPurchaseId: string): Promise<VerifyPaymentResult> {
+  const { data, error } = await supabase.functions.invoke('verify-fitme-payment', {
+    body: { reference: referenceOrPurchaseId, purchase_id: referenceOrPurchaseId },
+  });
+
+  if (error) {
+    return { success: false, status: 'UNKNOWN', error: error.message || 'Verification request failed' };
+  }
+  return data as VerifyPaymentResult;
+}
