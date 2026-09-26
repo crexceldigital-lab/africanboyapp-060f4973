@@ -14,6 +14,7 @@ import AttributesManager from '../components/admin/AttributesManager';
 import ReportsPanel from '../components/admin/ReportsPanel';
 import FitMeCreditsManager from '../components/admin/FitMeCreditsManager';
 import StaffManager from '../components/admin/StaffManager';
+import InternationalOrdersManager from '../components/admin/InternationalOrdersManager';
 import POSScreen from '../components/pos/POSScreen';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -257,6 +258,7 @@ export default function Admin() {
     pos: 'POS (Store)',
     products: 'Products',
     orders: 'Orders',
+    international: 'International Orders',
     customers: 'Customers',
     attributes: 'Attributes',
     gallery: 'Gallery',
@@ -291,7 +293,7 @@ export default function Admin() {
 
       {/* Main Navigation Pill Bar */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar p-1.5 bg-card border border-foreground/5 rounded-full">
-        {(['dashboard', 'pos', 'products', 'orders', 'customers', 'attributes', 'gallery', 'reports', 'staff', 'fitme'] as AdminTab[]).map(tab => (
+        {(['dashboard', 'pos', 'products', 'orders', 'international', 'customers', 'attributes', 'gallery', 'reports', 'staff', 'fitme'] as AdminTab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -431,6 +433,8 @@ export default function Admin() {
       )}
 
       {activeTab === 'orders' && <OrdersManager />}
+
+      {activeTab === 'international' && <InternationalOrdersManager />}
 
       {activeTab === 'customers' && <CustomersManager />}
 

@@ -19,6 +19,7 @@ import SplashScreen from './components/SplashScreen';
 
 
 import TrackOrder from './pages/TrackOrder';
+import InternationalOrder from './pages/InternationalOrder';
 
 function AppContent() {
   const { loading } = useCountry();
@@ -26,6 +27,10 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<NavTab>(initialTab);
   const [showSplash, setShowSplash] = useState(false);
   const [splashMounted, setSplashMounted] = useState(false);
+
+  if (window.location.pathname.startsWith('/international-order/')) {
+    return <InternationalOrder />;
+  }
 
   if (window.location.pathname === '/track-order') {
     return (
