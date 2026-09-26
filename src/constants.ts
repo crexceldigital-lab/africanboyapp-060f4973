@@ -50,10 +50,23 @@ export const LEATHER_COLOR_PRESETS = [
   { name: 'Burgundy', hex: '#800020' },
 ];
 
+export const TSHIRT_SIZES = ['M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
 export const PRESET_SIZES_CLOTHING = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
 export const PRESET_SIZES_JEANS = ['28', '30', '32', '34', '36', '38'];
 export const PRESET_SIZES_FOOTWEAR = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47'];
 export const PRESET_SIZES_FREE = ['FREE SIZE'];
+
+export function isTShirtCategory(category?: string, subcategory?: string): boolean {
+  const text = `${category || ''} ${subcategory || ''}`.toLowerCase();
+  return (
+    text === 't-shirt' ||
+    text.startsWith('t-shirt') ||
+    text.includes('t-shirt') ||
+    text.includes('tshirt') ||
+    text === 'tee' ||
+    text.includes('tee ')
+  );
+}
 
 export function isFootwearCategory(category?: string, subcategory?: string): boolean {
   const text = `${category || ''} ${subcategory || ''}`.toLowerCase();

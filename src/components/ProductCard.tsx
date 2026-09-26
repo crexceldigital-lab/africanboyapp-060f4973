@@ -187,7 +187,7 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
           {/* Size Pills */}
           {product.sizes && product.sizes.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-4" onClick={(e) => e.stopPropagation()}>
-              {product.sizes.slice(0, 5).map((size) => (
+              {product.sizes.slice(0, 6).map((size) => (
                 <button
                   key={size}
                   onClick={(e) => {
@@ -203,9 +203,9 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
                   {size}
                 </button>
               ))}
-              {product.sizes.length > 5 && (
+              {product.sizes.length > 6 && (
                 <span className="text-[9px] text-muted-foreground font-bold self-center">
-                  +{product.sizes.length - 5}
+                  +{product.sizes.length - 6}
                 </span>
               )}
             </div>

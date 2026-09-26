@@ -32,8 +32,8 @@ export const MOCK_PRODUCTS: Product[] = [
     category: 'T-Shirt',
     image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
     description: 'Premium cotton signature tee with luxury embroidered chest logo.',
-    stock_quantity: 25,
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+    stock_quantity: 30,
+    sizes: ['M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'],
     colors: [
       { name: 'Black', hex: '#1a1a1a' },
       { name: 'White', hex: '#f5f5f5' },

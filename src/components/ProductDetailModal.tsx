@@ -20,6 +20,10 @@ import { useCart } from '../context/CartContext';
 import { useCountry } from '../context/CountryContext';
 import ProductLightboxModal from './ProductLightboxModal';
 import ShareProductModal from './ShareProductModal';
+import {
+  getProductCanonicalUrl,
+  updateOpenGraphMeta,
+} from '../lib/shareUtils';
 import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock';
 import { isFootwearCategory } from '../constants';
 
@@ -76,6 +80,7 @@ export default function ProductDetailModal({
 
   useEffect(() => {
     if (!product) return;
+    updateOpenGraphMeta(product);
     const defaultColor = product.colors && product.colors.length > 0 ? product.colors[0].name : '';
     let initialSize = '';
     if (product.sizes && product.sizes.length > 0) {

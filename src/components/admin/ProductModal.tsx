@@ -4,7 +4,7 @@ import { X, Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
 import { Product, ProductColor, Category, Subcategory, AttributeSize, AttributeColor } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
-import { PRODUCT_CATEGORIES, AFRICAN_BOY_FASHION_COLORS, LEATHER_COLOR_PRESETS, PRESET_SIZES_CLOTHING, PRESET_SIZES_JEANS, PRESET_SIZES_FOOTWEAR, PRESET_SIZES_FREE, isFootwearCategory, isFreeSizeCategory } from '../../constants';
+import { PRODUCT_CATEGORIES, AFRICAN_BOY_FASHION_COLORS, LEATHER_COLOR_PRESETS, PRESET_SIZES_CLOTHING, PRESET_SIZES_JEANS, PRESET_SIZES_FOOTWEAR, PRESET_SIZES_FREE, TSHIRT_SIZES, isFootwearCategory, isFreeSizeCategory, isTShirtCategory } from '../../constants';
 
 export interface ProductFormData {
   name: string;
@@ -112,10 +112,13 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
   const currentCategoryObj = dbCategories.find(c => c.name.toLowerCase() === formData.category.toLowerCase());
   const availableSubcategories = dbSubcategories.filter(sc => !currentCategoryObj || sc.category_id === currentCategoryObj.id);
 
+  const isTShirt = isTShirtCategory(formData.category, formData.subcategory);
   const isFootwear = isFootwearCategory(formData.category, formData.subcategory);
   const isFreeSize = isFreeSizeCategory(formData.category, formData.subcategory);
 
-  const defaultPresets = isFootwear
+  const defaultPresets = isTShirt
+    ? TSHIRT_SIZES
+    : isFootwear
     ? PRESET_SIZES_FOOTWEAR
     : isFreeSize
     ? PRESET_SIZES_FREE
@@ -421,6 +424,24 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
               <button
                 type="button"
                 onClick={() => {
+                  const defaultStock = TSHIRT_SIZES.reduce((acc, s) => ({ ...acc, [s]: formData.stock?.[s] ?? 0 }), {} as Record<string, number>);
+                  const total = Object.values(defaultStock).reduce((sum, v) => sum + v, 0);
+                  setFormData(prev => ({
+                    ...prev,
+                    sizes: [...TSHIRT_SIZES],
+                    stock: defaultStock,
+                    stock_quantity: String(total),
+                  }));
+                }}
+                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                  isTShirt ? 'bg-primary text-black border-primary' : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:bg-foreground/10'
+                }`}
+              >
+                T-Shirt (M-XXXXL)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   const defaultStock = PRESET_SIZES_FOOTWEAR.reduce((acc, s) => ({ ...acc, [s]: formData.stock?.[s] ?? 0 }), {} as Record<string, number>);
                   const total = Object.values(defaultStock).reduce((sum, v) => sum + v, 0);
                   setFormData(prev => ({
@@ -450,7 +471,7 @@ export default function ProductModal({ isOpen, onClose, editingProduct, formData
                   }));
                 }}
                 className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
-                  !isFootwear && !isFreeSize && formData.category !== 'Jeans' ? 'bg-primary text-black border-primary' : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:bg-foreground/10'
+                  !isTShirt && !isFootwear && !isFreeSize && formData.category !== 'Jeans' ? 'bg-primary text-black border-primary' : 'bg-foreground/5 text-muted-foreground border-foreground/10 hover:bg-foreground/10'
                 }`}
               >
                 Clothing (S-XXL)

@@ -23,9 +23,27 @@ export function getProductShareText(product: Product, formattedPrice: string): s
   return `Check out this African Boy product: ${product.name}\n\nPrice: ${formattedPrice}\n\nDiscover it at African Boy.`;
 }
 
+/**
+ * Generates WhatsApp pre-filled message according to African Boy specification:
+ * Check out this African Boy product:
+ * 
+ * [PRODUCT NAME]
+ * 
+ * TSh [PRICE]
+ * 
+ * [PRODUCT URL]
+ */
+export function getWhatsAppShareText(product: Product, formattedPrice: string): string {
+  const url = getProductCanonicalUrl(product);
+  const priceDisplay = formattedPrice.startsWith('TSh')
+    ? formattedPrice
+    : `TSh ${product.price.toLocaleString()}`;
+  return `Check out this African Boy product:\n\n${product.name}\n\n${priceDisplay}\n\n${url}`;
+}
+
 export async function shareToWhatsApp({ product, formattedPrice }: ShareOptions): Promise<void> {
   const url = getProductCanonicalUrl(product);
-  const text = `Check out this African Boy product: *${product.name}*\n\n${formattedPrice}\n\n${url}\n\nDiscover it at African Boy.`;
+  const text = getWhatsAppShareText(product, formattedPrice);
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   
   trackProductShare(product, 'whatsapp', url);
@@ -106,12 +124,12 @@ export async function shareNative({ product, formattedPrice }: ShareOptions): Pr
 
 export async function shareToInstagramStory({ product, formattedPrice }: ShareOptions): Promise<{ success: boolean; isMobileNative: boolean }> {
   const url = getProductCanonicalUrl(product);
-  const text = getProductShareText(product, formattedPrice);
+  const text = `Check out ${product.name} on African Boy: ${url}`;
 
   trackProductShare(product, 'instagram_story', url);
 
   // Check Web Share API capability
-  if (navigator.share) {
+  if (typeof navigator !== 'undefined' && navigator.share) {
     try {
       await navigator.share({
         title: `${product.name} — African Boy`,
@@ -126,7 +144,7 @@ export async function shareToInstagramStory({ product, formattedPrice }: ShareOp
     }
   }
 
-  // Desktop or fallback: Copy URL to clipboard for manual Instagram post/story attachment
+  // Desktop or fallback: Copy URL to clipboard for manual Instagram story attachment
   await copyProductLink({ product, formattedPrice });
   return { success: true, isMobileNative: false };
 }
@@ -138,8 +156,45 @@ export async function shareToInstagramDirect({ product, formattedPrice }: ShareO
   const copied = await copyProductLink({ product, formattedPrice });
 
   // Try opening Instagram Direct inbox if on web/mobile
-  const igDirectUrl = 'https://www.instagram.com/direct/inbox/';
-  window.open(igDirectUrl, '_blank', 'noopener,noreferrer');
+  try {
+    const igDirectUrl = 'https://www.instagram.com/direct/inbox/';
+    window.open(igDirectUrl, '_blank', 'noopener,noreferrer');
+  } catch (e) {
+    console.warn('Could not open Instagram Direct window:', e);
+  }
 
   return { success: true, linkCopied: copied };
 }
+
+/**
+ * Dynamically updates document title and Open Graph meta tags for social media previews
+ */
+export function updateOpenGraphMeta(product: Product | null): void {
+  if (typeof window === 'undefined' || !document || !product) return;
+
+  const url = getProductCanonicalUrl(product);
+  const title = `${product.name} — AFRICAN BOY`;
+  const description = product.description || `Official African Boy luxury apparel: ${product.name}. Price: TSh ${product.price.toLocaleString()}.`;
+  const image = product.image_url;
+
+  document.title = title;
+
+  const setMetaTag = (selector: string, attrName: string, attrValue: string, content: string) => {
+    let element = document.querySelector(selector);
+    if (!element) {
+      element = document.createElement('meta');
+      element.setAttribute(attrName, attrValue);
+      document.head.appendChild(element);
+    }
+    element.setAttribute('content', content);
+  };
+
+  setMetaTag('meta[property="og:title"]', 'property', 'og:title', title);
+  setMetaTag('meta[property="og:description"]', 'property', 'og:description', description);
+  setMetaTag('meta[property="og:image"]', 'property', 'og:image', image);
+  setMetaTag('meta[property="og:url"]', 'property', 'og:url', url);
+  setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', title);
+  setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', description);
+  setMetaTag('meta[name="twitter:image"]', 'name', 'twitter:image', image);
+}
+

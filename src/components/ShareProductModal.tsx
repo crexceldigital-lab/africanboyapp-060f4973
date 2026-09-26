@@ -79,7 +79,7 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
     const success = await copyProductLink({ product, formattedPrice });
     if (success) {
       setCopied(true);
-      showToast('✓ Product link copied!');
+      showToast('✓ Product link copied');
       setTimeout(() => setCopied(false), 2500);
     }
   };
@@ -92,7 +92,7 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
   const handleInstagramStory = async () => {
     const res = await shareToInstagramStory({ product, formattedPrice });
     if (!res.isMobileNative) {
-      showToast('✓ Link copied! Paste it in your Instagram Story');
+      showToast('Product link copied. Open Instagram and paste it into your Story.');
     } else {
       onClose();
     }
@@ -100,7 +100,7 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
 
   const handleInstagramDirect = async () => {
     await shareToInstagramDirect({ product, formattedPrice });
-    showToast('✓ Link copied! Opening Instagram DMs');
+    showToast('Product link copied. Open Instagram and paste it into your Direct Message.');
   };
 
   const handleFacebook = async () => {

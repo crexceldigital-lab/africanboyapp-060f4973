@@ -8,6 +8,7 @@ import { useCountry } from '../context/CountryContext';
 import { AFRICAN_BOY_FASHION_COLORS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, RotateCcw } from 'lucide-react';
+import { updateOpenGraphMeta } from '@/lib/shareUtils';
 
 export default function Shop() {
   const { selectedCountry } = useCountry();
@@ -98,6 +99,9 @@ export default function Shop() {
   // Sync URL query string with selected product
   const handleSelectProduct = (product: Product | null) => {
     setSelectedProduct(product);
+    if (product) {
+      updateOpenGraphMeta(product);
+    }
     const url = new URL(window.location.href);
     if (product) {
       const slug = product.name.toLowerCase().replace(/\s+/g, '-');
@@ -138,7 +142,7 @@ export default function Shop() {
     'Tracksuit',
   ];
 
-  const availableSizesList = ['S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36'];
+  const availableSizesList = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL', '28', '30', '32', '34', '36', '38'];
 
   // Filter products by availability in the current store
   const availableProducts = useMemo(() => {

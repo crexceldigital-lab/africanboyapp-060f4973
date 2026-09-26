@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Order, OrderItem, Product, ProductColor } from '@/types';
+import { TSHIRT_SIZES, isTShirtCategory } from '@/constants';
 
 /**
  * Typed helper to query tables that are not yet in the generated Supabase
@@ -43,17 +44,40 @@ function parseRecord(value: unknown): Record<string, number> {
  * normalising JSON fields (colors, stock).
  */
 export function castProducts(data: any[]): Product[] {
-  return data.map((p: any) => ({
-    ...p,
-    price: Number(p.price) || 0,
-    sale_price: p.sale_price != null ? Number(p.sale_price) : null,
-    on_sale: Boolean(p.on_sale),
-    discount_percent: Number(p.discount_percent) || 0,
-    stock_quantity: Number(p.stock_quantity) || 0,
-    colors: parseJsonArray<ProductColor>(p.colors),
-    sizes: Array.isArray(p.sizes) ? p.sizes : [],
-    stock: parseRecord(p.stock),
-  })) as Product[];
+  return data.map((p: any) => {
+    const isTShirt = isTShirtCategory(p.category, p.subcategory);
+    const rawSizes = parseJsonArray<string>(p.sizes);
+    const sizes = isTShirt ? TSHIRT_SIZES : rawSizes.length > 0 ? rawSizes : Array.isArray(p.sizes) ? p.sizes : [];
+    const stock = parseRecord(p.stock);
+
+    if (isTShirt) {
+      const stockQty = Number(p.stock_quantity) || 0;
+      const defaultStockPerSize = stockQty > 0 ? Math.ceil(stockQty / TSHIRT_SIZES.length) : 0;
+      TSHIRT_SIZES.forEach((sz) => {
+        if (stock[sz] === undefined) {
+          stock[sz] = defaultStockPerSize;
+        }
+      });
+      // Delete old removed sizes if present (e.g., 'S')
+      Object.keys(stock).forEach((key) => {
+        if (!TSHIRT_SIZES.includes(key)) {
+          delete stock[key];
+        }
+      });
+    }
+
+    return {
+      ...p,
+      price: Number(p.price) || 0,
+      sale_price: p.sale_price != null ? Number(p.sale_price) : null,
+      on_sale: Boolean(p.on_sale),
+      discount_percent: Number(p.discount_percent) || 0,
+      stock_quantity: Number(p.stock_quantity) || 0,
+      colors: parseJsonArray<ProductColor>(p.colors),
+      sizes,
+      stock,
+    };
+  }) as Product[];
 }
 
 export function generateOrderNumber(): string {
