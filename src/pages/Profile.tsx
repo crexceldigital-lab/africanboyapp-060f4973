@@ -7,6 +7,7 @@ import { useCountry } from '../context/CountryContext';
 import { useCart } from '../context/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { castOrders } from '@/lib/supabase-helpers';
+import MyInternationalOrders from '../components/MyInternationalOrders';
 
 export default function Profile() {
   const { user, countries, formatPrice, logout, loading: countryLoading } = useCountry();
@@ -237,6 +238,8 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {user && <MyInternationalOrders userId={user.id} />}
 
       {/* Logout */}
       <div className="pt-8 border-t border-foreground/5">

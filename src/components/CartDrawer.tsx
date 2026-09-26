@@ -9,6 +9,7 @@ import AddressAutocomplete from './AddressAutocomplete';
 import DeliveryMapPreview from './DeliveryMapPreview';
 import StoreLocator, { STORE_LOCATIONS, StoreLocation } from './StoreLocator';
 import DeliveryAvailabilityNotice from './DeliveryAvailabilityNotice';
+import InternationalOrderModal from './InternationalOrderModal';
 import { SHIPPING_AVAILABILITY } from '@/lib/deliveryZones';
 import { normalizePhoneE164 } from '@/lib/phone';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
@@ -38,6 +39,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     longitude: null,
   });
   const [isStoreLocatorOpen, setIsStoreLocatorOpen] = useState(false);
+  const [isIntlOpen, setIsIntlOpen] = useState(false);
   const [selectedPickupStore, setSelectedPickupStore] = useState<StoreLocation>(STORE_LOCATIONS[0]);
 
   // Auth / Guest form state
@@ -681,7 +683,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   disabled={checkoutLoading}
                   className="w-full py-4 bg-primary text-primary-foreground font-black tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-50"
                 >
-                  {checkoutLoading ? 'PROCESSING...' : 'CHECKOUT'}
+                  {checkoutLoading ? 'PROCESSING...' : '🇹🇿 TANZANIA — PROCEED TO CHECKOUT'}
+                </button>
+                <button
+                  onClick={() => setIsIntlOpen(true)}
+                  className="w-full py-3.5 border border-primary/40 text-foreground font-black tracking-widest text-xs rounded-2xl hover:border-primary hover:text-primary transition-all"
+                >
+                  🌍 INTERNATIONAL — REQUEST INTERNATIONAL SHIPPING
                 </button>
               </div>
             )}
@@ -700,6 +708,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         }}
         selectedStoreId={selectedPickupStore.id}
       />
+      <InternationalOrderModal key="intl-modal" isOpen={isIntlOpen} onClose={() => setIsIntlOpen(false)} />
     </AnimatePresence>
   );
 }
