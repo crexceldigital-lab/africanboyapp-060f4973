@@ -13,7 +13,7 @@ const TYPES = [
   { v: 'RETURNED', l: 'Returned' },
   { v: 'MANUAL_CORRECTION', l: 'Manual Correction' },
 ];
-const typeLabel = (t: string) => TYPES.find(x => x.v === t)?.l || t.replace(/_/g, ' ').toLowerCase();
+const typeLabel = (t: string) => TYPES.find(x => x.v === t)?.l || t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, ' ').toLowerCase();
 
 interface Row {
   product_id: string;
@@ -128,7 +128,7 @@ export default function InventoryTab({ storeId, storeName }: { storeId: number; 
         </div>
       </div>
 
-      {open && <AdjustModal row={open} storeId={storeId} me={me} names={names} moves={moves.filter(m => m.product_id === open.product_id)}
+      {open && <AdjustModal row={open} storeId={storeId} storeName={storeName} me={me} names={names} moves={moves.filter(m => m.product_id === open.product_id)}
         onClose={() => setOpen(null)} onDone={async () => { await load(); setOpen(null); }} />}
     </div>
   );
@@ -148,7 +148,7 @@ function MoveRow({ m, name, me, names }: { m: Movement; name: string; me: string
   );
 }
 
-function AdjustModal({ row, storeId, moves, me, names, onClose, onDone }: { row: Row; storeId: number; moves: Movement[]; me: string | null; names: Record<string, string>; onClose: () => void; onDone: () => void }) {
+function AdjustModal({ row, storeId, storeName, moves, me, names, onClose, onDone }: { row: Row; storeId: number; storeName?: string; moves: Movement[]; me: string | null; names: Record<string, string>; onClose: () => void; onDone: () => void }) {
   const sizes = row.product.sizes || [];
   const [variant, setVariant] = useState<string>('');
   const current = variant ? Number(row.variant_stock?.[variant] ?? 0) : row.stock_quantity;
@@ -194,7 +194,7 @@ function AdjustModal({ row, storeId, moves, me, names, onClose, onDone }: { row:
             <Locked label="Price" value={tsh(row.product.price)} />
             <Locked label="Sale Price" value={row.product.on_sale && row.product.sale_price ? tsh(row.product.sale_price) : 'Not on sale'} />
             <Locked label="Category" value={row.product.category} />
-            <Locked label="Store Assignment" value={`Store #${storeId}`} />
+            <Locked label="Store Assignment" value={storeName || `Store #${storeId}`} />
           </div>
         </div>
         <Locked label="Description" value={row.product.description} />
