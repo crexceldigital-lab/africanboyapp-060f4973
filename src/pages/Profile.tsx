@@ -1,52 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Purchase, Order } from '../types';
+import { useState } from 'react';
 import Login from './Login';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Mail, Crown, ShoppingBag, Edit2, Save, X, Globe, LogOut, Truck, MapPin } from 'lucide-react';
+import { User as UserIcon, Mail, Crown, Edit2, Save, X, Globe, LogOut, Truck, MapPin } from 'lucide-react';
 import { useCountry } from '../context/CountryContext';
 import { useCart } from '../context/CartContext';
-import { supabase } from '@/integrations/supabase/client';
-import { castOrders } from '@/lib/supabase-helpers';
 import MyInternationalOrders from '../components/MyInternationalOrders';
+import MyOrders from '../components/MyOrders';
 
 export default function Profile() {
   const { user, countries, formatPrice, logout, loading: countryLoading } = useCountry();
   const { deliveryZone, setDeliveryZone } = useCart();
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: user?.full_name || '', email: user?.email || '', country_id: user?.country_id || 0 });
-
-  useEffect(() => {
-    const fetchUserPurchases = async () => {
-      if (!user) return;
-      try {
-        const { data: ordersData } = await supabase
-          .from('orders')
-          .select('*')
-          .or(`user_id.eq.${user.id},customer_email.eq.${user.email}`)
-          .order('created_at', { ascending: false });
-
-        if (ordersData && ordersData.length > 0) {
-          const casted = castOrders(ordersData);
-          const mappedPurchases: Purchase[] = casted.map((o, idx) => ({
-            id: idx + 1,
-            user_id: 1,
-            product_name: o.items?.[0]?.name || 'African Boy Product',
-            amount: o.total_amount,
-            currency_code: o.currency || 'TZS',
-            date: o.created_at,
-          }));
-          setPurchases(mappedPurchases);
-        } else {
-          setPurchases([]);
-        }
-      } catch (err) {
-        console.error('Error fetching user purchases:', err);
-        setPurchases([]);
-      }
-    };
-    fetchUserPurchases();
-  }, [user]);
 
   if (countryLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
