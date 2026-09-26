@@ -40,16 +40,19 @@ export default function InventoryTab({ storeId, storeName }: { storeId: number; 
   const [filter, setFilter] = useState<'all' | 'low' | 'out'>('all');
   const [open, setOpen] = useState<Row | null>(null);
   const [me, setMe] = useState<string | null>(null);
+  const [names, setNames] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
-    const [{ data: a }, { data: m }, { data: u }] = await Promise.all([
+    const [{ data: a }, { data: m }, { data: u }, { data: nm }] = await Promise.all([
       fromAny('product_store_availability')
         .select('product_id, stock_quantity, variant_stock, product:products(id,name,sku,price,sale_price,on_sale,category,description,image_url,sizes)')
         .eq('store_id', storeId),
       fromAny('inventory_movements').select('*').eq('store_id', storeId).order('created_at', { ascending: false }).limit(200),
       supabase.auth.getUser(),
+      (supabase as any).rpc('get_inventory_actor_names', { p_store_id: storeId }),
     ]);
+    setNames(Object.fromEntries(((nm as any[]) || []).map(x => [x.user_id, x.display_name])));
     setRows(((a as any[]) || []).filter(r => r.product) as Row[]);
     setMoves((m as Movement[]) || []);
     setMe(u.user?.id ?? null);
@@ -120,24 +123,24 @@ export default function InventoryTab({ storeId, storeName }: { storeId: number; 
       <div>
         <h3 className="text-sm font-black uppercase tracking-widest text-foreground flex items-center gap-2"><History size={14} /> Recent Inventory Adjustments</h3>
         <div className="mt-3 grid gap-2">
-          {moves.slice(0, 15).map(m => <MoveRow key={m.id} m={m} name={nameOf(m.product_id)} me={me} />)}
+          {moves.slice(0, 15).map(m => <MoveRow key={m.id} m={m} name={nameOf(m.product_id)} me={me} names={names} />)}
           {!moves.length && <p className="text-sm text-muted-foreground">No adjustments yet.</p>}
         </div>
       </div>
 
-      {open && <AdjustModal row={open} storeId={storeId} me={me} moves={moves.filter(m => m.product_id === open.product_id)}
+      {open && <AdjustModal row={open} storeId={storeId} me={me} names={names} moves={moves.filter(m => m.product_id === open.product_id)}
         onClose={() => setOpen(null)} onDone={async () => { await load(); setOpen(null); }} />}
     </div>
   );
 }
 
-function MoveRow({ m, name, me }: { m: Movement; name: string; me: string | null }) {
+function MoveRow({ m, name, me, names }: { m: Movement; name: string; me: string | null; names: Record<string, string> }) {
   return (
     <div className="flex items-start justify-between gap-3 p-3 rounded-xl bg-card border border-foreground/10 text-sm">
       <div className="min-w-0">
         <div className="font-bold text-foreground truncate">{name}{m.variant_key ? ` — ${m.variant_key}` : ''}</div>
         <div className="text-[11px] text-muted-foreground">
-          {new Date(m.created_at).toLocaleString()} · {typeLabel(m.movement_type)}{m.reason ? ` · ${m.reason}` : ''} · By: {m.staff_user_id && m.staff_user_id === me ? 'You' : m.staff_user_id ? 'Staff/Admin' : 'System'}
+          {new Date(m.created_at).toLocaleString()} · {typeLabel(m.movement_type)}{m.reason ? ` · ${m.reason}` : ''} · By: {m.staff_user_id ? `${names[m.staff_user_id] || 'Staff member'}${m.staff_user_id === me ? ' — you' : ''}` : 'System'}
         </div>
       </div>
       <div className={`font-black whitespace-nowrap ${m.quantity < 0 ? 'text-destructive' : 'text-primary'}`}>{m.quantity > 0 ? '+' : ''}{m.quantity}</div>
@@ -145,7 +148,7 @@ function MoveRow({ m, name, me }: { m: Movement; name: string; me: string | null
   );
 }
 
-function AdjustModal({ row, storeId, moves, me, onClose, onDone }: { row: Row; storeId: number; moves: Movement[]; me: string | null; onClose: () => void; onDone: () => void }) {
+function AdjustModal({ row, storeId, moves, me, names, onClose, onDone }: { row: Row; storeId: number; moves: Movement[]; me: string | null; names: Record<string, string>; onClose: () => void; onDone: () => void }) {
   const sizes = row.product.sizes || [];
   const [variant, setVariant] = useState<string>('');
   const current = variant ? Number(row.variant_stock?.[variant] ?? 0) : row.stock_quantity;
@@ -234,7 +237,7 @@ function AdjustModal({ row, storeId, moves, me, onClose, onDone }: { row: Row; s
         <div>
           <h4 className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-2"><History size={12} /> Inventory History</h4>
           <div className="mt-2 grid gap-2">
-            {moves.map(m => <MoveRow key={m.id} m={m} name={row.product.name} me={me} />)}
+            {moves.map(m => <MoveRow key={m.id} m={m} name={row.product.name} me={me} names={names} />)}
             {!moves.length && <p className="text-xs text-muted-foreground">No history yet.</p>}
           </div>
         </div>
