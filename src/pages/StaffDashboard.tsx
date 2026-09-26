@@ -8,6 +8,8 @@ import OrderDetailsModal from '../components/admin/OrderDetailsModal';
 import CustomerDetailsModal from '../components/admin/CustomerDetailsModal';
 import POSScreen from '../components/pos/POSScreen';
 import MySalesTab from '../components/pos/MySalesTab';
+import InventoryTab from '../components/pos/InventoryTab';
+import { Boxes } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StaffDashboardProps {
@@ -17,13 +19,14 @@ interface StaffDashboardProps {
 
 export default function StaffDashboard({ staffAssignment, onNavigateHome }: StaffDashboardProps) {
   const { logout, user } = useCountry();
-  const [activeTab, setActiveTab] = useState<'pos' | 'orders' | 'customers' | 'my_sales'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'orders' | 'customers' | 'my_sales' | 'inventory'>('pos');
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const isManager = staffAssignment.staff_role === 'store_manager' && staffAssignment.status === 'active';
 
   const fetchStaffData = async () => {
     setLoading(true);
@@ -227,9 +230,23 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
           >
             <DollarSign size={16} /> MY SALES
           </button>
+          {isManager && (
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'inventory'
+                ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
+                : 'bg-card border border-foreground/10 text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Boxes size={16} /> INVENTORY
+          </button>
+          )}
         </div>
 
         {/* Tab 1: POS Screen */}
+        {activeTab === 'inventory' && isManager && <InventoryTab storeId={staffAssignment.store_id} storeName={staffAssignment.store?.name} />}
+
         {activeTab === 'pos' && <POSScreen staffAssignment={staffAssignment} />}
 
         {/* Tab 2: My Sales Tab */}

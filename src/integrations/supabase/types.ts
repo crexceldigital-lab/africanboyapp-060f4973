@@ -488,9 +488,11 @@ export type Database = {
           previous_stock: number
           product_id: string
           quantity: number
+          reason: string | null
           reference_id: string | null
           staff_user_id: string | null
           store_id: number | null
+          variant_key: string | null
         }
         Insert: {
           created_at?: string
@@ -500,9 +502,11 @@ export type Database = {
           previous_stock: number
           product_id: string
           quantity: number
+          reason?: string | null
           reference_id?: string | null
           staff_user_id?: string | null
           store_id?: number | null
+          variant_key?: string | null
         }
         Update: {
           created_at?: string
@@ -512,9 +516,11 @@ export type Database = {
           previous_stock?: number
           product_id?: string
           quantity?: number
+          reason?: string | null
           reference_id?: string | null
           staff_user_id?: string | null
           store_id?: number | null
+          variant_key?: string | null
         }
         Relationships: [
           {
@@ -927,6 +933,7 @@ export type Database = {
           product_id: string
           stock_quantity: number
           store_id: number
+          variant_stock: Json
         }
         Insert: {
           id?: string
@@ -934,6 +941,7 @@ export type Database = {
           product_id: string
           stock_quantity?: number
           store_id: number
+          variant_stock?: Json
         }
         Update: {
           id?: string
@@ -941,6 +949,7 @@ export type Database = {
           product_id?: string
           stock_quantity?: number
           store_id?: number
+          variant_stock?: Json
         }
         Relationships: [
           {
@@ -1237,6 +1246,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_store_inventory: {
+        Args: {
+          p_adjustment_type: string
+          p_new_quantity: number
+          p_product_id: string
+          p_reason: string
+          p_store_id: number
+          p_variant: string
+        }
+        Returns: Json
+      }
       confirm_order_payment: {
         Args: {
           p_amount?: number
@@ -1336,6 +1356,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_store_manager_of: { Args: { _store_id: number }; Returns: boolean }
       process_online_checkout: {
         Args: {
           p_currency?: string

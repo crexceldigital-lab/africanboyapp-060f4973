@@ -1,0 +1,2 @@
+ALTER TABLE public.inventory_movements DROP CONSTRAINT inventory_movements_movement_type_check;
+ALTER TABLE public.inventory_movements ADD CONSTRAINT inventory_movements_movement_type_check CHECK (movement_type = ANY (ARRAY['SALE','RESTOCK','ADJUSTMENT','VOID','STOCK_RECEIVED','STOCK_ADJUSTMENT','DAMAGED','LOST','RETURNED','MANUAL_CORRECTION']));
