@@ -156,22 +156,25 @@ function AdjustModal({ row, storeId, storeName, moves, me, names, onClose, onDon
   const [type, setType] = useState('STOCK_RECEIVED');
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
-  useEffect(() => { setQty(String(current)); }, [variant]);
+  const [err, setErr] = useState('');
+  useEffect(() => { setQty(String(current)); setErr(''); }, [variant]);
 
   const n = Number(qty);
   const diff = Number.isFinite(n) ? n - current : 0;
 
+  const fail = (m: string) => { setErr(m); toast.error(m); };
   const save = async () => {
-    if (!Number.isInteger(n) || n < 0) return toast.error('Enter a whole number of 0 or more');
-    if (reason.trim().length < 2) return toast.error('Please enter a reason');
-    if (diff === 0) return toast.error('Quantity has not changed');
+    setErr('');
+    if (qty.trim() === '' || !Number.isInteger(n) || n < 0) return fail('Enter a whole number of 0 or more');
+    if (diff === 0) return fail('The new stock is the same as the current stock');
+    if (reason.trim().length < 2) return fail('Please enter a reason (e.g. "New stock received") before saving');
     setSaving(true);
     const { error } = await (supabase as any).rpc('adjust_store_inventory', {
       p_product_id: row.product_id, p_store_id: storeId, p_variant: variant || null,
       p_new_quantity: n, p_adjustment_type: type, p_reason: reason.trim(),
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) return fail(error.message || 'Could not save. Please try again.');
     toast.success('Inventory updated');
     onDone();
   };
@@ -229,6 +232,7 @@ function AdjustModal({ row, storeId, storeName, moves, me, names, onClose, onDon
             {TYPES.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
           </select>
           <input value={reason} onChange={e => setReason(e.target.value)} maxLength={500} placeholder='Reason, e.g. "New stock received"' className="w-full px-3 py-2 rounded-xl bg-background border border-foreground/10 text-foreground text-sm" />
+          {err && <p role="alert" className="text-sm font-bold text-destructive">{err}</p>}
           <button disabled={saving} onClick={save} className="w-full py-3 rounded-2xl bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest disabled:opacity-50">
             {saving ? 'Saving...' : 'Save Adjustment'}
           </button>
