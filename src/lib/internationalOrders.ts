@@ -98,22 +98,22 @@ export function buildWhatsAppMessage(r: { reference_number: string; customer_nam
   const lines = [
     'Hello African Boy Team 👋', '',
     "I'd like to place an international order.", '',
-    'Order Reference:', r.reference_number, '',
-    'Customer:', r.customer_name, '',
-    'Country:', r.country, '',
-    'City:', r.city, '',
-    'Phone:', r.customer_phone, '',
+    `Order Reference: ${r.reference_number}`, '',
+    `Customer: ${r.customer_name}`,
+    `Country: ${r.country}`,
+    `City: ${r.city}`,
+    `Phone: ${r.customer_phone}`, '',
     'ORDER:', '',
   ];
   r.cart_items.forEach((it, i) => {
     lines.push(`${i + 1}. ${it.product_name}`);
     if (it.size) lines.push(`Size: ${it.size}`);
     if (it.colour) lines.push(`Colour: ${it.colour}`);
-    lines.push(`Qty: ${it.quantity}`);
+    lines.push(`Quantity: ${it.quantity}`);
     lines.push(`Price: ${formatTsh(it.unit_price)}`, '');
   });
-  lines.push('PRODUCT TOTAL:', formatTsh(r.product_total), '',
-    'International shipping:', 'To be confirmed', '',
+  lines.push(`PRODUCT TOTAL: ${formatTsh(r.product_total)}`, '',
+    'International shipping: To be confirmed', '',
     'Please confirm product availability and provide the international shipping cost and final payment instructions.', '',
     'Thank you.');
   return lines.join('\n');
