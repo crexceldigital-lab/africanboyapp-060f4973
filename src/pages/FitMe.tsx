@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import FitMeCreditsModal from '../components/FitMeCreditsModal';
 import { fetchWallet, FitMeWallet, verifyPaymentStatus } from '@/lib/fitmeCredits';
-import { trackFitMe, trackFitMeProductSelected } from '@/lib/analytics';
+import { trackFitMe, trackFitMeProductSelected } from '../lib/analytics';
 
 export default function FitMe() {
   const [userImage, setUserImage] = useState<string | null>(null);
