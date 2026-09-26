@@ -245,6 +245,14 @@ export function trackFitMe(event: FitMeEvent, params: Record<string, unknown> = 
   trackEvent(event, params);
 }
 
+export function trackFitMeProductSelected(product: Pick<EcomItem, 'id' | 'name' | 'category'>) {
+  trackFitMe('fitme_product_selected', {
+    product_id: product.id,
+    product_name: product.name,
+    product_category: product.category,
+  });
+}
+
 /** Records product_share event when a customer shares a product */
 export function trackProductShare(product: { id: string; name: string }, platform: string, productUrl: string) {
   initAnalytics();
