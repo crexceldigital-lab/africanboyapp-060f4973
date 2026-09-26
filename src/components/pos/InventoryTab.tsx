@@ -232,6 +232,7 @@ function AdjustModal({ row, storeId, storeName, moves, me, names, onClose, onDon
             {TYPES.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
           </select>
           <input value={reason} onChange={e => setReason(e.target.value)} maxLength={500} placeholder='Reason, e.g. "New stock received"' className="w-full px-3 py-2 rounded-xl bg-background border border-foreground/10 text-foreground text-sm" />
+          {err && <p role="alert" className="text-sm font-bold text-destructive">{err}</p>}
           <button disabled={saving} onClick={save} className="w-full py-3 rounded-2xl bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest disabled:opacity-50">
             {saving ? 'Saving...' : 'Save Adjustment'}
           </button>
