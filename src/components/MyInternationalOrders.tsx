@@ -13,14 +13,15 @@ export default function MyInternationalOrders({ userId }: { userId: string }) {
       .then(({ data }: any) => setRows(data || []));
   }, [userId]);
 
-  if (rows.length === 0) return null;
-
   return (
     <div className="bg-card rounded-[2rem] border border-foreground/5 p-6">
       <h2 className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-6">
         <Globe size={16} className="text-primary" /> My International Orders
       </h2>
       <div className="space-y-3">
+        {rows.length === 0 && (
+          <p className="text-center py-8 bg-foreground/5 rounded-2xl border border-dashed border-foreground/10 text-xs text-muted-foreground font-bold uppercase tracking-widest">No international requests yet.</p>
+        )}
         {rows.map(r => (
           <a key={r.reference_number} href={requestPath(r.reference_number)} className="block bg-foreground/5 rounded-2xl p-4 hover:bg-foreground/10 transition-all">
             <div className="flex justify-between items-start gap-3">
