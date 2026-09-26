@@ -1347,6 +1347,13 @@ export type Database = {
         Args: { p_reference: string; p_token: string }
         Returns: Json
       }
+      get_inventory_actor_names: {
+        Args: { p_store_id: number }
+        Returns: {
+          display_name: string
+          user_id: string
+        }[]
+      }
       get_staff_store: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
