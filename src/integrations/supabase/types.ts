@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          is_public: boolean
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          is_public?: boolean
+          key: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          is_public?: boolean
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       countries: {
         Row: {
           code: string
@@ -373,6 +394,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      international_order_requests: {
+        Row: {
+          access_token: string
+          address: string | null
+          cart_items: Json
+          city: string
+          country: string
+          created_at: string
+          currency: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string
+          customer_phone: string
+          estimated_delivery: string | null
+          final_currency: string | null
+          final_total: number | null
+          fulfillment_location: string | null
+          id: string
+          postcode: string | null
+          product_total: number
+          reference_number: string
+          shipping_cost: number | null
+          shipping_currency: string | null
+          shipping_notes: string | null
+          shipping_provider: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string
+          address?: string | null
+          cart_items?: Json
+          city: string
+          country: string
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name: string
+          customer_phone: string
+          estimated_delivery?: string | null
+          final_currency?: string | null
+          final_total?: number | null
+          fulfillment_location?: string | null
+          id?: string
+          postcode?: string | null
+          product_total?: number
+          reference_number: string
+          shipping_cost?: number | null
+          shipping_currency?: string | null
+          shipping_notes?: string | null
+          shipping_provider?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          address?: string | null
+          cart_items?: Json
+          city?: string
+          country?: string
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string
+          customer_phone?: string
+          estimated_delivery?: string | null
+          final_currency?: string | null
+          final_total?: number | null
+          fulfillment_location?: string | null
+          id?: string
+          postcode?: string | null
+          product_total?: number
+          reference_number?: string
+          shipping_cost?: number | null
+          shipping_currency?: string | null
+          shipping_notes?: string | null
+          shipping_provider?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       inventory_movements: {
         Row: {
@@ -1141,6 +1246,19 @@ export type Database = {
         }
         Returns: Json
       }
+      create_international_request: {
+        Args: {
+          p_address: string
+          p_city: string
+          p_country: string
+          p_customer_email: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_items: Json
+          p_postcode: string
+        }
+        Returns: Json
+      }
       create_order_shipment: {
         Args: {
           p_actor_id?: string
@@ -1205,6 +1323,10 @@ export type Database = {
         Args: { p_input_hash: string; p_product_ids: Json; p_user_id: string }
         Returns: Json
       }
+      get_international_request: {
+        Args: { p_reference: string; p_token: string }
+        Returns: Json
+      }
       get_staff_store: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
@@ -1248,6 +1370,10 @@ export type Database = {
           p_subtotal?: number
           p_total_amount?: number
         }
+        Returns: Json
+      }
+      respond_international_quote: {
+        Args: { p_accept: boolean; p_reference: string; p_token: string }
         Returns: Json
       }
       void_pos_sale: {
