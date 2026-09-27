@@ -51,7 +51,7 @@ export const LEATHER_COLOR_PRESETS = [
 ];
 
 export const PRESET_SIZES_CLOTHING = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
-export const PRESET_SIZES_JEANS = ['28', '30', '32', '34', '36', '38'];
+export const PRESET_SIZES_JEANS = ['28', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40'];
 export const PRESET_SIZES_FOOTWEAR = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47'];
 export const PRESET_SIZES_FREE = ['FREE SIZE'];
 
