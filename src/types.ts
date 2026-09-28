@@ -171,7 +171,8 @@ export interface Order {
   is_voided?: boolean;
   voided_at?: string | null;
   voided_by?: string | null;
-  void_reason?: string | null;
+  inventory_deducted?: boolean;
+  stock_deducted_at?: string | null;
   created_at: string;
   updated_at?: string | null;
 }
