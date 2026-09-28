@@ -119,6 +119,8 @@ export function castOrders(data: any[]): Order[] {
       amount_paid: amountPaid,
       balance: balance,
       payment_status: paymentStatus,
+      inventory_deducted: Boolean(o.inventory_deducted || o.stock_deducted_at),
+      stock_deducted_at: o.stock_deducted_at || null,
       items,
       payments,
     };
