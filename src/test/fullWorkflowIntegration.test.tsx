@@ -113,7 +113,7 @@ describe('Full Workflow Integration Tests', () => {
       fireEvent.click(igStoryBtn);
 
       expect(
-        await screen.findByText('Product link copied. Open Instagram and paste it into your Story.')
+        await screen.findByText('Product link copied. Open Instagram and add it to your Story.')
       ).toBeInTheDocument();
     });
   });
