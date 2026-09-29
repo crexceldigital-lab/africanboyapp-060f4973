@@ -43,7 +43,7 @@ export function getWhatsAppShareText(product: Product, formattedPrice: string): 
 
 export async function shareToWhatsApp({ product, formattedPrice }: ShareOptions): Promise<void> {
   const url = getProductCanonicalUrl(product);
-  const text = getWhatsAppShareText(product, formattedPrice);
+  const text = `Check out this African Boy product:\n\n${product.name}\n\n${formattedPrice}\n\n${url}`;
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   
   trackProductShare(product, 'whatsapp', url);
@@ -106,11 +106,17 @@ export async function shareNative({ product, formattedPrice }: ShareOptions): Pr
 
   if (navigator.share) {
     try {
-      await navigator.share({
-        title: product.name,
-        text,
-        url,
-      });
+      const data: ShareData = { title: product.name, text, url };
+      // Attach the product image where the device supports file sharing
+      try {
+        if (product.image_url && (navigator as any).canShare) {
+          const res = await fetch(product.image_url);
+          const blob = await res.blob();
+          const file = new File([blob], 'african-boy-product.jpg', { type: blob.type || 'image/jpeg' });
+          if ((navigator as any).canShare({ files: [file] })) (data as any).files = [file];
+        }
+      } catch { /* image optional */ }
+      await navigator.share(data);
       return true;
     } catch (err: any) {
       if (err.name !== 'AbortError') {

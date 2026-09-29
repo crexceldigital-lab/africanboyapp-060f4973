@@ -1,51 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Purchase, Order } from '../types';
+import { useState } from 'react';
 import Login from './Login';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Mail, Crown, ShoppingBag, Edit2, Save, X, Globe, LogOut, Truck, MapPin } from 'lucide-react';
+import { User as UserIcon, Mail, Crown, Edit2, Save, X, Globe, LogOut, Truck, MapPin } from 'lucide-react';
 import { useCountry } from '../context/CountryContext';
 import { useCart } from '../context/CartContext';
-import { supabase } from '@/integrations/supabase/client';
-import { castOrders } from '@/lib/supabase-helpers';
+import MyInternationalOrders from '../components/MyInternationalOrders';
+import MyOrders from '../components/MyOrders';
 
 export default function Profile() {
   const { user, countries, formatPrice, logout, loading: countryLoading } = useCountry();
   const { deliveryZone, setDeliveryZone } = useCart();
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: user?.full_name || '', email: user?.email || '', country_id: user?.country_id || 0 });
-
-  useEffect(() => {
-    const fetchUserPurchases = async () => {
-      if (!user) return;
-      try {
-        const { data: ordersData } = await supabase
-          .from('orders')
-          .select('*')
-          .or(`user_id.eq.${user.id},customer_email.eq.${user.email}`)
-          .order('created_at', { ascending: false });
-
-        if (ordersData && ordersData.length > 0) {
-          const casted = castOrders(ordersData);
-          const mappedPurchases: Purchase[] = casted.map((o, idx) => ({
-            id: idx + 1,
-            user_id: 1,
-            product_name: o.items?.[0]?.name || 'African Boy Product',
-            amount: o.total_amount,
-            currency_code: o.currency || 'TZS',
-            date: o.created_at,
-          }));
-          setPurchases(mappedPurchases);
-        } else {
-          setPurchases([]);
-        }
-      } catch (err) {
-        console.error('Error fetching user purchases:', err);
-        setPurchases([]);
-      }
-    };
-    fetchUserPurchases();
-  }, [user]);
 
   if (countryLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -191,52 +157,9 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Order History */}
-      <div className="bg-card rounded-[2rem] border border-foreground/5 p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-            <ShoppingBag size={16} className="text-primary" />
-            Order History
-          </h2>
-          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{purchases.length} ORDERS</span>
-        </div>
-        
-        <div className="space-y-4">
-          {purchases.length > 0 ? (
-            purchases.map((purchase, idx) => (
-              <motion.div 
-                key={purchase.id}
-                initial={{ opacity: 0, x: -10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.05 }}
-                className="bg-foreground/5 rounded-2xl p-5 flex justify-between items-center hover:bg-card transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center text-primary">
-                    <ShoppingBag size={20} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm">{purchase.product_name}</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1 font-medium">
-                      {new Date(purchase.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-primary font-black text-lg">{formatPrice(purchase.amount)}</div>
-                  <div className="text-[9px] text-emerald-500 font-black uppercase tracking-widest mt-1 bg-emerald-500/10 px-2 py-1 rounded-md inline-block border border-emerald-500/20">COMPLETED</div>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            <div className="text-center py-16 bg-foreground/5 rounded-[2rem] border border-dashed border-foreground/10">
-              <ShoppingBag size={48} className="mx-auto text-secondary mb-4" />
-              <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">No purchases yet.</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <MyOrders userId={user.id} email={user.email} />
+
+      <MyInternationalOrders userId={user.id} />
 
       {/* Logout */}
       <div className="pt-8 border-t border-foreground/5">

@@ -2,7 +2,7 @@ import { LucideIcon } from 'lucide-react';
 
 export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin';
 
-export type AdminTab = 'dashboard' | 'pos' | 'products' | 'orders' | 'customers' | 'attributes' | 'gallery' | 'reports' | 'staff' | 'fitme';
+export type AdminTab = 'dashboard' | 'pos' | 'products' | 'orders' | 'international' | 'customers' | 'attributes' | 'gallery' | 'reports' | 'staff' | 'fitme';
 
 export interface FitMeCreditTransaction {
   id: string;

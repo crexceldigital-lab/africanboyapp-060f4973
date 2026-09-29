@@ -65,7 +65,7 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
     ? Number(product.sale_price)
     : product.price;
 
-  const formattedPrice = formatPrice(effectivePrice);
+  const formattedPrice = `TSh ${Math.round(effectivePrice).toLocaleString('en-US')}`;
   const canonicalUrl = getProductCanonicalUrl(product);
 
   const showToast = (msg: string) => {
@@ -92,7 +92,7 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
   const handleInstagramStory = async () => {
     const res = await shareToInstagramStory({ product, formattedPrice });
     if (!res.isMobileNative) {
-      showToast('Product link copied. Open Instagram and paste it into your Story.');
+      showToast('Product link copied. Open Instagram and add it to your Story.');
     } else {
       onClose();
     }
@@ -117,6 +117,8 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
     const shared = await shareNative({ product, formattedPrice });
     if (shared) {
       onClose();
+    } else if (!hasNativeShare) {
+      await handleCopyLink();
     }
   };
 
@@ -281,7 +283,7 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
           </div>
 
           {/* More / Native Share (if supported) */}
-          {hasNativeShare && (
+          {(
             <button
               onClick={handleNative}
               className="w-full py-3 bg-secondary hover:bg-foreground/10 border border-foreground/10 text-foreground font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all"
