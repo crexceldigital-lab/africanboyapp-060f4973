@@ -1362,6 +1362,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_store_manager: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_store_manager_of: { Args: { _store_id: number }; Returns: boolean }
       process_online_checkout: {
