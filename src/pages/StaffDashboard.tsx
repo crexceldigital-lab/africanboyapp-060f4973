@@ -9,7 +9,8 @@ import CustomerDetailsModal from '../components/admin/CustomerDetailsModal';
 import POSScreen from '../components/pos/POSScreen';
 import MySalesTab from '../components/pos/MySalesTab';
 import InventoryTab from '../components/pos/InventoryTab';
-import { Boxes } from 'lucide-react';
+import InternationalOrdersManager from '../components/admin/InternationalOrdersManager';
+import { Boxes, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StaffDashboardProps {
@@ -19,7 +20,7 @@ interface StaffDashboardProps {
 
 export default function StaffDashboard({ staffAssignment, onNavigateHome }: StaffDashboardProps) {
   const { logout, user } = useCountry();
-  const [activeTab, setActiveTab] = useState<'pos' | 'orders' | 'customers' | 'my_sales' | 'inventory'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'orders' | 'customers' | 'my_sales' | 'inventory' | 'international'>('pos');
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -242,10 +243,23 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
             <Boxes size={16} /> INVENTORY
           </button>
           )}
+          {isManager && (
+          <button
+            onClick={() => setActiveTab('international')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'international'
+                ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
+                : 'bg-card border border-foreground/10 text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Globe size={16} /> INTERNATIONAL
+          </button>
+          )}
         </div>
 
         {/* Tab 1: POS Screen */}
         {activeTab === 'inventory' && isManager && <InventoryTab storeId={staffAssignment.store_id} storeName={staffAssignment.store?.name} />}
+        {activeTab === 'international' && isManager && <InternationalOrdersManager canEditSettings={false} />}
 
         {activeTab === 'pos' && <POSScreen staffAssignment={staffAssignment} />}
 
