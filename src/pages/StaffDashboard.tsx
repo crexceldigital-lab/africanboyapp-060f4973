@@ -106,6 +106,19 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
     }
   };
 
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase.rpc('update_order_status', {
+      p_order_id: orderId,
+      p_status: newStatus,
+    });
+    if (error) {
+      toast.error(error.message || 'Failed to update status');
+    } else {
+      toast.success('Order status updated');
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    }
+  };
+
   const filteredOrders = orders.filter(o =>
     o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (o.customer_name && o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -302,9 +315,23 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
                       <td className="px-6 py-4 font-mono font-bold text-primary">{Number(ord.total_amount).toLocaleString()} {ord.currency || 'TZS'}</td>
                       <td className="px-6 py-4 text-muted-foreground">{new Date(ord.created_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusBadge(ord.status)}`}>
-                          {ord.status.replace('_', ' ')}
-                        </span>
+                        {isManager ? (
+                          <select
+                            value={ord.status}
+                            onChange={(e) => handleStatusChange(ord.id, e.target.value)}
+                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border outline-none cursor-pointer ${getStatusBadge(ord.status)}`}
+                          >
+                            <option value="pending" className="bg-card text-foreground">Pending</option>
+                            <option value="in_progress" className="bg-card text-foreground">In Progress</option>
+                            <option value="completed" className="bg-card text-foreground">Completed</option>
+                            <option value="cancelled" className="bg-card text-foreground">Cancelled</option>
+                            <option value="refunded" className="bg-card text-foreground">Refunded</option>
+                          </select>
+                        ) : (
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusBadge(ord.status)}`}>
+                            {ord.status.replace('_', ' ')}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
