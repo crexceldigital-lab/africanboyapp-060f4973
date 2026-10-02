@@ -1405,6 +1405,10 @@ export type Database = {
         Args: { p_accept: boolean; p_reference: string; p_token: string }
         Returns: Json
       }
+      update_order_status: {
+        Args: { p_order_id: string; p_status: string }
+        Returns: Json
+      }
       void_pos_sale: {
         Args: { p_order_id: string; p_reason: string; p_staff_user_id: string }
         Returns: Json
