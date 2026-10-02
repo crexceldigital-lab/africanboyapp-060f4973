@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { formatMoney, formatTsh, INTL_LOCATIONS, INTL_STATUSES, IntlRequest, intlTable, statusLabel } from '@/lib/internationalOrders';
 
-export default function InternationalOrdersManager() {
+export default function InternationalOrdersManager({ canEditSettings = true }: { canEditSettings?: boolean }) {
   const [rows, setRows] = useState<IntlRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<IntlRequest | null>(null);
@@ -21,7 +21,7 @@ export default function InternationalOrdersManager() {
 
   useEffect(() => {
     load();
-    (supabase as any).from('app_settings').select('value').eq('key', 'intl_whatsapp_number').maybeSingle().then(({ data }: any) => setWa(data?.value || ''));
+    if (canEditSettings) (supabase as any).from('app_settings').select('value').eq('key', 'intl_whatsapp_number').maybeSingle().then(({ data }: any) => setWa(data?.value || ''));
   }, []);
 
   const saveWa = async () => {
@@ -35,6 +35,7 @@ export default function InternationalOrdersManager() {
 
   return (
     <div className="space-y-6">
+      {canEditSettings && (
       <div className="bg-card border border-foreground/5 rounded-2xl p-5 flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="flex-1">
           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nigeria fulfillment WhatsApp (international format)</label>
@@ -42,6 +43,7 @@ export default function InternationalOrdersManager() {
         </div>
         <button onClick={saveWa} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-black tracking-widest">SAVE</button>
       </div>
+      )}
 
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Globe size={16} className="text-primary" /> International Orders ({shown.length})</h2>
