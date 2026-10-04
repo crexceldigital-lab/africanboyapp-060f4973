@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { castOrders } from '@/lib/supabase-helpers';
 import { Customer, Order } from '../../types';
-import { Search, Eye, RefreshCw, UserCheck } from 'lucide-react';
+import { Search, Eye, RefreshCw, UserCheck, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import CustomerDetailsModal from './CustomerDetailsModal';
+import CustomerInvoiceModal from './CustomerInvoiceModal';
 
 export default function CustomersManager() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [invoiceCustomer, setInvoiceCustomer] = useState<Customer | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
   const fetchCustomersData = async () => {
     setLoading(true);
@@ -157,6 +160,15 @@ export default function CustomersManager() {
           />
         </div>
         <button
+          onClick={() => {
+            setInvoiceCustomer(null);
+            setIsInvoiceOpen(true);
+          }}
+          className="px-4 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
+        >
+          <FileText size={16} /> Generate Invoice
+        </button>
+        <button
           onClick={fetchCustomersData}
           className="p-3 bg-card border border-foreground/10 hover:border-primary rounded-2xl text-muted-foreground hover:text-foreground transition-all"
         >
@@ -220,10 +232,21 @@ export default function CustomersManager() {
                         {customer.status}
                       </span>
                     </td>
-                    <td className="px-8 py-6 text-right">
+                    <td className="px-8 py-6 text-right space-x-1">
                       <button
+                        title="Generate Invoice"
+                        onClick={() => {
+                          setInvoiceCustomer(customer);
+                          setIsInvoiceOpen(true);
+                        }}
+                        className="p-2 hover:bg-primary/10 rounded-xl text-primary transition-all inline-flex items-center justify-center"
+                      >
+                        <FileText size={18} />
+                      </button>
+                      <button
+                        title="View Customer Details"
                         onClick={() => setSelectedCustomer(customer)}
-                        className="p-2 hover:bg-foreground/10 rounded-xl text-muted-foreground hover:text-foreground transition-all"
+                        className="p-2 hover:bg-foreground/10 rounded-xl text-muted-foreground hover:text-foreground transition-all inline-flex items-center justify-center"
                       >
                         <Eye size={18} />
                       </button>
@@ -241,6 +264,16 @@ export default function CustomersManager() {
         customer={selectedCustomer}
         isOpen={!!selectedCustomer}
         onClose={() => setSelectedCustomer(null)}
+      />
+
+      {/* Customer Invoice Modal */}
+      <CustomerInvoiceModal
+        customer={invoiceCustomer}
+        isOpen={isInvoiceOpen}
+        onClose={() => {
+          setIsInvoiceOpen(false);
+          setInvoiceCustomer(null);
+        }}
       />
     </div>
   );

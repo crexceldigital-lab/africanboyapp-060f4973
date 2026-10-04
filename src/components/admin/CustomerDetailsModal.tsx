@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Customer, Order } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { castOrders } from '@/lib/supabase-helpers';
-import { User, Mail, Phone, Calendar, ShoppingBag, DollarSign, TrendingUp, Eye } from 'lucide-react';
+import { User, Mail, Phone, Calendar, ShoppingBag, DollarSign, TrendingUp, Eye, FileText } from 'lucide-react';
 import OrderDetailsModal from './OrderDetailsModal';
+import CustomerInvoiceModal from './CustomerInvoiceModal';
 
 interface CustomerDetailsModalProps {
   customer: Customer | null;
@@ -16,6 +17,8 @@ export default function CustomerDetailsModal({ customer, isOpen, onClose }: Cust
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     if (customer && isOpen) {
@@ -56,19 +59,32 @@ export default function CustomerDetailsModal({ customer, isOpen, onClose }: Cust
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="max-w-3xl bg-card border border-foreground/10 rounded-[32px] p-8 text-foreground max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl">
           <DialogHeader className="border-b border-foreground/5 pb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-xl italic uppercase">
-                {customer.full_name ? customer.full_name.substring(0, 2) : 'CU'}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-xl italic uppercase">
+                  {customer.full_name ? customer.full_name.substring(0, 2) : 'CU'}
+                </div>
+                <div>
+                  <span className="text-primary text-[10px] font-black uppercase tracking-widest">Customer Profile</span>
+                  <DialogTitle className="text-2xl font-black italic uppercase tracking-tight">
+                    {customer.full_name || 'Anonymous Customer'}
+                  </DialogTitle>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                    Joined: {customer.joined_date ? new Date(customer.joined_date).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-primary text-[10px] font-black uppercase tracking-widest">Customer Profile</span>
-                <DialogTitle className="text-2xl font-black italic uppercase tracking-tight">
-                  {customer.full_name || 'Anonymous Customer'}
-                </DialogTitle>
-                <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                  Joined: {customer.joined_date ? new Date(customer.joined_date).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setInvoiceOrder(null);
+                  setIsInvoiceOpen(true);
+                }}
+                className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 shadow-md"
+              >
+                <FileText size={16} /> Generate Invoice
+              </button>
             </div>
           </DialogHeader>
 
@@ -153,10 +169,21 @@ export default function CustomerDetailsModal({ customer, isOpen, onClose }: Cust
                               {ord.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 text-right space-x-1">
                             <button
+                              title="Generate Invoice for Order"
+                              onClick={() => {
+                                setInvoiceOrder(ord);
+                                setIsInvoiceOpen(true);
+                              }}
+                              className="p-1.5 hover:bg-primary/10 rounded-lg text-primary transition-all inline-flex items-center justify-center"
+                            >
+                              <FileText size={14} />
+                            </button>
+                            <button
+                              title="View Order Details"
                               onClick={() => setSelectedOrder(ord)}
-                              className="p-1.5 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                              className="p-1.5 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-all inline-flex items-center justify-center"
                             >
                               <Eye size={14} />
                             </button>
@@ -178,6 +205,17 @@ export default function CustomerDetailsModal({ customer, isOpen, onClose }: Cust
         isOpen={!!selectedOrder}
         onClose={() => setSelectedOrder(null)}
         onOrderUpdated={fetchCustomerOrders}
+      />
+
+      {/* Customer Invoice Modal */}
+      <CustomerInvoiceModal
+        customer={customer}
+        order={invoiceOrder}
+        isOpen={isInvoiceOpen}
+        onClose={() => {
+          setIsInvoiceOpen(false);
+          setInvoiceOrder(null);
+        }}
       />
     </>
   );
