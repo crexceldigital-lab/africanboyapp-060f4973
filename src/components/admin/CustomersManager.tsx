@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { castOrders } from '@/lib/supabase-helpers';
 import { Customer, Order } from '../../types';
-import { Search, Eye, RefreshCw, UserCheck, FileText } from 'lucide-react';
+import { Search, Eye, RefreshCw, UserCheck, FileText, Edit3 } from 'lucide-react';
 import { toast } from 'sonner';
 import CustomerDetailsModal from './CustomerDetailsModal';
 import CustomerInvoiceModal from './CustomerInvoiceModal';
+import EditInvoiceSettingsModal from './EditInvoiceSettingsModal';
 
 export default function CustomersManager() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -14,6 +15,8 @@ export default function CustomersManager() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [invoiceCustomer, setInvoiceCustomer] = useState<Customer | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [isEditInvoiceMode, setIsEditInvoiceMode] = useState(false);
+  const [isEditSettingsOpen, setIsEditSettingsOpen] = useState(false);
 
   const fetchCustomersData = async () => {
     setLoading(true);
@@ -149,8 +152,8 @@ export default function CustomersManager() {
   return (
     <div className="space-y-6">
       {/* Header Controls */}
-      <div className="flex gap-4">
-        <div className="flex-1 relative">
+      <div className="flex gap-4 flex-wrap sm:flex-nowrap">
+        <div className="flex-1 relative min-w-[240px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input
             value={searchQuery}
@@ -162,11 +165,20 @@ export default function CustomersManager() {
         <button
           onClick={() => {
             setInvoiceCustomer(null);
+            setIsEditInvoiceMode(false);
             setIsInvoiceOpen(true);
           }}
           className="px-4 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
         >
           <FileText size={16} /> Generate Invoice
+        </button>
+        <button
+          onClick={() => {
+            setIsEditSettingsOpen(true);
+          }}
+          className="px-4 py-3 bg-card border border-foreground/10 hover:border-amber-500/50 text-foreground font-black text-xs uppercase tracking-widest rounded-2xl flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
+        >
+          <Edit3 size={16} className="text-amber-500" /> Edit Invoice Details
         </button>
         <button
           onClick={fetchCustomersData}
@@ -237,11 +249,23 @@ export default function CustomersManager() {
                         title="Generate Invoice"
                         onClick={() => {
                           setInvoiceCustomer(customer);
+                          setIsEditInvoiceMode(false);
                           setIsInvoiceOpen(true);
                         }}
                         className="p-2 hover:bg-primary/10 rounded-xl text-primary transition-all inline-flex items-center justify-center"
                       >
                         <FileText size={18} />
+                      </button>
+                      <button
+                        title="Edit Invoice Details"
+                        onClick={() => {
+                          setInvoiceCustomer(customer);
+                          setIsEditInvoiceMode(true);
+                          setIsInvoiceOpen(true);
+                        }}
+                        className="p-2 hover:bg-amber-500/10 rounded-xl text-amber-500 transition-all inline-flex items-center justify-center"
+                      >
+                        <Edit3 size={18} />
                       </button>
                       <button
                         title="View Customer Details"
@@ -270,10 +294,19 @@ export default function CustomersManager() {
       <CustomerInvoiceModal
         customer={invoiceCustomer}
         isOpen={isInvoiceOpen}
+        initialEditMode={isEditInvoiceMode}
         onClose={() => {
           setIsInvoiceOpen(false);
           setInvoiceCustomer(null);
+          setIsEditInvoiceMode(false);
         }}
+      />
+
+      {/* Edit Invoice Settings Modal */}
+      <EditInvoiceSettingsModal
+        isOpen={isEditSettingsOpen}
+        onClose={() => setIsEditSettingsOpen(false)}
+        onSaved={() => fetchCustomersData()}
       />
     </div>
   );

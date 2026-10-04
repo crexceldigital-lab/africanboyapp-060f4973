@@ -4,6 +4,7 @@ import React from 'react';
 import CustomerInvoiceModal from '../components/admin/CustomerInvoiceModal';
 import CustomersManager from '../components/admin/CustomersManager';
 import CustomerDetailsModal from '../components/admin/CustomerDetailsModal';
+import EditInvoiceSettingsModal from '../components/admin/EditInvoiceSettingsModal';
 import { Customer, Order } from '../types';
 
 // Mock Supabase with chainable query builder
@@ -26,12 +27,52 @@ const mockOrdersData = [
   }
 ];
 
+const mockInvoiceSettings = {
+  id: 'set-1',
+  store_id: 1,
+  business_name: 'AfricanBoy International Ltd',
+  trading_name: 'AfricanBoy Apparel & Merchandise',
+  business_address: 'Kariakoo Commercial District, Msimbazi Street',
+  city: 'Dar es Salaam',
+  country: 'Tanzania',
+  phone: '+255 700 000 000',
+  email: 'billing@africanboy.com',
+  website: 'https://africanboy.com',
+  tin_number: '123-456-789',
+  vrn_number: 'VRN-40019284',
+  registration_number: 'TZ-REG-2026-9482',
+  bank_name: 'CRDB Bank',
+  account_name: 'AfricanBoy International Co. Ltd',
+  account_number: '0150294829100',
+  bank_branch: 'Kariakoo Branch, Dar es Salaam',
+  swift_code: 'CORUTZTZ',
+  payment_instructions: 'Pay via CRDB Bank or M-Pesa Till Number: 8849201. Please include Invoice # as reference.',
+  invoice_prefix: 'AFB-INV',
+  default_currency: 'TZS',
+  payment_terms: 'Payment due within 14 days of invoice issue date.',
+  due_days: 14,
+  invoice_notes: 'Thank you for shopping with AfricanBoy!',
+  footer_text: 'AfricanBoy Official Commercial Invoice • All rights reserved.',
+  contact_person: 'Finance Desk',
+  contact_phone: '+255 700 000 000',
+  contact_email: 'finance@africanboy.com',
+};
+
 vi.mock('@/integrations/supabase/client', () => {
-  const createQueryBuilder = () => {
+  const createQueryBuilder = (table?: string) => {
     const builder: any = {
       select: vi.fn().mockImplementation(() => builder),
       or: vi.fn().mockImplementation(() => builder),
       eq: vi.fn().mockImplementation(() => builder),
+      maybeSingle: vi.fn().mockImplementation(() => Promise.resolve({
+        data: table === 'invoice_settings' ? mockInvoiceSettings : null,
+        error: null,
+      })),
+      single: vi.fn().mockImplementation(() => Promise.resolve({
+        data: mockInvoiceSettings,
+        error: null,
+      })),
+      upsert: vi.fn().mockImplementation(() => builder),
       order: vi.fn().mockImplementation(() => Promise.resolve({ data: mockOrdersData, error: null })),
       then: (resolve: any) => resolve({ data: mockOrdersData, error: null }),
     };
@@ -40,6 +81,12 @@ vi.mock('@/integrations/supabase/client', () => {
 
   return {
     supabase: {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: { user: { id: 'admin-1', email: 'admin@africanboy.com' } } },
+          error: null,
+        }),
+      },
       from: vi.fn().mockImplementation((table: string) => {
         if (table === 'profiles') {
           return {
@@ -51,13 +98,13 @@ vi.mock('@/integrations/supabase/client', () => {
             })
           };
         }
-        return createQueryBuilder();
+        return createQueryBuilder(table);
       })
     }
   };
 });
 
-describe('Customer Segment Invoice Generation', () => {
+describe('Customer Segment Invoice Generation & Editing', () => {
   const mockCustomer: Customer = {
     id: 'usr-1',
     full_name: 'Juma Issa',
@@ -96,7 +143,7 @@ describe('Customer Segment Invoice Generation', () => {
       />
     );
 
-    expect(screen.getByText('Generate Customer Invoice')).toBeInTheDocument();
+    expect(screen.getByText('Customer Invoice View & Issue')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Juma Issa')).toBeInTheDocument();
     expect(screen.getByDisplayValue('juma@example.com')).toBeInTheDocument();
     expect(screen.getByDisplayValue('+255711223344')).toBeInTheDocument();
@@ -124,21 +171,49 @@ describe('Customer Segment Invoice Generation', () => {
     expect(screen.getByText(/total due/i)).toBeInTheDocument();
   });
 
-  it('renders invoice buttons on CustomersManager table and opens invoice modal', async () => {
+  it('renders Edit Invoice Details modal with 4 sections', async () => {
+    render(
+      <EditInvoiceSettingsModal
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Invoice Details')).toBeInTheDocument();
+      expect(screen.getByText(/A\. Business \/ Billing Information/i)).toBeInTheDocument();
+      expect(screen.getByText(/B\. Bank & Payment Details/i)).toBeInTheDocument();
+      expect(screen.getByText(/C\. Default Invoice Information/i)).toBeInTheDocument();
+      expect(screen.getByText(/D\. Billing Contact Information/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renders Edit Invoice Details buttons next to Generate Invoice in CustomersManager header and table rows', async () => {
     render(<CustomersManager />);
 
     await waitFor(() => {
       expect(screen.getByText('Juma Issa')).toBeInTheDocument();
     });
 
-    const generateInvoiceButtons = screen.getAllByTitle('Generate Invoice');
-    expect(generateInvoiceButtons.length).toBeGreaterThan(0);
+    const generateBtns = screen.getAllByRole('button', { name: /generate invoice/i });
+    const editBtnsHeader = screen.getAllByRole('button', { name: /edit invoice details/i });
 
-    fireEvent.click(generateInvoiceButtons[0]);
-    expect(screen.getByText('Generate Customer Invoice')).toBeInTheDocument();
+    expect(generateBtns.length).toBeGreaterThan(0);
+    expect(editBtnsHeader.length).toBeGreaterThan(0);
+
+    const generateInvoiceRowBtns = screen.getAllByTitle('Generate Invoice');
+    const editInvoiceRowBtns = screen.getAllByTitle('Edit Invoice Details');
+
+    expect(generateInvoiceRowBtns.length).toBeGreaterThan(0);
+    expect(editInvoiceRowBtns.length).toBeGreaterThan(0);
+
+    // Click Edit Invoice Details from table row
+    fireEvent.click(editInvoiceRowBtns[0]);
+    expect(screen.getByText('Edit Customer Invoice Details')).toBeInTheDocument();
+    expect(screen.getByText('Editing Details Mode')).toBeInTheDocument();
   });
 
-  it('renders generate invoice button in CustomerDetailsModal header and order rows', async () => {
+  it('renders Edit Invoice Details buttons next to Generate Invoice in CustomerDetailsModal', async () => {
     render(
       <CustomerDetailsModal
         customer={mockCustomer}
@@ -148,16 +223,19 @@ describe('Customer Segment Invoice Generation', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /generate invoice/i })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /generate invoice/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: /edit invoice details/i }).length).toBeGreaterThan(0);
     });
 
     await waitFor(() => {
       expect(screen.getByTitle('Generate Invoice for Order')).toBeInTheDocument();
+      expect(screen.getByTitle('Edit Invoice Details')).toBeInTheDocument();
     });
 
-    const orderInvoiceButton = screen.getByTitle('Generate Invoice for Order');
-    fireEvent.click(orderInvoiceButton);
+    const editOrderInvoiceButton = screen.getByTitle('Edit Invoice Details');
+    fireEvent.click(editOrderInvoiceButton);
 
-    expect(screen.getByText('Generate Customer Invoice')).toBeInTheDocument();
+    expect(screen.getByText('Edit Customer Invoice Details')).toBeInTheDocument();
+    expect(screen.getByText('Editing Details Mode')).toBeInTheDocument();
   });
 });

@@ -362,3 +362,66 @@ export interface Purchase {
   currency_code: string;
   date: string;
 }
+
+export interface InvoiceSettings {
+  id?: string;
+  store_id: number;
+  business_name: string;
+  trading_name?: string;
+  business_address?: string;
+  city?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  tin_number?: string;
+  vrn_number?: string;
+  registration_number?: string;
+  bank_name?: string;
+  account_name?: string;
+  account_number?: string;
+  bank_branch?: string;
+  swift_code?: string;
+  payment_instructions?: string;
+  invoice_prefix?: string;
+  default_currency?: string;
+  payment_terms?: string;
+  due_days?: number;
+  invoice_notes?: string;
+  footer_text?: string;
+  contact_person?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
+  store_id: 1,
+  business_name: 'AfricanBoy International Ltd',
+  trading_name: 'AfricanBoy Apparel & Merchandise',
+  business_address: 'Kariakoo Commercial District, Msimbazi Street',
+  city: 'Dar es Salaam',
+  country: 'Tanzania',
+  phone: '+255 700 000 000',
+  email: 'billing@africanboy.com',
+  website: 'https://africanboy.com',
+  tin_number: '123-456-789',
+  vrn_number: 'VRN-40019284',
+  registration_number: 'TZ-REG-2026-9482',
+  bank_name: 'CRDB Bank',
+  account_name: 'AfricanBoy International Co. Ltd',
+  account_number: '0150294829100',
+  bank_branch: 'Kariakoo Branch, Dar es Salaam',
+  swift_code: 'CORUTZTZ',
+  payment_instructions: 'Pay via CRDB Bank or M-Pesa Till Number: 8849201. Please include Invoice # as reference.',
+  invoice_prefix: 'AFB-INV',
+  default_currency: 'TZS',
+  payment_terms: 'Payment due within 14 days of invoice issue date.',
+  due_days: 14,
+  invoice_notes: 'Thank you for shopping with AfricanBoy! Keep this invoice for official accounting records.',
+  footer_text: 'AfricanBoy Official Commercial Invoice • All rights reserved.',
+  contact_person: 'Finance & Billing Desk',
+  contact_phone: '+255 700 000 000',
+  contact_email: 'finance@africanboy.com',
+};

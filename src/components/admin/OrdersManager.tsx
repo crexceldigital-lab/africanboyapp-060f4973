@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { castOrders } from '@/lib/supabase-helpers';
 import { Order } from '../../types';
-import { Search, Eye, Filter, RefreshCw } from 'lucide-react';
+import { Search, Eye, Filter, RefreshCw, FileText, Edit3 } from 'lucide-react';
 import { toast } from 'sonner';
 import OrderDetailsModal from './OrderDetailsModal';
+import CustomerInvoiceModal from './CustomerInvoiceModal';
+import EditInvoiceSettingsModal from './EditInvoiceSettingsModal';
 
 export default function OrdersManager() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -12,6 +14,10 @@ export default function OrdersManager() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [isEditInvoiceMode, setIsEditInvoiceMode] = useState(false);
+  const [isEditSettingsOpen, setIsEditSettingsOpen] = useState(false);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -195,10 +201,33 @@ export default function OrdersManager() {
                         <option value="refunded" className="bg-card text-foreground">Refunded</option>
                       </select>
                     </td>
-                    <td className="px-8 py-6 text-right">
+                    <td className="px-8 py-6 text-right space-x-1">
                       <button
+                        title="Generate Invoice"
+                        onClick={() => {
+                          setInvoiceOrder(order);
+                          setIsEditInvoiceMode(false);
+                          setIsInvoiceOpen(true);
+                        }}
+                        className="p-2 hover:bg-primary/10 rounded-xl text-primary transition-all inline-flex items-center justify-center"
+                      >
+                        <FileText size={18} />
+                      </button>
+                      <button
+                        title="Edit Invoice Details"
+                        onClick={() => {
+                          setInvoiceOrder(order);
+                          setIsEditInvoiceMode(true);
+                          setIsInvoiceOpen(true);
+                        }}
+                        className="p-2 hover:bg-amber-500/10 rounded-xl text-amber-500 transition-all inline-flex items-center justify-center"
+                      >
+                        <Edit3 size={18} />
+                      </button>
+                      <button
+                        title="View Order Details"
                         onClick={() => setSelectedOrder(order)}
-                        className="p-2 hover:bg-foreground/10 rounded-xl text-muted-foreground hover:text-foreground transition-all"
+                        className="p-2 hover:bg-foreground/10 rounded-xl text-muted-foreground hover:text-foreground transition-all inline-flex items-center justify-center"
                       >
                         <Eye size={18} />
                       </button>
@@ -217,6 +246,26 @@ export default function OrdersManager() {
         isOpen={!!selectedOrder}
         onClose={() => setSelectedOrder(null)}
         onOrderUpdated={fetchOrders}
+      />
+
+      {/* Customer Invoice Modal */}
+      <CustomerInvoiceModal
+        customer={null}
+        order={invoiceOrder}
+        isOpen={isInvoiceOpen}
+        initialEditMode={isEditInvoiceMode}
+        onClose={() => {
+          setIsInvoiceOpen(false);
+          setInvoiceOrder(null);
+          setIsEditInvoiceMode(false);
+        }}
+      />
+
+      {/* Edit Invoice Settings Modal */}
+      <EditInvoiceSettingsModal
+        isOpen={isEditSettingsOpen}
+        onClose={() => setIsEditSettingsOpen(false)}
+        onSaved={fetchOrders}
       />
     </div>
   );
