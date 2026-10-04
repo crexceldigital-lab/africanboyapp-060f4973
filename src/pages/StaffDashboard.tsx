@@ -9,7 +9,8 @@ import CustomerDetailsModal from '../components/admin/CustomerDetailsModal';
 import POSScreen from '../components/pos/POSScreen';
 import MySalesTab from '../components/pos/MySalesTab';
 import InventoryTab from '../components/pos/InventoryTab';
-import { Boxes } from 'lucide-react';
+import InternationalOrdersManager from '../components/admin/InternationalOrdersManager';
+import { Boxes, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StaffDashboardProps {
@@ -19,7 +20,7 @@ interface StaffDashboardProps {
 
 export default function StaffDashboard({ staffAssignment, onNavigateHome }: StaffDashboardProps) {
   const { logout, user } = useCountry();
-  const [activeTab, setActiveTab] = useState<'pos' | 'orders' | 'customers' | 'my_sales' | 'inventory'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'orders' | 'customers' | 'my_sales' | 'inventory' | 'international'>('pos');
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +103,19 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
       }
     } catch (err: any) {
       toast.error(err.message || 'Error executing status update');
+    }
+  };
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase.rpc('update_order_status', {
+      p_order_id: orderId,
+      p_status: newStatus,
+    });
+    if (error) {
+      toast.error(error.message || 'Failed to update status');
+    } else {
+      toast.success('Order status updated');
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     }
   };
 
@@ -242,10 +256,23 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
             <Boxes size={16} /> INVENTORY
           </button>
           )}
+          {isManager && (
+          <button
+            onClick={() => setActiveTab('international')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'international'
+                ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
+                : 'bg-card border border-foreground/10 text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Globe size={16} /> INTERNATIONAL
+          </button>
+          )}
         </div>
 
         {/* Tab 1: POS Screen */}
         {activeTab === 'inventory' && isManager && <InventoryTab storeId={staffAssignment.store_id} storeName={staffAssignment.store?.name} />}
+        {activeTab === 'international' && isManager && <InternationalOrdersManager canEditSettings={false} />}
 
         {activeTab === 'pos' && <POSScreen staffAssignment={staffAssignment} />}
 
@@ -288,9 +315,23 @@ export default function StaffDashboard({ staffAssignment, onNavigateHome }: Staf
                       <td className="px-6 py-4 font-mono font-bold text-primary">{Number(ord.total_amount).toLocaleString()} {ord.currency || 'TZS'}</td>
                       <td className="px-6 py-4 text-muted-foreground">{new Date(ord.created_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusBadge(ord.status)}`}>
-                          {ord.status.replace('_', ' ')}
-                        </span>
+                        {isManager ? (
+                          <select
+                            value={ord.status}
+                            onChange={(e) => handleStatusChange(ord.id, e.target.value)}
+                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border outline-none cursor-pointer ${getStatusBadge(ord.status)}`}
+                          >
+                            <option value="pending" className="bg-card text-foreground">Pending</option>
+                            <option value="in_progress" className="bg-card text-foreground">In Progress</option>
+                            <option value="completed" className="bg-card text-foreground">Completed</option>
+                            <option value="cancelled" className="bg-card text-foreground">Cancelled</option>
+                            <option value="refunded" className="bg-card text-foreground">Refunded</option>
+                          </select>
+                        ) : (
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusBadge(ord.status)}`}>
+                            {ord.status.replace('_', ' ')}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
