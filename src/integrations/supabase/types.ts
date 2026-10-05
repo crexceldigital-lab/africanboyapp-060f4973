@@ -539,6 +539,113 @@ export type Database = {
           },
         ]
       }
+      invoice_settings: {
+        Row: {
+          account_name: string | null
+          account_number: string | null
+          bank_branch: string | null
+          bank_name: string | null
+          business_address: string | null
+          business_name: string
+          city: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          default_currency: string | null
+          due_days: number | null
+          email: string | null
+          footer_text: string | null
+          id: string
+          invoice_notes: string | null
+          invoice_prefix: string | null
+          payment_instructions: string | null
+          payment_terms: string | null
+          phone: string | null
+          registration_number: string | null
+          store_id: number
+          swift_code: string | null
+          tin_number: string | null
+          trading_name: string | null
+          updated_at: string
+          vrn_number: string | null
+          website: string | null
+        }
+        Insert: {
+          account_name?: string | null
+          account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          business_address?: string | null
+          business_name?: string
+          city?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          default_currency?: string | null
+          due_days?: number | null
+          email?: string | null
+          footer_text?: string | null
+          id?: string
+          invoice_notes?: string | null
+          invoice_prefix?: string | null
+          payment_instructions?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          registration_number?: string | null
+          store_id: number
+          swift_code?: string | null
+          tin_number?: string | null
+          trading_name?: string | null
+          updated_at?: string
+          vrn_number?: string | null
+          website?: string | null
+        }
+        Update: {
+          account_name?: string | null
+          account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          business_address?: string | null
+          business_name?: string
+          city?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          default_currency?: string | null
+          due_days?: number | null
+          email?: string | null
+          footer_text?: string | null
+          id?: string
+          invoice_notes?: string | null
+          invoice_prefix?: string | null
+          payment_instructions?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          registration_number?: string | null
+          store_id?: number
+          swift_code?: string | null
+          tin_number?: string | null
+          trading_name?: string | null
+          updated_at?: string
+          vrn_number?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_activity: {
         Row: {
           action: string
