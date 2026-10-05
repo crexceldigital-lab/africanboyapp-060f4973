@@ -222,8 +222,28 @@ export default function CustomerInvoiceModal({
     toast.success('Invoice shared via WhatsApp');
   };
 
-  const handleSaveInvoice = () => {
-    toast.success(`Invoice ${invoiceNumber} updated and issued for ${customerName}`);
+  const handleSaveInvoice = async () => {
+    const { error } = await (supabase as any).from('invoices').upsert({
+      invoice_number: invoiceNumber,
+      order_id: order?.id || null,
+      customer_id: customer?.id || order?.user_id || null,
+      customer_name: customerName || 'Valued Customer',
+      customer_email: customerEmail || null,
+      customer_phone: customerPhone || null,
+      delivery_address: deliveryAddress || null,
+      issue_date: issueDate,
+      due_date: dueDate || null,
+      currency,
+      items: items.map(({ name, description, quantity, unitPrice }) => ({ name, description, quantity, unitPrice })),
+      subtotal, tax_percent: taxPercent, delivery_fee: deliveryFee, discount_amount: discountAmount,
+      total_amount: totalAmount, payment_status: paymentStatus, notes,
+    }, { onConflict: 'invoice_number' });
+    if (error) {
+      toast.error(`Invoice could not be saved: ${error.message}`);
+      return;
+    }
+    toast.success(`Invoice ${invoiceNumber} issued for ${customerName} — see Admin → Invoices`);
+    window.dispatchEvent(new Event('invoices:changed'));
     onClose();
   };
 
