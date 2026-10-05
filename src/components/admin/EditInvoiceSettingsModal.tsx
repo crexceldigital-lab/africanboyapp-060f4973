@@ -184,15 +184,14 @@ export default function EditInvoiceSettingsModal({
 
       if (error) {
         console.error('Invoice settings upsert error:', error);
-        // Fallback or retry logic if table structure is being initialized
-        if (error.message.includes('relation') && error.message.includes('does not exist')) {
-          toast.warning('Database table creating... saved to active store settings.');
-        } else {
-          throw error;
+        if (error.code === '42501' || /row-level security|permission/i.test(error.message)) {
+          throw new Error('You do not have permission to change invoice details. Only Admin or this store\'s Manager can save them.');
         }
+        throw error;
       }
+      if (!data) throw new Error('Save was not confirmed by the database. Please try again.');
 
-      toast.success('Invoice details updated successfully.');
+      toast.success('Invoice details saved successfully.');
       const updated = data ? (data as InvoiceSettings) : payload;
       if (onSaved) onSaved(updated);
       onClose();
