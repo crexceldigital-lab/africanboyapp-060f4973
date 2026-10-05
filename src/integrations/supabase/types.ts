@@ -646,6 +646,89 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          created_at: string
+          currency: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string
+          customer_phone: string | null
+          delivery_address: string | null
+          delivery_fee: number
+          discount_amount: number
+          due_date: string | null
+          id: string
+          invoice_number: string
+          issue_date: string
+          issued_by: string | null
+          items: Json
+          notes: string | null
+          order_id: string | null
+          payment_status: string
+          subtotal: number
+          tax_percent: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number
+          discount_amount?: number
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          issue_date: string
+          issued_by?: string | null
+          items?: Json
+          notes?: string | null
+          order_id?: string | null
+          payment_status?: string
+          subtotal?: number
+          tax_percent?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number
+          discount_amount?: number
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          issued_by?: string | null
+          items?: Json
+          notes?: string | null
+          order_id?: string | null
+          payment_status?: string
+          subtotal?: number
+          tax_percent?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_activity: {
         Row: {
           action: string
