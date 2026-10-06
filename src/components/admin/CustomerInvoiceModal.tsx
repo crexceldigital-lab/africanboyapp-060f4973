@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Customer, Order, OrderItem, InvoiceSettings, DEFAULT_INVOICE_SETTINGS } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, Printer, Share2, Plus, Trash2, CheckCircle2, DollarSign, Calendar, User, Mail, Phone, MapPin, Send, Building, Edit3, CreditCard, ShieldCheck } from 'lucide-react';
+import { generateInvoicePdf } from '@/lib/invoicePdf';
+import { FileText, Printer, Download, Share2, Plus, Trash2, CheckCircle2, DollarSign, Calendar, User, Mail, Phone, MapPin, Send, Building, Edit3, CreditCard, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import EditInvoiceSettingsModal from './EditInvoiceSettingsModal';
 
@@ -198,6 +199,31 @@ export default function CustomerInvoiceModal({
     window.print();
   };
 
+  const handleDownloadInvoice = () => {
+    try {
+      generateInvoicePdf({
+        invoice_number: invoiceNumber,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        delivery_address: deliveryAddress,
+        issue_date: issueDate,
+        due_date: dueDate,
+        currency,
+        items: items.map(({ name, description, quantity, unitPrice }) => ({ name, description, quantity, unitPrice })),
+        subtotal,
+        tax_percent: taxPercent,
+        delivery_fee: deliveryFee,
+        discount_amount: discountAmount,
+        total_amount: totalAmount,
+        payment_status: paymentStatus,
+        notes,
+      }, invoiceSettings, `${invoiceNumber}-${customerName.replace(/[^a-zA-Z0-9]+/g, '-')}`);
+    } catch (e) {
+      toast.error(`Could not generate the PDF: ${e instanceof Error ? e.message : 'unknown error'}`);
+    }
+  };
+
   const handleSendWhatsAppInvoice = () => {
     const summary = `*INVOICE ${invoiceNumber}*\n` +
       `From: ${invoiceSettings.business_name}\n` +
@@ -302,9 +328,17 @@ export default function CustomerInvoiceModal({
                   type="button"
                   onClick={handlePrintInvoice}
                   className="px-3 py-2 bg-foreground/10 hover:bg-foreground/20 text-foreground font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5"
-                  title="Print or Save PDF"
+                  title="Print"
                 >
                   <Printer size={14} /> Print
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadInvoice}
+                  className="px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5"
+                  title="Download invoice as PDF"
+                >
+                  <Download size={14} /> Download PDF
                 </button>
                 <button
                   type="button"

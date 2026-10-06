@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, Search, Trash2, ChevronDown } from 'lucide-react';
+import { FileText, Search, Trash2, ChevronDown, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { generateInvoicePdf } from '@/lib/invoicePdf';
+import { DEFAULT_INVOICE_SETTINGS, type InvoiceSettings } from '../../types';
 
 type Invoice = {
   id: string;
@@ -36,6 +38,8 @@ export default function InvoicesManager() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
   const [open, setOpen] = useState<string | null>(null);
+  const [settings, setSettings] = useState<InvoiceSettings>(DEFAULT_INVOICE_SETTINGS);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -48,10 +52,43 @@ export default function InvoicesManager() {
 
   useEffect(() => {
     load();
+    (supabase as any)
+      .from('invoice_settings').select('*').eq('store_id', 1).maybeSingle()
+      .then(({ data }: { data: InvoiceSettings | null }) => {
+        if (data) setSettings({ ...DEFAULT_INVOICE_SETTINGS, ...data });
+      });
     const h = () => load();
     window.addEventListener('invoices:changed', h);
     return () => window.removeEventListener('invoices:changed', h);
   }, []);
+
+  const download = async (r: Invoice) => {
+    setDownloading(r.id);
+    try {
+      generateInvoicePdf({
+        invoice_number: r.invoice_number,
+        customer_name: r.customer_name,
+        customer_email: r.customer_email,
+        customer_phone: r.customer_phone,
+        delivery_address: null,
+        issue_date: r.issue_date,
+        due_date: r.due_date,
+        currency: r.currency,
+        items: (r.items || []).map(it => ({ name: it.name, description: it.description, quantity: Number(it.quantity) || 1, unitPrice: Number(it.unitPrice) || 0 })),
+        subtotal: Number(r.subtotal) || 0,
+        tax_percent: Number(r.tax_percent) || 0,
+        delivery_fee: Number(r.delivery_fee) || 0,
+        discount_amount: Number(r.discount_amount) || 0,
+        total_amount: Number(r.total_amount) || 0,
+        payment_status: r.payment_status,
+        notes: r.notes,
+      }, settings, `${r.invoice_number}-${r.customer_name.replace(/[^a-zA-Z0-9]+/g, '-')}`);
+    } catch (e) {
+      toast.error(`Could not generate the PDF: ${e instanceof Error ? e.message : 'unknown error'}`);
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -139,6 +176,10 @@ export default function InvoicesManager() {
                     </select>
                     <button onClick={() => setOpen(isOpen ? null : r.id)} aria-label="Show details">
                       <ChevronDown size={16} className={`text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    <button onClick={() => download(r)} aria-label="Download invoice PDF" title="Download PDF"
+                      disabled={downloading === r.id} className="text-primary disabled:opacity-50">
+                      {downloading === r.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                     </button>
                     <button onClick={() => remove(r)} aria-label="Delete invoice" className="text-destructive">
                       <Trash2 size={16} />
