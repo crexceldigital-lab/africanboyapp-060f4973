@@ -177,6 +177,10 @@ export default function InvoicesManager() {
                     <button onClick={() => setOpen(isOpen ? null : r.id)} aria-label="Show details">
                       <ChevronDown size={16} className={`text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                     </button>
+                    <button onClick={() => download(r)} aria-label="Download invoice PDF" title="Download PDF"
+                      disabled={downloading === r.id} className="text-primary disabled:opacity-50">
+                      {downloading === r.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    </button>
                     <button onClick={() => remove(r)} aria-label="Delete invoice" className="text-destructive">
                       <Trash2 size={16} />
                     </button>
