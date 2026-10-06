@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, Search, Trash2, ChevronDown } from 'lucide-react';
+import { FileText, Search, Trash2, ChevronDown, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { generateInvoicePdf } from '@/lib/invoicePdf';
+import { DEFAULT_INVOICE_SETTINGS, type InvoiceSettings } from '../../types';
 
 type Invoice = {
   id: string;
