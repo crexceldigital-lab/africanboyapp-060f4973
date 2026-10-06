@@ -198,6 +198,31 @@ export default function CustomerInvoiceModal({
     window.print();
   };
 
+  const handleDownloadInvoice = () => {
+    try {
+      generateInvoicePdf({
+        invoice_number: invoiceNumber,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        delivery_address: deliveryAddress,
+        issue_date: issueDate,
+        due_date: dueDate,
+        currency,
+        items: items.map(({ name, description, quantity, unitPrice }) => ({ name, description, quantity, unitPrice })),
+        subtotal,
+        tax_percent: taxPercent,
+        delivery_fee: deliveryFee,
+        discount_amount: discountAmount,
+        total_amount: totalAmount,
+        payment_status: paymentStatus,
+        notes,
+      }, invoiceSettings, `${invoiceNumber}-${customerName.replace(/[^a-zA-Z0-9]+/g, '-')}`);
+    } catch (e) {
+      toast.error(`Could not generate the PDF: ${e instanceof Error ? e.message : 'unknown error'}`);
+    }
+  };
+
   const handleSendWhatsAppInvoice = () => {
     const summary = `*INVOICE ${invoiceNumber}*\n` +
       `From: ${invoiceSettings.business_name}\n` +
