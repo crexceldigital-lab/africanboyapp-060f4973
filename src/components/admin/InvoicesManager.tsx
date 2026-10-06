@@ -38,6 +38,8 @@ export default function InvoicesManager() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
   const [open, setOpen] = useState<string | null>(null);
+  const [settings, setSettings] = useState<InvoiceSettings>(DEFAULT_INVOICE_SETTINGS);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
