@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, Search, Trash2, ChevronDown, Download } from 'lucide-react';
+import { FileText, Search, Trash2, ChevronDown, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { generateInvoicePdf } from '@/lib/invoicePdf';
