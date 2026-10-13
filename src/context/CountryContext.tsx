@@ -117,6 +117,7 @@ export function CountryProvider({ children }: { children: ReactNode }) {
       .eq('user_id', authUser.id);
 
     const isAdmin = roles?.some((r: any) => r.role === 'admin') || false;
+    const isAgent = roles?.some((r: any) => r.role === 'agent') || false;
     const country = countries.find(c => c.id === (profile?.country_id || 1)) || countries[0];
 
     return {
@@ -124,7 +125,7 @@ export function CountryProvider({ children }: { children: ReactNode }) {
       email: authUser.email || '',
       phone_number: profile?.phone_number || '',
       full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
-      role: isAdmin ? 'admin' : 'user',
+      role: isAdmin ? 'admin' : isAgent ? 'agent' : 'user',
       vip_tier: profile?.vip_tier || 'None',
       country_id: profile?.country_id || 1,
       country_name: country?.name,
