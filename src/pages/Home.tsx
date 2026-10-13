@@ -220,7 +220,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
           {/* Text & CTAs - Phase 3, 4, 5 */}
           <motion.div
-            className="w-full max-w-2xl flex flex-col items-center"
+            className="w-full max-w-4xl flex flex-col items-center"
             style={{
               x: isMobile || shouldReduceMotion ? 0 : mousePos.x * -3,
               y: isMobile || shouldReduceMotion ? 0 : mousePos.y * -2,
@@ -264,9 +264,9 @@ export default function Home({ onNavigate }: HomeProps) {
               Official Merchandise • Exclusive Content • VIP Experience
             </motion.p>
 
-            {/* CTA Buttons - Phase 5 */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
-              {/* Primary CTA */}
+            {/* CTA Buttons - Phase 5 (Three-button group) */}
+            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-4 w-full max-w-3xl mx-auto px-4 sm:px-0">
+              {/* Primary CTA: Shop Collection */}
               <motion.button
                 onClick={() => onNavigate('shop')}
                 initial={
@@ -282,7 +282,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 transition={{ delay: 1.3, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                className="group relative w-full sm:w-auto px-6 sm:px-8 py-4 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[11px] sm:text-sm rounded-full overflow-hidden shadow-[0_0_30px_hsl(43,96%,49%,0.4)] transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                className="group relative w-full sm:w-auto max-w-xs sm:max-w-none px-6 sm:px-7 py-3.5 sm:py-4 bg-primary text-primary-foreground font-black uppercase tracking-widest text-xs sm:text-sm rounded-full overflow-hidden shadow-[0_0_30px_hsl(43,96%,49%,0.4)] transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
               >
                 {/* Animated light highlight streak */}
                 <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 pointer-events-none" />
@@ -295,7 +295,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 </span>
               </motion.button>
 
-              {/* Secondary CTA */}
+              {/* Secondary CTA: Explore Media */}
               <motion.button
                 onClick={() => onNavigate('video')}
                 initial={
@@ -311,9 +311,39 @@ export default function Home({ onNavigate }: HomeProps) {
                 transition={{ delay: 1.4, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                className="group w-full sm:w-auto px-8 py-4 bg-foreground/5 backdrop-blur-md border border-foreground/15 text-foreground font-black uppercase tracking-widest text-xs sm:text-sm rounded-full hover:bg-foreground/10 hover:border-primary/50 transition-all flex items-center justify-center gap-2"
+                className="group w-full sm:w-auto max-w-xs sm:max-w-none px-6 sm:px-7 py-3.5 sm:py-4 bg-foreground/5 backdrop-blur-md border border-foreground/15 text-foreground font-black uppercase tracking-widest text-xs sm:text-sm rounded-full hover:bg-foreground/10 hover:border-primary/50 transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
               >
-                <span>Explore Media</span>
+                <span>EXPLORE MEDIA</span>
+              </motion.button>
+
+              {/* Third CTA: Become an Agent */}
+              <motion.button
+                onClick={() => {
+                  window.history.pushState({}, '', '/become-an-agent');
+                  onNavigate('become-an-agent');
+                }}
+                initial={
+                  shouldReduceMotion
+                    ? { opacity: 0 }
+                    : { opacity: 0, y: 20, scale: 0.96 }
+                }
+                animate={
+                  shouldReduceMotion
+                    ? { opacity: 1 }
+                    : { opacity: 1, y: 0, scale: 1 }
+                }
+                transition={{ delay: 1.5, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className="group w-full sm:w-auto max-w-xs sm:max-w-none px-6 sm:px-7 py-3.5 sm:py-4 bg-black/60 backdrop-blur-md border border-primary/40 hover:border-primary text-primary hover:bg-primary/10 font-black uppercase tracking-widest text-xs sm:text-sm rounded-full transition-all flex items-center justify-center gap-2 whitespace-nowrap shadow-[0_0_20px_hsl(43,96%,49%,0.15)] shrink-0"
+              >
+                <span className="whitespace-nowrap flex items-center gap-2">
+                  BECOME AN AGENT
+                  <ArrowRight
+                    size={16}
+                    className="shrink-0 transition-transform duration-300 group-hover:translate-x-1"
+                  />
+                </span>
               </motion.button>
             </div>
           </motion.div>
