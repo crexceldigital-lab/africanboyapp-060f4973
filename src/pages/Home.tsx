@@ -1,10 +1,12 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Product, NavTab } from '../types';
-import { ArrowRight, ChevronDown, Flame } from 'lucide-react';
+import { ArrowRight, ChevronDown, Flame, Globe, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
 import ProductDetailModal from '../components/ProductDetailModal';
+import Footer from '../components/Footer';
+import AgentApplicationModal from '../components/agent/AgentApplicationModal';
 import africanBoyLogo from '@/assets/african-boy-logo.png';
 import heroBg from '@/assets/hero-group.jpg.asset.json';
 import spotlight1 from '@/assets/spotlight-1.png';
@@ -34,6 +36,7 @@ export default function Home({ onNavigate }: HomeProps) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
@@ -548,6 +551,75 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
       </section>
 
+      {/* Dedicated Homepage Recruitment Banner */}
+      <section className="px-4 sm:px-6 py-12 max-w-7xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="relative rounded-[2.5rem] bg-gradient-to-br from-zinc-950 via-black to-zinc-900 border border-primary/30 p-8 sm:p-12 md:p-16 overflow-hidden shadow-2xl text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-8 group"
+        >
+          {/* Subtle Ambient Glows */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/15 transition-all duration-700" />
+          <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-2xl space-y-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary/10 border border-primary/25 backdrop-blur-md">
+              <Globe size={14} className="text-primary animate-spin-slow" />
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">
+                GLOBAL EXPANSION NETWORK
+              </span>
+            </div>
+
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-[0.98] text-white">
+              REPRESENT AFRICAN BOY <br className="hidden sm:inline" />
+              <span className="text-primary">IN YOUR COUNTRY.</span>
+            </h2>
+
+            <p className="text-sm sm:text-base text-white/70 font-medium leading-relaxed max-w-xl">
+              Join the African Boy global network. Represent the brand, sell our collections, and grow your business in your market.
+            </p>
+
+            <div className="pt-2 flex flex-wrap items-center gap-3 justify-center md:justify-start">
+              <span className="text-[11px] font-bold text-white/50 uppercase tracking-widest flex items-center gap-1.5">
+                <ShieldCheck size={14} className="text-primary" /> Verified Commercial Rights
+              </span>
+              <span className="text-white/20 hidden sm:inline">·</span>
+              <span className="text-[11px] font-bold text-white/50 uppercase tracking-widest">
+                Wholesale & Distribution Mandates
+              </span>
+            </div>
+          </div>
+
+          <div className="relative z-10 flex flex-col sm:flex-row md:flex-col gap-3.5 w-full sm:w-auto flex-shrink-0">
+            <button
+              onClick={() => {
+                window.history.pushState({}, '', '/become-an-agent');
+                onNavigate('become-an-agent');
+              }}
+              className="px-8 py-4 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_0_35px_rgba(234,179,8,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 group/btn"
+            >
+              <span>BECOME AN AGENT</span>
+              <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+            </button>
+
+            <button
+              onClick={() => {
+                window.history.pushState({}, '', '/become-an-agent');
+                onNavigate('become-an-agent');
+              }}
+              className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-widest rounded-2xl border border-white/15 backdrop-blur-md hover:border-white/30 transition-all flex items-center justify-center gap-2"
+            >
+              EXPLORE THE OPPORTUNITY
+            </button>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Website Footer */}
+      <Footer onNavigate={onNavigate} />
+
       {/* Product Detail Modal */}
       {selectedDetailProduct && (
         <ProductDetailModal
@@ -555,7 +627,14 @@ export default function Home({ onNavigate }: HomeProps) {
           onClose={() => setSelectedDetailProduct(null)}
         />
       )}
+
+      {/* Agent Application Modal */}
+      <AgentApplicationModal
+        isOpen={isAgentModalOpen}
+        onClose={() => setIsAgentModalOpen(false)}
+      />
     </div>
   );
 }
+
 

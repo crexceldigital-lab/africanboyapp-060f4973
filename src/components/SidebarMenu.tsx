@@ -4,7 +4,7 @@ import {
   X, Home, ShoppingBag, Grid3X3, Sparkles, TrendingUp,
   ShoppingCart, Heart, Truck, Ruler, Package, RotateCcw,
   Mail, Info, Image, ChevronDown, ChevronRight, User,
-  Sun, Moon, Phone, MessageCircle, MapPin, Monitor
+  Sun, Moon, Phone, MessageCircle, MapPin, Monitor, Globe, Briefcase
 } from 'lucide-react';
 import { NavTab } from '../types';
 import { useCart } from '../context/CartContext';
@@ -206,6 +206,37 @@ export default function SidebarMenu({ isOpen, onClose, activeTab, setActiveTab }
 
                 <MenuItem icon={Sparkles} label="New Arrivals" onClick={() => navigate('shop')} />
                 <MenuItem icon={TrendingUp} label="Best Sellers" onClick={() => navigate('shop')} />
+              </div>
+
+              {/* Global Agent Program */}
+              <SectionLabel label="Global Agent Program" />
+              <div className="px-2 space-y-1">
+                <button
+                  onClick={() => {
+                    window.history.pushState({}, '', '/become-an-agent');
+                    navigate('become-an-agent');
+                  }}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all border text-xs font-black uppercase tracking-wider ${
+                    activeTab === 'become-an-agent'
+                      ? 'bg-primary text-black border-primary shadow-lg scale-[1.01]'
+                      : 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20'
+                  }`}
+                >
+                  <Globe size={18} className={activeTab === 'become-an-agent' ? 'text-black' : 'text-primary'} />
+                  <span className="flex-1 text-left">Become an Agent</span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-black/20 text-current">
+                    JOIN
+                  </span>
+                </button>
+                <MenuItem
+                  icon={Briefcase}
+                  label="Agent Portal / Dashboard"
+                  onClick={() => {
+                    window.history.pushState({}, '', '/agent/dashboard');
+                    navigate('agent-dashboard');
+                  }}
+                  isActive={activeTab === 'agent-dashboard'}
+                />
               </div>
 
               {/* Shopping */}

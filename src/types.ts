@@ -1,8 +1,8 @@
 import { LucideIcon } from 'lucide-react';
 
-export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin';
+export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin' | 'become-an-agent' | 'agent-dashboard';
 
-export type AdminTab = 'dashboard' | 'pos' | 'products' | 'orders' | 'international' | 'customers' | 'invoices' | 'attributes' | 'gallery' | 'reports' | 'staff' | 'fitme';
+export type AdminTab = 'dashboard' | 'pos' | 'products' | 'orders' | 'international' | 'customers' | 'invoices' | 'attributes' | 'gallery' | 'reports' | 'staff' | 'fitme' | 'agents';
 
 export interface FitMeCreditTransaction {
   id: string;
@@ -425,3 +425,162 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   contact_phone: '+255 700 000 000',
   contact_email: 'finance@africanboy.com',
 };
+
+// ==========================================
+// AFRICAN BOY GLOBAL AGENT PROGRAM TYPES
+// ==========================================
+
+export type AgentApplicationStatus =
+  | 'Draft'
+  | 'Submitted'
+  | 'Under Review'
+  | 'More Information Required'
+  | 'Approved'
+  | 'Rejected'
+  | 'Withdrawn';
+
+export type AgentBusinessModel =
+  | 'Wholesale Reseller'
+  | 'Commission-Based Agent'
+  | 'Country Distributor';
+
+export interface AgentApplication {
+  id: string;
+  application_reference: string;
+  user_id?: string | null;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  country_code: string;
+  country_name: string;
+  city: string;
+  preferred_language: string;
+  business_name?: string | null;
+  business_type: string;
+  website_or_social?: string | null;
+  business_address?: string | null;
+  business_registration_number?: string | null;
+  years_of_experience: string;
+  previous_experience_details?: string | null;
+  requested_categories: string[];
+  preferred_business_model: AgentBusinessModel;
+  proposed_territory_details?: string | null;
+  expected_monthly_sales?: string | null;
+  estimated_initial_investment?: string | null;
+  preferred_sales_channels: string[];
+  marketing_activities?: string | null;
+  motivation?: string | null;
+  status: AgentApplicationStatus;
+  internal_notes?: string | null;
+  admin_feedback_to_applicant?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  terms_accepted: boolean;
+  privacy_accepted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AgentStatus = 'active' | 'suspended' | 'pending_agreement' | 'terminated';
+
+export interface AgentProfile {
+  id: string;
+  user_id: string;
+  application_id?: string | null;
+  agent_code: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  business_name?: string | null;
+  business_model: AgentBusinessModel;
+  assigned_country_code: string;
+  assigned_country_name: string;
+  assigned_territory: string;
+  is_exclusive: boolean;
+  exclusivity_conditions?: string | null;
+  approved_categories: string[];
+  commission_rate: number;
+  wholesale_discount_percent: number;
+  minimum_order_quantity: number;
+  minimum_initial_purchase: number;
+  currency: string;
+  payment_terms: string;
+  status: AgentStatus;
+  agreement_reference?: string | null;
+  agreement_status?: string | null;
+  agreement_start_date?: string | null;
+  agreement_end_date?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentCommercialAgreement {
+  id: string;
+  agent_id: string;
+  agreement_number: string;
+  title: string;
+  business_model: AgentBusinessModel;
+  territory: string;
+  is_exclusive: boolean;
+  categories: string[];
+  commission_rate: number;
+  wholesale_discount_percent: number;
+  moq: number;
+  currency: string;
+  payment_terms: string;
+  status: 'Draft' | 'Active' | 'Expired' | 'Terminated' | 'Under Review';
+  valid_from: string;
+  valid_until?: string | null;
+  terms_document_url?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentReplenishmentOrder {
+  id: string;
+  order_number: string;
+  agent_id: string;
+  user_id: string;
+  status: 'draft' | 'submitted' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  payment_status: 'pending' | 'paid' | 'partial' | 'cancelled';
+  items: OrderItem[];
+  subtotal: number;
+  discount_amount: number;
+  shipping_fee: number;
+  total_amount: number;
+  amount_paid: number;
+  currency: string;
+  shipping_address: string;
+  destination_country: string;
+  destination_city: string;
+  commercial_terms_snapshot: Record<string, any>;
+  payment_method?: string | null;
+  payment_reference?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentAuditLog {
+  id: string;
+  agent_id?: string | null;
+  application_id?: string | null;
+  performed_by?: string | null;
+  action: string;
+  details?: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface AgentReportSummary {
+  totalApplications: number;
+  applicationsByStatus: Record<AgentApplicationStatus, number>;
+  approvedAgentsByCountry: Record<string, number>;
+  approvedAgentsByCategory: Record<string, number>;
+  agentsByBusinessModel: Record<AgentBusinessModel, number>;
+  totalReplenishmentOrders: number;
+  replenishmentOrderValue: number;
+  totalCommissionsEarned: number;
+  estimatedGrossMargin: number;
+  outstandingBalance: number;
+}
+
