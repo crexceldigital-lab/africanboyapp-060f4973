@@ -11,12 +11,17 @@ import type {
   AgentReportSummary,
   Product,
   OrderItem,
+  AgentShippingQuote,
+  ShippingOrigin,
+  ShippingQuoteStatus,
+  ShippingPaymentStatus,
 } from '@/types';
 
 // Local storage cache keys
 const STORAGE_KEY_APPLICATIONS = 'ab_agent_applications_cache';
 const STORAGE_KEY_PROFILES = 'ab_agent_profiles_cache';
 const STORAGE_KEY_ORDERS = 'ab_agent_orders_cache';
+const STORAGE_KEY_SHIPPING_QUOTES = 'ab_agent_shipping_quotes_cache';
 const STORAGE_KEY_MESSAGES_PREFIX = 'ab_agent_messages_cache_';
 
 // Test environment detector (unit test runner vs real browser/production)
@@ -248,6 +253,48 @@ function saveLocalMessages(appId: string, msgs: any[]) {
     localStorage.setItem(`${STORAGE_KEY_MESSAGES_PREFIX}${appId}`, JSON.stringify(msgs));
   } catch (e) {
     console.warn('Could not save messages to localStorage:', e);
+  }
+}
+
+function getLocalShippingQuotes(): AgentShippingQuote[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SHIPPING_QUOTES);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Failed to parse cached shipping quotes:', e);
+  }
+  return [];
+}
+
+function saveLocalShippingQuotes(quotes: AgentShippingQuote[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY_SHIPPING_QUOTES, JSON.stringify(quotes));
+  } catch (e) {
+    console.warn('Could not save shipping quotes to localStorage:', e);
+  }
+}
+
+const STORAGE_KEY_SHIPPING_AUDIT = 'ab_agent_shipping_audit_cache';
+
+function getLocalShippingAuditLogs(): any[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SHIPPING_AUDIT);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Failed to parse cached shipping audit logs:', e);
+  }
+  return [];
+}
+
+function saveLocalShippingAuditLog(entry: any) {
+  try {
+    const current = getLocalShippingAuditLogs();
+    localStorage.setItem(
+      STORAGE_KEY_SHIPPING_AUDIT,
+      JSON.stringify([{ id: `sal-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, created_at: new Date().toISOString(), ...entry }, ...current])
+    );
+  } catch (e) {
+    console.warn('Could not save shipping audit log to localStorage:', e);
   }
 }
 
@@ -941,7 +988,49 @@ export const agentService = {
   },
 
   /**
+   * Determine available shipping origins (Tanzania, China) for an order's items.
+   * Tanzania and China are offered only when fulfillment from that location is possible.
+   */
+  getOrderAvailableOrigins(items: OrderItem[], allProducts: Product[] = []): ShippingOrigin[] {
+    if (!items || items.length === 0) return ['Tanzania', 'China'];
+
+    // Check if Tanzania can fulfill all items
+    const canTanzania = items.every(item => {
+      const prod = allProducts.find(p => p.id === item.product_id);
+      if (!prod || !prod.available_origins || prod.available_origins.length === 0) {
+        return true; // Default Tanzania store stock available
+      }
+      return prod.available_origins.includes('Tanzania');
+    });
+
+    // Check if China can fulfill all items (e.g. factory t-shirts, caps, or explicit China origin)
+    const canChina = items.every(item => {
+      const prod = allProducts.find(p => p.id === item.product_id);
+      if (prod && prod.available_origins && prod.available_origins.length > 0) {
+        return prod.available_origins.includes('China');
+      }
+      const catLower = (prod?.category || '').toLowerCase();
+      const nameLower = (item.name || '').toLowerCase();
+      return (
+        catLower.includes('t-shirt') ||
+        catLower.includes('cap') ||
+        nameLower.includes('tee') ||
+        nameLower.includes('t-shirt') ||
+        nameLower.includes('cap')
+      );
+    });
+
+    const origins: ShippingOrigin[] = [];
+    if (canTanzania) origins.push('Tanzania');
+    if (canChina) origins.push('China');
+
+    return origins.length > 0 ? origins : ['Tanzania'];
+  },
+
+  /**
    * Create agent replenishment order.
+   * Product prices strictly exclude shipping.
+   * Merchandise subtotal is the total due for products, and shipping is arranged separately.
    */
   async createReplenishmentOrder(
     agentProfile: AgentProfile,
@@ -958,10 +1047,16 @@ export const agentService = {
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const shippingFee = 35000;
-    const totalAmount = subtotal + shippingFee;
+    // Product prices exclude shipping. Do not add unconfirmed or estimated shipping costs to product orders.
+    const shippingFee = 0;
+    const totalAmount = subtotal;
     const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
     const orderNumber = `ARO-2026-${randomHex}`;
+
+    const shippingDisclaimer = 'Shipping is not included and will be arranged and charged separately.';
+    const combinedNotes = notes?.trim()
+      ? `${notes.trim()}\n\n[NOTICE]: ${shippingDisclaimer}`
+      : shippingDisclaimer;
 
     const newOrder: AgentReplenishmentOrder = {
       id: `ord-${Date.now()}-${randomHex}`,
@@ -987,9 +1082,10 @@ export const agentService = {
         commission_rate: agentProfile.commission_rate,
         moq: agentProfile.minimum_order_quantity,
         payment_terms: agentProfile.payment_terms,
+        shipping_policy: shippingDisclaimer,
       },
       payment_method: 'Agent Commercial Transfer',
-      notes: notes || null,
+      notes: combinedNotes,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -1007,6 +1103,525 @@ export const agentService = {
     saveLocalOrders([newOrder, ...currentOrders]);
 
     return { success: true, order: newOrder };
+  },
+
+  /**
+   * Request a separate shipping quotation for an order.
+   */
+  async requestShippingQuote(params: {
+    orderId: string;
+    orderNumber: string;
+    agentId: string;
+    userId: string;
+    shippingOrigin: ShippingOrigin;
+    destinationCountry: string;
+    destinationCity: string;
+    destinationPostcode?: string;
+    deliveryAddress: string;
+    specialRequirements?: string;
+  }): Promise<{ success: boolean; quote?: AgentShippingQuote; error?: string }> {
+    const quoteId = `sq-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newQuote: AgentShippingQuote = {
+      id: quoteId,
+      order_id: params.orderId,
+      order_number: params.orderNumber,
+      agent_id: params.agentId,
+      user_id: params.userId,
+      shipping_origin: params.shippingOrigin,
+      destination_country: params.destinationCountry,
+      destination_city: params.destinationCity,
+      destination_postcode: params.destinationPostcode || null,
+      delivery_address: params.deliveryAddress,
+      special_requirements: params.specialRequirements || null,
+      courier_name: null,
+      shipping_amount: null,
+      currency: 'USD',
+      customs_and_handling_fee: 0,
+      estimated_delivery_time: null,
+      quote_date: null,
+      expiry_date: null,
+      is_verified: false,
+      status: 'pending',
+      agent_rejection_reason: null,
+      revision_number: 1,
+      shipping_payment_status: 'unpaid',
+      shipping_payment_reference: null,
+      shipping_payment_date: null,
+      tracking_number: null,
+      tracking_url: null,
+      dispatched_at: null,
+      estimated_delivery_date: null,
+      delivered_at: null,
+      internal_notes: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      await fromAny('agent_shipping_quotes').insert(newQuote);
+      await fromAny('agent_replenishment_orders')
+        .update({ shipping_quote_id: newQuote.id, updated_at: new Date().toISOString() })
+        .eq('id', params.orderId);
+      await fromAny('agent_shipping_audit_logs').insert({
+        quote_id: newQuote.id,
+        action: 'REQUESTED',
+        details: {
+          shipping_origin: params.shippingOrigin,
+          destination: `${params.destinationCity}, ${params.destinationCountry}`,
+        },
+      });
+      saveLocalShippingAuditLog({
+        quote_id: newQuote.id,
+        action: 'REQUESTED',
+        details: {
+          shipping_origin: params.shippingOrigin,
+          destination: `${params.destinationCity}, ${params.destinationCountry}`,
+        },
+      });
+    } catch (e) {
+      console.warn('DB error creating shipping quote request:', e);
+      saveLocalShippingAuditLog({
+        quote_id: newQuote.id,
+        action: 'REQUESTED',
+        details: {
+          shipping_origin: params.shippingOrigin,
+          destination: `${params.destinationCity}, ${params.destinationCountry}`,
+        },
+      });
+    }
+
+    const currentQuotes = getLocalShippingQuotes();
+    saveLocalShippingQuotes([newQuote, ...currentQuotes]);
+
+    // Also update order in local cache
+    const currentOrders = getLocalOrders();
+    const updatedOrders = currentOrders.map(o => (o.id === params.orderId ? { ...o, shipping_quote_id: newQuote.id } : o));
+    saveLocalOrders(updatedOrders);
+
+    return { success: true, quote: newQuote };
+  },
+
+  /**
+   * Get the shipping quotation linked to an order.
+   */
+  async getShippingQuoteForOrder(orderId: string): Promise<AgentShippingQuote | null> {
+    try {
+      const { data, error } = await fromAny('agent_shipping_quotes')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        return data as AgentShippingQuote;
+      }
+    } catch (e) {
+      console.warn('DB error fetching quote for order:', e);
+    }
+
+    const quotes = getLocalShippingQuotes();
+    return quotes.find(q => q.order_id === orderId) || null;
+  },
+
+  /**
+   * Get all shipping quotations (Admin).
+   */
+  async getAllShippingQuotes(): Promise<AgentShippingQuote[]> {
+    try {
+      const { data, error } = await fromAny('agent_shipping_quotes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data as AgentShippingQuote[];
+      }
+    } catch (e) {
+      console.warn('DB error fetching all shipping quotes:', e);
+    }
+
+    return getLocalShippingQuotes();
+  },
+
+  /**
+   * Submit or revise verified shipping quotation (Admin).
+   * Do not invent shipping prices or display a quotation as confirmed before it has been verified.
+   * If quote was previously accepted and revised, status returns to 'sent' for re-approval.
+   */
+  async submitVerifiedShippingQuote(params: {
+    quoteId: string;
+    courierName: string;
+    shippingAmount: number;
+    currency: string;
+    customsAndHandlingFee?: number;
+    estimatedDeliveryTime: string;
+    quoteDate?: string;
+    expiryDate?: string;
+    internalNotes?: string;
+  }): Promise<{ success: boolean; quote?: AgentShippingQuote; error?: string }> {
+    if (!params.courierName.trim()) {
+      return { success: false, error: 'Courier or freight forwarder is required.' };
+    }
+    if (params.shippingAmount == null || isNaN(params.shippingAmount) || params.shippingAmount < 0) {
+      return { success: false, error: 'Verified shipping amount must be a positive number.' };
+    }
+
+    const quotes = getLocalShippingQuotes();
+    const existing = quotes.find(q => q.id === params.quoteId);
+    const revision = existing ? existing.revision_number + (existing.status === 'accepted' ? 1 : 0) : 1;
+
+    const updates: Partial<AgentShippingQuote> = {
+      courier_name: params.courierName.trim(),
+      shipping_amount: Number(params.shippingAmount),
+      currency: params.currency.trim().toUpperCase() || 'USD',
+      customs_and_handling_fee: Number(params.customsAndHandlingFee || 0),
+      estimated_delivery_time: params.estimatedDeliveryTime.trim(),
+      quote_date: params.quoteDate || new Date().toISOString().split('T')[0],
+      expiry_date: params.expiryDate || new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
+      internal_notes: params.internalNotes?.trim() || null,
+      is_verified: true,
+      status: 'sent',
+      revision_number: revision,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      await fromAny('agent_shipping_quotes').update(updates).eq('id', params.quoteId);
+      await fromAny('agent_shipping_audit_logs').insert({
+        quote_id: params.quoteId,
+        action: 'QUOTE_VERIFIED_AND_SENT',
+        details: {
+          courier: params.courierName,
+          amount: params.shippingAmount,
+          currency: params.currency,
+          revision,
+        },
+      });
+      saveLocalShippingAuditLog({
+        quote_id: params.quoteId,
+        action: 'QUOTE_VERIFIED_AND_SENT',
+        details: {
+          courier: params.courierName,
+          amount: params.shippingAmount,
+          currency: params.currency,
+          revision,
+        },
+      });
+    } catch (e) {
+      console.warn('DB error updating shipping quote:', e);
+      saveLocalShippingAuditLog({
+        quote_id: params.quoteId,
+        action: 'QUOTE_VERIFIED_AND_SENT',
+        details: {
+          courier: params.courierName,
+          amount: params.shippingAmount,
+          currency: params.currency,
+          revision,
+        },
+      });
+    }
+
+    const updatedQuotes = quotes.map(q => (q.id === params.quoteId ? { ...q, ...updates } : q));
+    saveLocalShippingQuotes(updatedQuotes);
+
+    const targetQuote = updatedQuotes.find(q => q.id === params.quoteId);
+    return { success: true, quote: targetQuote };
+  },
+
+  /**
+   * Agent response: accept or reject the shipping quotation.
+   * Do not change an accepted shipping price without the agent's approval of the revised quotation.
+   */
+  async respondToShippingQuote(
+    quoteId: string,
+    accept: boolean,
+    rejectionReason?: string
+  ): Promise<{ success: boolean; quote?: AgentShippingQuote; error?: string }> {
+    const updates: Partial<AgentShippingQuote> = {
+      status: accept ? 'accepted' : 'rejected',
+      agent_rejection_reason: accept ? null : rejectionReason || 'Quotation declined by agent',
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      await fromAny('agent_shipping_quotes').update(updates).eq('id', quoteId);
+      await fromAny('agent_shipping_audit_logs').insert({
+        quote_id: quoteId,
+        action: accept ? 'ACCEPTED' : 'REJECTED',
+        details: {
+          accept,
+          reason: rejectionReason || null,
+        },
+      });
+      saveLocalShippingAuditLog({
+        quote_id: quoteId,
+        action: accept ? 'ACCEPTED' : 'REJECTED',
+        details: {
+          accept,
+          reason: rejectionReason || null,
+        },
+      });
+    } catch (e) {
+      console.warn('DB error responding to shipping quote:', e);
+      saveLocalShippingAuditLog({
+        quote_id: quoteId,
+        action: accept ? 'ACCEPTED' : 'REJECTED',
+        details: {
+          accept,
+          reason: rejectionReason || null,
+        },
+      });
+    }
+
+    const quotes = getLocalShippingQuotes();
+    const updatedQuotes = quotes.map(q => (q.id === quoteId ? { ...q, ...updates } : q));
+    saveLocalShippingQuotes(updatedQuotes);
+
+    const targetQuote = updatedQuotes.find(q => q.id === quoteId);
+    return { success: true, quote: targetQuote };
+  },
+
+  /**
+   * Record shipping payment separately from goods payment.
+   */
+  async recordShippingPayment(
+    quoteId: string,
+    paymentReference: string,
+    amountPaid?: number
+  ): Promise<{ success: boolean; quote?: AgentShippingQuote; error?: string }> {
+    if (!paymentReference.trim()) {
+      return { success: false, error: 'Payment reference is required.' };
+    }
+
+    const updates: Partial<AgentShippingQuote> = {
+      shipping_payment_status: 'paid',
+      shipping_payment_reference: paymentReference.trim(),
+      shipping_payment_date: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      await fromAny('agent_shipping_quotes').update(updates).eq('id', quoteId);
+      await fromAny('agent_shipping_audit_logs').insert({
+        quote_id: quoteId,
+        action: 'PAYMENT_RECORDED',
+        details: {
+          payment_reference: paymentReference,
+          amount_paid: amountPaid,
+        },
+      });
+      saveLocalShippingAuditLog({
+        quote_id: quoteId,
+        action: 'PAYMENT_RECORDED',
+        details: {
+          payment_reference: paymentReference,
+          amount_paid: amountPaid,
+        },
+      });
+    } catch (e) {
+      console.warn('DB error recording shipping payment:', e);
+      saveLocalShippingAuditLog({
+        quote_id: quoteId,
+        action: 'PAYMENT_RECORDED',
+        details: {
+          payment_reference: paymentReference,
+          amount_paid: amountPaid,
+        },
+      });
+    }
+
+    const quotes = getLocalShippingQuotes();
+    const updatedQuotes = quotes.map(q => (q.id === quoteId ? { ...q, ...updates } : q));
+    saveLocalShippingQuotes(updatedQuotes);
+
+    const targetQuote = updatedQuotes.find(q => q.id === quoteId);
+    return { success: true, quote: targetQuote };
+  },
+
+  /**
+   * Dispatch shipment with courier and tracking details.
+   * Requires approval of the shipping cost before dispatch.
+   */
+  async dispatchShipment(params: {
+    quoteId: string;
+    courierName: string;
+    trackingNumber: string;
+    trackingUrl?: string;
+    dispatchDate?: string;
+    estimatedDeliveryDate?: string;
+  }): Promise<{ success: boolean; quote?: AgentShippingQuote; error?: string }> {
+    if (!params.trackingNumber.trim()) {
+      return { success: false, error: 'Tracking number is required for dispatch.' };
+    }
+
+    const quotes = getLocalShippingQuotes();
+    const targetQuote = quotes.find(q => q.id === params.quoteId);
+
+    if (targetQuote && targetQuote.status !== 'accepted') {
+      return {
+        success: false,
+        error: 'Cannot dispatch shipment before the agent has approved the shipping quotation.',
+      };
+    }
+
+    const updates: Partial<AgentShippingQuote> = {
+      status: 'dispatched',
+      courier_name: params.courierName.trim() || targetQuote?.courier_name,
+      tracking_number: params.trackingNumber.trim(),
+      tracking_url: params.trackingUrl?.trim() || null,
+      dispatched_at: params.dispatchDate || new Date().toISOString(),
+      estimated_delivery_date: params.estimatedDeliveryDate || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      await fromAny('agent_shipping_quotes').update(updates).eq('id', params.quoteId);
+
+      // Keep linked replenishment order updated
+      if (targetQuote?.order_id) {
+        await fromAny('agent_replenishment_orders')
+          .update({
+            status: 'shipped',
+            courier_name: params.courierName.trim() || targetQuote.courier_name,
+            tracking_number: params.trackingNumber.trim(),
+            tracking_url: params.trackingUrl?.trim() || null,
+            estimated_delivery: params.estimatedDeliveryDate || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', targetQuote.order_id);
+      }
+
+      await fromAny('agent_shipping_audit_logs').insert({
+        quote_id: params.quoteId,
+        action: 'DISPATCHED',
+        details: {
+          courier: params.courierName,
+          tracking_number: params.trackingNumber,
+          tracking_url: params.trackingUrl,
+        },
+      });
+      saveLocalShippingAuditLog({
+        quote_id: params.quoteId,
+        action: 'DISPATCHED',
+        details: {
+          courier: params.courierName,
+          tracking_number: params.trackingNumber,
+          tracking_url: params.trackingUrl,
+        },
+      });
+    } catch (e) {
+      console.warn('DB error dispatching shipment:', e);
+      saveLocalShippingAuditLog({
+        quote_id: params.quoteId,
+        action: 'DISPATCHED',
+        details: {
+          courier: params.courierName,
+          tracking_number: params.trackingNumber,
+          tracking_url: params.trackingUrl,
+        },
+      });
+    }
+
+    const updatedQuotes = quotes.map(q => (q.id === params.quoteId ? { ...q, ...updates } : q));
+    saveLocalShippingQuotes(updatedQuotes);
+
+    // Update local order tracking as well
+    if (targetQuote?.order_id) {
+      const orders = getLocalOrders();
+      const updatedOrders = orders.map(o =>
+        o.id === targetQuote.order_id
+          ? {
+              ...o,
+              status: 'shipped' as const,
+              courier_name: params.courierName.trim() || targetQuote.courier_name,
+              tracking_number: params.trackingNumber.trim(),
+              tracking_url: params.trackingUrl?.trim() || null,
+              estimated_delivery: params.estimatedDeliveryDate || null,
+              updated_at: new Date().toISOString(),
+            }
+          : o
+      );
+      saveLocalOrders(updatedOrders);
+    }
+
+    const quoteRes = updatedQuotes.find(q => q.id === params.quoteId);
+    return { success: true, quote: quoteRes };
+  },
+
+  /**
+   * Confirm delivery of shipment.
+   */
+  async confirmDelivery(quoteId: string): Promise<{ success: boolean; quote?: AgentShippingQuote; error?: string }> {
+    const updates: Partial<AgentShippingQuote> = {
+      status: 'delivered',
+      delivered_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      await fromAny('agent_shipping_quotes').update(updates).eq('id', quoteId);
+
+      const quotes = getLocalShippingQuotes();
+      const targetQuote = quotes.find(q => q.id === quoteId);
+      if (targetQuote?.order_id) {
+        await fromAny('agent_replenishment_orders')
+          .update({
+            status: 'delivered',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', targetQuote.order_id);
+      }
+
+      await fromAny('agent_shipping_audit_logs').insert({
+        quote_id: quoteId,
+        action: 'DELIVERED',
+        details: { delivered_at: updates.delivered_at },
+      });
+      saveLocalShippingAuditLog({
+        quote_id: quoteId,
+        action: 'DELIVERED',
+        details: { delivered_at: updates.delivered_at },
+      });
+    } catch (e) {
+      console.warn('DB error confirming delivery:', e);
+      saveLocalShippingAuditLog({
+        quote_id: quoteId,
+        action: 'DELIVERED',
+        details: { delivered_at: updates.delivered_at },
+      });
+    }
+
+    const quotes = getLocalShippingQuotes();
+    const updatedQuotes = quotes.map(q => (q.id === quoteId ? { ...q, ...updates } : q));
+    saveLocalShippingQuotes(updatedQuotes);
+
+    const targetQuote = updatedQuotes.find(q => q.id === quoteId);
+    if (targetQuote?.order_id) {
+      const orders = getLocalOrders();
+      const updatedOrders = orders.map(o => (o.id === targetQuote.order_id ? { ...o, status: 'delivered' as const } : o));
+      saveLocalOrders(updatedOrders);
+    }
+
+    return { success: true, quote: targetQuote };
+  },
+
+  /**
+   * Get shipping quotation audit logs.
+   */
+  async getShippingAuditLogs(quoteId: string): Promise<any[]> {
+    try {
+      const { data, error } = await fromAny('agent_shipping_audit_logs')
+        .select('*')
+        .eq('quote_id', quoteId)
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data;
+      }
+    } catch (e) {
+      console.warn('DB error fetching shipping audit logs:', e);
+    }
+    return getLocalShippingAuditLogs().filter(l => l.quote_id === quoteId);
   },
 
   /**

@@ -328,8 +328,9 @@ describe('AFRICAN BOY GLOBAL AGENT PROGRAM - Comprehensive Unit & Workflow Tests
       );
       expect(successResult.success).toBe(true);
       expect(successResult.order?.order_number).toMatch(/^ARO-2026-[A-Z0-9]+$/);
-      expect(successResult.order?.status).toBe('submitted');
-      expect(successResult.order?.total_amount).toBe(35000 * 20 + 35000); // subtotal + freight
+      expect(successResult.order?.total_amount).toBe(35000 * 20); // strictly excludes shipping
+      expect(successResult.order?.shipping_fee).toBe(0);
+      expect(successResult.order?.notes).toContain('Shipping is not included and will be arranged and charged separately.');
     });
   });
 

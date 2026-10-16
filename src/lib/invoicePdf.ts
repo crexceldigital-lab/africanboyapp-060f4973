@@ -171,6 +171,16 @@ export function generateInvoicePdf(
     ['TOTAL', money(invoice.total_amount, invoice.currency), true],
   ];
   const tx = W - M - 220;
+
+  // Clear notice on product invoices that shipping is excluded
+  if (!invoice.delivery_fee || invoice.delivery_fee === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(...GOLD);
+    doc.text('Shipping is not included and will be arranged and charged separately.', M, y + 10);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+  }
   totals.forEach(([label, value, bold]) => {
     if (bold) {
       doc.setFillColor(...DARK);

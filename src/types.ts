@@ -59,6 +59,7 @@ export interface Product {
   colors: ProductColor[];
   status?: 'active' | 'inactive' | 'stock_out' | string;
   tags?: string[];
+  available_origins?: ('Tanzania' | 'China')[];
   created_at?: string;
   updated_at?: string;
 }
@@ -555,6 +556,46 @@ export interface AgentCommercialAgreement {
   updated_at: string;
 }
 
+export type ShippingOrigin = 'Tanzania' | 'China';
+export type ShippingQuoteStatus = 'pending' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'dispatched' | 'delivered';
+export type ShippingPaymentStatus = 'unpaid' | 'pending' | 'paid';
+
+export interface AgentShippingQuote {
+  id: string;
+  order_id: string;
+  order_number: string;
+  agent_id: string;
+  user_id: string;
+  shipping_origin: ShippingOrigin;
+  destination_country: string;
+  destination_city: string;
+  destination_postcode?: string | null;
+  delivery_address: string;
+  special_requirements?: string | null;
+  courier_name?: string | null;
+  shipping_amount?: number | null;
+  currency: string;
+  customs_and_handling_fee: number;
+  estimated_delivery_time?: string | null;
+  quote_date?: string | null;
+  expiry_date?: string | null;
+  is_verified: boolean;
+  status: ShippingQuoteStatus;
+  agent_rejection_reason?: string | null;
+  revision_number: number;
+  shipping_payment_status: ShippingPaymentStatus;
+  shipping_payment_reference?: string | null;
+  shipping_payment_date?: string | null;
+  tracking_number?: string | null;
+  tracking_url?: string | null;
+  dispatched_at?: string | null;
+  estimated_delivery_date?: string | null;
+  delivered_at?: string | null;
+  internal_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AgentReplenishmentOrder {
   id: string;
   order_number: string;
@@ -576,6 +617,8 @@ export interface AgentReplenishmentOrder {
   payment_method?: string | null;
   payment_reference?: string | null;
   notes?: string | null;
+  shipping_quote_id?: string | null;
+  shipping_quote?: AgentShippingQuote | null;
   courier_name?: string | null;
   tracking_number?: string | null;
   tracking_url?: string | null;

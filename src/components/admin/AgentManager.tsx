@@ -4,7 +4,7 @@ import {
   Globe, Briefcase, CheckCircle2, XCircle, Clock, AlertCircle,
   Search, Filter, ChevronRight, Eye, Check, X, Shield, Plus,
   Download, Edit2, FileText, Send, UserCheck, RefreshCw, Layers,
-  ExternalLink, Save
+  ExternalLink, Save, Truck, History, MapPin, DollarSign
 } from 'lucide-react';
 import { agentService } from '@/services/agentService';
 import { INTERNATIONAL_COUNTRIES } from '@/data/internationalCountries';
@@ -16,13 +16,17 @@ import type {
   AgentBusinessModel,
   AgentProfile,
   AgentReplenishmentOrder,
-  AgentReportSummary
+  AgentReportSummary,
+  AgentShippingQuote,
+  ShippingOrigin,
+  ShippingQuoteStatus,
+  ShippingPaymentStatus
 } from '@/types';
 import WholesaleProgramSettingsTab from './WholesaleProgramSettingsTab';
 import WholesaleQuotationBuilder from './WholesaleQuotationBuilder';
 
 export default function AgentManager() {
-  const [activeSubTab, setActiveSubTab] = useState<'applications' | 'agents' | 'orders' | 'wholesale' | 'reports'>('applications');
+  const [activeSubTab, setActiveSubTab] = useState<'applications' | 'agents' | 'orders' | 'shipping' | 'wholesale' | 'reports'>('applications');
   const [loading, setLoading] = useState(true);
 
   // Applications State
@@ -63,22 +67,65 @@ export default function AgentManager() {
   // Orders State
   const [orders, setOrders] = useState<AgentReplenishmentOrder[]>([]);
 
+  // Shipping Quotations State
+  const [shippingQuotes, setShippingQuotes] = useState<AgentShippingQuote[]>([]);
+  const [shippingStatusFilter, setShippingStatusFilter] = useState<string>('All');
+  const [shippingOriginFilter, setShippingOriginFilter] = useState<string>('All');
+  const [shippingSearchQuery, setShippingSearchQuery] = useState<string>('');
+
+  // Modal: Review & Issue Verified Quote
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState<AgentShippingQuote | null>(null);
+  const [quoteCourierName, setQuoteCourierName] = useState('');
+  const [quoteShippingAmount, setQuoteShippingAmount] = useState('');
+  const [quoteCurrency, setQuoteCurrency] = useState('USD');
+  const [quoteCustomsFee, setQuoteCustomsFee] = useState('');
+  const [quoteEstimatedDeliveryTime, setQuoteEstimatedDeliveryTime] = useState('');
+  const [quoteDate, setQuoteDate] = useState('');
+  const [quoteExpiryDate, setQuoteExpiryDate] = useState('');
+  const [quoteInternalNotes, setQuoteInternalNotes] = useState('');
+  const [quoteStatusSelect, setQuoteStatusSelect] = useState<ShippingQuoteStatus>('sent');
+  const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
+
+  // Modal: Record Shipping Payment
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedQuoteForPayment, setSelectedQuoteForPayment] = useState<AgentShippingQuote | null>(null);
+  const [adminPaymentRef, setAdminPaymentRef] = useState('');
+  const [adminPaymentAmount, setAdminPaymentAmount] = useState('');
+
+  // Modal: Dispatch Shipment
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [selectedQuoteForDispatch, setSelectedQuoteForDispatch] = useState<AgentShippingQuote | null>(null);
+  const [dispatchCourierName, setDispatchCourierName] = useState('');
+  const [dispatchTrackingNumber, setDispatchTrackingNumber] = useState('');
+  const [dispatchTrackingUrl, setDispatchTrackingUrl] = useState('');
+  const [dispatchDate, setDispatchDate] = useState('');
+  const [dispatchEstimatedDelivery, setDispatchEstimatedDelivery] = useState('');
+  const [isDispatching, setIsDispatching] = useState(false);
+
+  // Modal: Audit Trail
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [selectedQuoteForAudit, setSelectedQuoteForAudit] = useState<AgentShippingQuote | null>(null);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
   // Reports State
   const [reports, setReports] = useState<AgentReportSummary | null>(null);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [apps, agts, ords, rep] = await Promise.all([
+      const [apps, agts, ords, rep, quotes] = await Promise.all([
         agentService.getApplications(),
         agentService.getAllAgentProfiles(),
         agentService.getAllReplenishmentOrders(),
         agentService.getReportsSummary(),
+        agentService.getAllShippingQuotes(),
       ]);
       setApplications(apps);
       setAgents(agts);
       setOrders(ords);
       setReports(rep);
+      setShippingQuotes(quotes);
     } catch (err) {
       console.error('Error loading Agent Manager data:', err);
     } finally {
@@ -220,6 +267,149 @@ export default function AgentManager() {
     loadData();
   };
 
+  // Open Quote Modal
+  const openQuoteModal = (quote: AgentShippingQuote) => {
+    setSelectedQuote(quote);
+    setQuoteCourierName(quote.courier_name || '');
+    setQuoteShippingAmount(quote.shipping_amount != null ? String(quote.shipping_amount) : '');
+    setQuoteCurrency(quote.currency || 'USD');
+    setQuoteCustomsFee(quote.customs_and_handling_fee ? String(quote.customs_and_handling_fee) : '');
+    setQuoteEstimatedDeliveryTime(quote.estimated_delivery_time || '');
+    setQuoteDate(quote.quote_date || new Date().toISOString().split('T')[0]);
+    setQuoteExpiryDate(quote.expiry_date || new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0]);
+    setQuoteInternalNotes(quote.internal_notes || '');
+    setQuoteStatusSelect(quote.status === 'pending' ? 'sent' : quote.status);
+    setShowQuoteModal(true);
+  };
+
+  // Submit Verified Shipping Quote (Admin)
+  // Do not invent shipping prices or display a quotation as confirmed before it has been verified.
+  const handleSaveVerifiedQuote = async () => {
+    if (!selectedQuote) return;
+    if (!quoteCourierName.trim()) {
+      toast.error('Please enter the verified courier or freight forwarder name.');
+      return;
+    }
+    const amountNum = Number(quoteShippingAmount);
+    if (!quoteShippingAmount.trim() || isNaN(amountNum) || amountNum < 0) {
+      toast.error('Please enter a valid, verified positive shipping amount.');
+      return;
+    }
+
+    setIsSubmittingQuote(true);
+    try {
+      const res = await agentService.submitVerifiedShippingQuote({
+        quoteId: selectedQuote.id,
+        courierName: quoteCourierName.trim(),
+        shippingAmount: amountNum,
+        currency: quoteCurrency.trim().toUpperCase(),
+        customsAndHandlingFee: Number(quoteCustomsFee || 0),
+        estimatedDeliveryTime: quoteEstimatedDeliveryTime.trim() || '3-7 business days',
+        quoteDate,
+        expiryDate,
+        internalNotes: quoteInternalNotes.trim() || undefined,
+      });
+
+      if (res.success && res.quote) {
+        toast.success(`Verified quotation issued for Order #${res.quote.order_number}!`);
+        setShowQuoteModal(false);
+        loadData();
+      } else {
+        toast.error(res.error || 'Failed to update shipping quotation.');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Error saving shipping quotation.');
+    } finally {
+      setIsSubmittingQuote(false);
+    }
+  };
+
+  // Open Payment Modal
+  const openPaymentModal = (quote: AgentShippingQuote) => {
+    setSelectedQuoteForPayment(quote);
+    setAdminPaymentRef(quote.shipping_payment_reference || '');
+    setAdminPaymentAmount(quote.shipping_amount ? String(quote.shipping_amount + (quote.customs_and_handling_fee || 0)) : '');
+    setShowPaymentModal(true);
+  };
+
+  // Record Shipping Payment
+  const handleRecordPayment = async () => {
+    if (!selectedQuoteForPayment) return;
+    if (!adminPaymentRef.trim()) {
+      toast.error('Payment reference or transaction ID is required.');
+      return;
+    }
+
+    const res = await agentService.recordShippingPayment(
+      selectedQuoteForPayment.id,
+      adminPaymentRef.trim(),
+      adminPaymentAmount ? Number(adminPaymentAmount) : undefined
+    );
+    if (res.success) {
+      toast.success('Shipping payment recorded successfully.');
+      setShowPaymentModal(false);
+      loadData();
+    } else {
+      toast.error(res.error || 'Failed to record shipping payment.');
+    }
+  };
+
+  // Open Dispatch Modal
+  const openDispatchModal = (quote: AgentShippingQuote) => {
+    if (quote.status !== 'accepted') {
+      toast.error('Approval of the shipping cost is required before dispatch.');
+      return;
+    }
+    setSelectedQuoteForDispatch(quote);
+    setDispatchCourierName(quote.courier_name || '');
+    setDispatchTrackingNumber(quote.tracking_number || '');
+    setDispatchTrackingUrl(quote.tracking_url || '');
+    setDispatchDate(new Date().toISOString().split('T')[0]);
+    setDispatchEstimatedDelivery(quote.estimated_delivery_date || '');
+    setShowDispatchModal(true);
+  };
+
+  // Dispatch Shipment
+  const handleDispatchShipment = async () => {
+    if (!selectedQuoteForDispatch) return;
+    if (!dispatchTrackingNumber.trim()) {
+      toast.error('Tracking number is required to confirm dispatch.');
+      return;
+    }
+
+    setIsDispatching(true);
+    try {
+      const res = await agentService.dispatchShipment({
+        quoteId: selectedQuoteForDispatch.id,
+        courierName: dispatchCourierName.trim(),
+        trackingNumber: dispatchTrackingNumber.trim(),
+        trackingUrl: dispatchTrackingUrl.trim() || undefined,
+        dispatchDate,
+        estimatedDeliveryDate: dispatchEstimatedDelivery.trim() || undefined,
+      });
+
+      if (res.success) {
+        toast.success(`Shipment dispatched! Tracking #${dispatchTrackingNumber.trim()} registered.`);
+        setShowDispatchModal(false);
+        loadData();
+      } else {
+        toast.error(res.error || 'Failed to dispatch shipment.');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Error dispatching shipment.');
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
+  // Open Audit Trail Modal
+  const openAuditModal = async (quote: AgentShippingQuote) => {
+    setSelectedQuoteForAudit(quote);
+    const logs = await agentService.getShippingAuditLogs(quote.id);
+    setAuditLogs(logs);
+    setShowAuditModal(true);
+  };
+
   // Export to CSV
   const handleExportCSV = () => {
     if (!reports) return;
@@ -287,6 +477,7 @@ export default function AgentManager() {
           { id: 'applications', label: `Applications (${applications.length})` },
           { id: 'agents', label: `Active Agents (${agents.length})` },
           { id: 'orders', label: `Replenishment Orders (${orders.length})` },
+          { id: 'shipping', label: `Shipping Quotes (${shippingQuotes.length})` },
           { id: 'wholesale', label: 'Wholesale Program & Tiers' },
           { id: 'reports', label: 'Reports & Analytics' },
         ].map(tab => (
@@ -515,62 +706,349 @@ export default function AgentManager() {
                   <th className="px-5 py-3.5">Order #</th>
                   <th className="px-5 py-3.5">Agent Destination</th>
                   <th className="px-5 py-3.5">Items / Volume</th>
-                  <th className="px-5 py-3.5">Total Amount</th>
-                  <th className="px-5 py-3.5">Payment</th>
+                  <th className="px-5 py-3.5">Merchandise Subtotal</th>
+                  <th className="px-5 py-3.5">Goods Payment</th>
+                  <th className="px-5 py-3.5">Separate Shipping Quote</th>
                   <th className="px-5 py-3.5">Fulfillment</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-foreground/5">
-                {orders.map(order => (
-                  <tr key={order.id} className="hover:bg-foreground/5 transition-colors">
-                    <td className="px-5 py-4 font-mono font-bold text-primary">
-                      {order.order_number}
-                    </td>
-                    <td className="px-5 py-4">
-                      <p className="font-bold text-foreground">{order.destination_city}</p>
-                      <p className="text-[11px] text-muted-foreground">{order.destination_country}</p>
-                    </td>
-                    <td className="px-5 py-4 font-medium">
-                      {order.items.reduce((s, i) => s + i.quantity, 0)} units ({order.items.length} lines)
-                    </td>
-                    <td className="px-5 py-4 font-bold text-foreground">
-                      {Number(order.total_amount).toLocaleString()} {order.currency}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                        order.payment_status === 'paid' ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'
-                      }`}>
-                        {order.payment_status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="px-2 py-0.5 rounded-full bg-foreground/10 text-[10px] font-black uppercase">
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {order.payment_status !== 'paid' && (
-                          <button
-                            onClick={() => handleUpdateOrderStatus(order.id, order.status, 'paid')}
-                            className="px-2.5 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 font-bold rounded-lg text-[10px]"
-                          >
-                            Mark Paid
-                          </button>
+                {orders.map(order => {
+                  const quote = shippingQuotes.find(q => q.order_id === order.id);
+
+                  return (
+                    <tr key={order.id} className="hover:bg-foreground/5 transition-colors">
+                      <td className="px-5 py-4 font-mono font-bold text-primary">
+                        {order.order_number}
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="font-bold text-foreground">{order.destination_city}</p>
+                        <p className="text-[11px] text-muted-foreground">{order.destination_country}</p>
+                      </td>
+                      <td className="px-5 py-4 font-medium">
+                        {order.items.reduce((s, i) => s + i.quantity, 0)} units ({order.items.length} lines)
+                      </td>
+                      <td className="px-5 py-4 font-bold text-foreground">
+                        {Number(order.total_amount).toLocaleString()} {order.currency}
+                        <span className="block text-[10px] text-muted-foreground font-normal">Excl. Shipping</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          order.payment_status === 'paid' ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'
+                        }`}>
+                          {order.payment_status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        {quote ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                quote.shipping_origin === 'China' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'
+                              }`}>
+                                {quote.shipping_origin === 'China' ? '🇨🇳 China' : '🇹🇿 TZ'}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                quote.status === 'accepted' ? 'bg-green-500/15 text-green-400' :
+                                quote.status === 'sent' ? 'bg-blue-500/15 text-blue-400' :
+                                quote.status === 'dispatched' ? 'bg-emerald-500/15 text-emerald-400' :
+                                'bg-yellow-500/15 text-yellow-400'
+                              }`}>
+                                {quote.status}
+                              </span>
+                            </div>
+                            {quote.shipping_amount != null && (
+                              <span className="text-[11px] font-mono text-foreground block">
+                                {quote.shipping_amount.toLocaleString()} {quote.currency}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground italic">No Quote Requested</span>
                         )}
-                        {order.status !== 'shipped' && order.status !== 'delivered' && (
-                          <button
-                            onClick={() => handleUpdateOrderStatus(order.id, 'shipped', order.payment_status)}
-                            className="px-2.5 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold rounded-lg text-[10px]"
-                          >
-                            Ship Order
-                          </button>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="px-2 py-0.5 rounded-full bg-foreground/10 text-[10px] font-black uppercase">
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {order.payment_status !== 'paid' && (
+                            <button
+                              onClick={() => handleUpdateOrderStatus(order.id, order.status, 'paid')}
+                              className="px-2.5 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 font-bold rounded-lg text-[10px]"
+                            >
+                              Mark Goods Paid
+                            </button>
+                          )}
+                          {quote && (
+                            <button
+                              onClick={() => openQuoteModal(quote)}
+                              className="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-lg text-[10px]"
+                            >
+                              Manage Quote
+                            </button>
+                          )}
+                          {quote && quote.status === 'accepted' && order.status !== 'shipped' && order.status !== 'delivered' && (
+                            <button
+                              onClick={() => openDispatchModal(quote)}
+                              className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[10px]"
+                            >
+                              Dispatch
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* SUBTAB 4: SHIPPING QUOTATIONS & FREIGHT MANAGEMENT */}
+      {activeSubTab === 'shipping' && (
+        <div className="space-y-6">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {[
+              { label: 'Total Requests', count: shippingQuotes.length, color: 'text-foreground' },
+              { label: 'Pending Verification', count: shippingQuotes.filter(q => q.status === 'pending').length, color: 'text-yellow-400' },
+              { label: 'Awaiting Agent Approval', count: shippingQuotes.filter(q => q.status === 'sent').length, color: 'text-blue-400' },
+              { label: 'Approved & Ready', count: shippingQuotes.filter(q => q.status === 'accepted').length, color: 'text-green-400' },
+              { label: 'Dispatched', count: shippingQuotes.filter(q => q.status === 'dispatched' || q.status === 'delivered').length, color: 'text-emerald-400' },
+            ].map((st, i) => (
+              <div key={i} className="p-4 rounded-2xl bg-card border border-foreground/10 text-center space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{st.label}</span>
+                <p className={`text-2xl font-black ${st.color}`}>{st.count}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Filters & Search */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={shippingStatusFilter}
+                onChange={e => setShippingStatusFilter(e.target.value)}
+                className="px-3 py-2 bg-card border border-foreground/15 rounded-xl text-xs font-bold text-foreground"
+              >
+                <option value="All">All Statuses</option>
+                <option value="pending">Pending Verification</option>
+                <option value="sent">Sent to Agent</option>
+                <option value="accepted">Accepted by Agent</option>
+                <option value="rejected">Revision Requested</option>
+                <option value="dispatched">Dispatched</option>
+                <option value="delivered">Delivered</option>
+              </select>
+
+              <select
+                value={shippingOriginFilter}
+                onChange={e => setShippingOriginFilter(e.target.value)}
+                className="px-3 py-2 bg-card border border-foreground/15 rounded-xl text-xs font-bold text-foreground"
+              >
+                <option value="All">All Origins</option>
+                <option value="Tanzania">Ship from Tanzania (Local Stock)</option>
+                <option value="China">Ship from China (Direct Factory)</option>
+              </select>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
+              <input
+                type="text"
+                placeholder="Search order #, city, courier..."
+                value={shippingSearchQuery}
+                onChange={e => setShippingSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-card border border-foreground/15 rounded-xl text-xs text-foreground outline-none focus:border-primary w-full sm:w-64"
+              />
+            </div>
+          </div>
+
+          {/* Quotations Table */}
+          <div className="bg-card border border-foreground/10 rounded-2xl overflow-hidden shadow-xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-foreground/5 text-muted-foreground font-black uppercase tracking-wider text-[10px] border-b border-foreground/10">
+                <tr>
+                  <th className="px-5 py-3.5">Order & Origin</th>
+                  <th className="px-5 py-3.5">Destination & Special Req</th>
+                  <th className="px-5 py-3.5">Courier & Transit</th>
+                  <th className="px-5 py-3.5">Freight & Customs</th>
+                  <th className="px-5 py-3.5">Status & Validity</th>
+                  <th className="px-5 py-3.5">Shipping Payment</th>
+                  <th className="px-5 py-3.5">Tracking</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-foreground/5">
+                {shippingQuotes
+                  .filter(quote => {
+                    if (shippingStatusFilter !== 'All' && quote.status !== shippingStatusFilter) return false;
+                    if (shippingOriginFilter !== 'All' && quote.shipping_origin !== shippingOriginFilter) return false;
+                    if (shippingSearchQuery.trim()) {
+                      const q = shippingSearchQuery.toLowerCase();
+                      return (
+                        quote.order_number.toLowerCase().includes(q) ||
+                        quote.destination_city.toLowerCase().includes(q) ||
+                        quote.destination_country.toLowerCase().includes(q) ||
+                        (quote.courier_name && quote.courier_name.toLowerCase().includes(q))
+                      );
+                    }
+                    return true;
+                  })
+                  .map(quote => (
+                    <tr key={quote.id} className="hover:bg-foreground/5 transition-colors">
+                      <td className="px-5 py-4 font-mono font-bold text-primary">
+                        <div>
+                          <span>{quote.order_number}</span>
+                          <span className={`block font-sans text-[10px] font-bold mt-0.5 px-2 py-0.5 rounded w-max ${
+                            quote.shipping_origin === 'China'
+                              ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          }`}>
+                            {quote.shipping_origin === 'China' ? '🇨🇳 China' : '🇹🇿 Tanzania'}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <p className="font-bold text-foreground">
+                          {quote.destination_city}, {quote.destination_country}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate max-w-[200px]" title={quote.delivery_address}>
+                          {quote.delivery_address}
+                        </p>
+                        {quote.special_requirements && (
+                          <p className="text-[10px] text-amber-400/90 truncate max-w-[200px]" title={quote.special_requirements}>
+                            ⚠️ {quote.special_requirements}
+                          </p>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <p className="font-bold text-foreground">{quote.courier_name || 'Pending forwarder'}</p>
+                        <p className="text-[11px] text-muted-foreground">{quote.estimated_delivery_time || 'Pending transit estimate'}</p>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {quote.is_verified && quote.shipping_amount != null ? (
+                          <div>
+                            <p className="font-bold text-foreground">
+                              {quote.shipping_amount.toLocaleString()} {quote.currency}
+                            </p>
+                            {quote.customs_and_handling_fee > 0 && (
+                              <p className="text-[10px] text-muted-foreground">
+                                +{quote.customs_and_handling_fee.toLocaleString()} {quote.currency} customs/handling
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-yellow-400 font-medium">Unverified / Pending</span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          quote.status === 'accepted' ? 'bg-green-500/15 text-green-400' :
+                          quote.status === 'sent' ? 'bg-blue-500/15 text-blue-400' :
+                          quote.status === 'dispatched' ? 'bg-emerald-500/15 text-emerald-400' :
+                          quote.status === 'rejected' ? 'bg-red-500/15 text-red-400' :
+                          'bg-yellow-500/15 text-yellow-400'
+                        }`}>
+                          {quote.status}
+                        </span>
+                        {quote.revision_number > 1 && (
+                          <span className="text-[10px] text-amber-400 block font-bold mt-0.5">Rev #{quote.revision_number}</span>
+                        )}
+                        {quote.expiry_date && (
+                          <span className="text-[10px] text-muted-foreground block">Exp: {quote.expiry_date}</span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          quote.shipping_payment_status === 'paid' ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400'
+                        }`}>
+                          {quote.shipping_payment_status}
+                        </span>
+                        {quote.shipping_payment_reference && (
+                          <span className="font-mono text-[10px] text-muted-foreground block mt-0.5 truncate max-w-[120px]">
+                            {quote.shipping_payment_reference}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {quote.tracking_number ? (
+                          <div className="space-y-0.5">
+                            <span className="font-mono font-bold text-foreground text-[11px]">
+                              {quote.tracking_number}
+                            </span>
+                            {quote.tracking_url && (
+                              <a
+                                href={quote.tracking_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary hover:underline text-[10px] block"
+                              >
+                                Track URL
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground italic">Not Dispatched</span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          <button
+                            onClick={() => openQuoteModal(quote)}
+                            className="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-lg text-[10px]"
+                          >
+                            {quote.is_verified ? 'Revise Quote' : 'Verify & Quote'}
+                          </button>
+
+                          {quote.shipping_payment_status !== 'paid' && (
+                            <button
+                              onClick={() => openPaymentModal(quote)}
+                              className="px-2.5 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 font-bold rounded-lg text-[10px]"
+                            >
+                              Pay Shipping
+                            </button>
+                          )}
+
+                          {quote.status === 'accepted' ? (
+                            <button
+                              onClick={() => openDispatchModal(quote)}
+                              className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[10px]"
+                            >
+                              Dispatch
+                            </button>
+                          ) : quote.status !== 'dispatched' && quote.status !== 'delivered' ? (
+                            <span
+                              className="text-[10px] text-muted-foreground italic px-2 py-1 bg-foreground/5 rounded-lg cursor-not-allowed opacity-60"
+                              title="Agent must approve quote before goods dispatch"
+                            >
+                              Approval Required
+                            </span>
+                          ) : null}
+
+                          <button
+                            onClick={() => openAuditModal(quote)}
+                            className="p-1 rounded-lg hover:bg-foreground/10 text-muted-foreground hover:text-foreground"
+                            title="Audit Log"
+                          >
+                            <History size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -1182,6 +1660,391 @@ export default function AgentManager() {
                 className="px-5 py-2 bg-primary text-primary-foreground font-black text-xs uppercase rounded-xl hover:scale-105 transition-transform"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ISSUE / REVISE VERIFIED SHIPPING QUOTATION */}
+      {showQuoteModal && selectedQuote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-lg bg-card border border-foreground/20 rounded-3xl p-6 space-y-4 text-foreground max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-foreground/10 pb-3">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
+                  <Truck size={18} className="text-primary" /> Verified Shipping Quotation
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Order #{selectedQuote.order_number} · Ref: {selectedQuote.id}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowQuoteModal(false)}
+                className="p-1 rounded-full hover:bg-foreground/10"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Origin & Destination summary */}
+            <div className="p-3 bg-foreground/5 rounded-xl border border-foreground/10 text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fulfillment Origin:</span>
+                <span className="font-bold text-primary">
+                  {selectedQuote.shipping_origin === 'China' ? '🇨🇳 Ship from China (Factory)' : '🇹🇿 Ship from Tanzania (Local Stock)'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Destination:</span>
+                <span className="font-bold text-foreground">
+                  {selectedQuote.destination_city}, {selectedQuote.destination_country}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground truncate pt-0.5">
+                Address: {selectedQuote.delivery_address}
+              </p>
+              {selectedQuote.special_requirements && (
+                <p className="text-[10px] text-amber-400 font-medium">
+                  Special Req: {selectedQuote.special_requirements}
+                </p>
+              )}
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">
+                  Courier / Freight Forwarder *
+                </label>
+                <input
+                  type="text"
+                  value={quoteCourierName}
+                  onChange={e => setQuoteCourierName(e.target.value)}
+                  placeholder="e.g. DHL Express Worldwide, Air Cargo Global, Sea Freight..."
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">
+                    Verified Shipping Price *
+                  </label>
+                  <input
+                    type="number"
+                    value={quoteShippingAmount}
+                    onChange={e => setQuoteShippingAmount(e.target.value)}
+                    placeholder="e.g. 150"
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-mono font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Currency</label>
+                  <select
+                    value={quoteCurrency}
+                    onChange={e => setQuoteCurrency(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold font-mono"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="TZS">TZS (TSh)</option>
+                    <option value="KES">KES (KSh)</option>
+                    <option value="ZAR">ZAR (R)</option>
+                    <option value="AED">AED (د.إ)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">
+                    Customs, Tax & Handling (Separate)
+                  </label>
+                  <input
+                    type="number"
+                    value={quoteCustomsFee}
+                    onChange={e => setQuoteCustomsFee(e.target.value)}
+                    placeholder="e.g. 35 (Optional)"
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-mono font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">
+                    Estimated Transit Time *
+                  </label>
+                  <input
+                    type="text"
+                    value={quoteEstimatedDeliveryTime}
+                    onChange={e => setQuoteEstimatedDeliveryTime(e.target.value)}
+                    placeholder="e.g. 3-5 business days"
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Quote Issue Date</label>
+                  <input
+                    type="date"
+                    value={quoteDate}
+                    onChange={e => setQuoteDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Quote Expiry Date</label>
+                  <input
+                    type="date"
+                    value={quoteExpiryDate}
+                    onChange={e => setQuoteExpiryDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Internal Logistics Notes</label>
+                <textarea
+                  rows={2}
+                  value={quoteInternalNotes}
+                  onChange={e => setQuoteInternalNotes(e.target.value)}
+                  placeholder="Forwarder quote reference number, air waybill reservation notes..."
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-normal"
+                />
+              </div>
+            </div>
+
+            {/* Verification reminder alert */}
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-300 leading-relaxed space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <AlertCircle size={13} /> Strict Logistics Rule
+              </p>
+              <p className="text-muted-foreground">
+                Do not invent shipping prices or display a quotation as confirmed before it has been verified. If modifying an already accepted quote, revision number will advance to #{selectedQuote.revision_number + 1} and return to sent status for agent re-approval.
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-3 border-t border-foreground/10">
+              <button
+                onClick={() => setShowQuoteModal(false)}
+                className="px-4 py-2 rounded-xl border border-foreground/15 text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveVerifiedQuote}
+                disabled={isSubmittingQuote}
+                className="px-5 py-2 bg-primary text-primary-foreground font-black text-xs uppercase rounded-xl hover:scale-105 transition-transform disabled:opacity-50"
+              >
+                {isSubmittingQuote ? 'Saving...' : 'Issue Verified Quotation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RECORD SHIPPING PAYMENT */}
+      {showPaymentModal && selectedQuoteForPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-md bg-card border border-foreground/20 rounded-3xl p-6 space-y-4 text-foreground">
+            <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
+              <DollarSign size={18} className="text-emerald-400" /> Record Shipping Payment
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Order #{selectedQuoteForPayment.order_number} · Shipping Total:{' '}
+              <strong className="text-foreground">
+                {((selectedQuoteForPayment.shipping_amount || 0) + (selectedQuoteForPayment.customs_and_handling_fee || 0)).toLocaleString()} {selectedQuoteForPayment.currency}
+              </strong>
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Payment Reference / Code *</label>
+                <input
+                  type="text"
+                  value={adminPaymentRef}
+                  onChange={e => setAdminPaymentRef(e.target.value)}
+                  placeholder="e.g. CRDB-TXN-884920 or Swift Wire Ref..."
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Amount Paid</label>
+                <input
+                  type="number"
+                  value={adminPaymentAmount}
+                  onChange={e => setAdminPaymentAmount(e.target.value)}
+                  placeholder="e.g. 185"
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-mono font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-3 border-t border-foreground/10">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="px-4 py-2 rounded-xl border border-foreground/15 text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRecordPayment}
+                className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase rounded-xl transition-all"
+              >
+                Confirm Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DISPATCH SHIPMENT & REGISTER TRACKING */}
+      {showDispatchModal && selectedQuoteForDispatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-md bg-card border border-foreground/20 rounded-3xl p-6 space-y-4 text-foreground">
+            <div className="flex justify-between items-center border-b border-foreground/10 pb-3">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
+                  <Truck size={18} className="text-emerald-400" /> Dispatch Order Shipment
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Order #{selectedQuoteForDispatch.order_number} · Agent Approval Verified
+                </p>
+              </div>
+              <button onClick={() => setShowDispatchModal(false)} className="p-1 rounded-full hover:bg-foreground/10">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Courier / Forwarder Name *</label>
+                <input
+                  type="text"
+                  value={dispatchCourierName}
+                  onChange={e => setDispatchCourierName(e.target.value)}
+                  placeholder="e.g. DHL Express, FedEx, Air Cargo Global..."
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Tracking Number *</label>
+                <input
+                  type="text"
+                  value={dispatchTrackingNumber}
+                  onChange={e => setDispatchTrackingNumber(e.target.value)}
+                  placeholder="e.g. 9482710492"
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Tracking URL (Optional)</label>
+                <input
+                  type="url"
+                  value={dispatchTrackingUrl}
+                  onChange={e => setDispatchTrackingUrl(e.target.value)}
+                  placeholder="https://www.dhl.com/en/express/tracking.html?AWB=..."
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Dispatch Date</label>
+                  <input
+                    type="date"
+                    value={dispatchDate}
+                    onChange={e => setDispatchDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Estimated Delivery Date</label>
+                  <input
+                    type="date"
+                    value={dispatchEstimatedDelivery}
+                    onChange={e => setDispatchEstimatedDelivery(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-3 border-t border-foreground/10">
+              <button
+                onClick={() => setShowDispatchModal(false)}
+                className="px-4 py-2 rounded-xl border border-foreground/15 text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDispatchShipment}
+                disabled={isDispatching}
+                className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase rounded-xl transition-all disabled:opacity-50"
+              >
+                {isDispatching ? 'Registering...' : 'Confirm Dispatch'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: AUDIT TRAIL LOGS */}
+      {showAuditModal && selectedQuoteForAudit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-lg bg-card border border-foreground/20 rounded-3xl p-6 space-y-4 text-foreground max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-foreground/10 pb-3">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
+                  <History size={18} className="text-primary" /> Shipping Quotation Audit Trail
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Order #{selectedQuoteForAudit.order_number} · Quote ID: {selectedQuoteForAudit.id}
+                </p>
+              </div>
+              <button onClick={() => setShowAuditModal(false)} className="p-1 rounded-full hover:bg-foreground/10">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {auditLogs.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic py-4 text-center">No audit records found.</p>
+              ) : (
+                auditLogs.map((log, i) => (
+                  <div key={i} className="p-3 bg-foreground/5 rounded-xl border border-foreground/10 text-xs space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-primary font-mono">{log.action}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {log.created_at ? new Date(log.created_at).toLocaleString() : 'Recent'}
+                      </span>
+                    </div>
+                    {log.details && (
+                      <pre className="text-[10px] bg-background/50 p-2 rounded-lg text-muted-foreground overflow-x-auto font-mono">
+                        {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-foreground/10">
+              <button
+                onClick={() => setShowAuditModal(false)}
+                className="px-4 py-2 rounded-xl bg-foreground/10 text-xs font-bold"
+              >
+                Close
               </button>
             </div>
           </div>
