@@ -497,6 +497,10 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         proposed_territory_details: 'Coast Province',
         preferred_business_model: 'Wholesale Reseller',
         requested_categories: ['T-Shirt', 'Caps'],
+        preferred_language: 'en',
+        business_type: 'Retail Store',
+        years_of_experience: '1-3 years',
+        preferred_sales_channels: ['Retail Storefront'],
         terms_accepted: true,
         privacy_accepted: true,
       });
