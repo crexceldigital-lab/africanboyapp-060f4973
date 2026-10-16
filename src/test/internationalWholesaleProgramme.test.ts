@@ -437,7 +437,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
       });
 
       expect(offer.id).toBeDefined();
-      expect(offer.offerReference).toMatch(/^AB-OFFER-/);
+      expect(offer.offerReference).toMatch(/^ABO-2026-/);
       expect(offer.status).toBe('Draft');
 
       const retrieved = await wholesaleProgramService.getOfferByApplicationId('app-ke-001');
