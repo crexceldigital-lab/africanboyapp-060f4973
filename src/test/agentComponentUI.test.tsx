@@ -212,11 +212,16 @@ describe('AFRICAN BOY GLOBAL AGENT PROGRAM - UI & Component Tests', () => {
       vi.spyOn(agentService, 'getAllAgentProfiles').mockResolvedValue([]);
       vi.spyOn(agentService, 'getAllReplenishmentOrders').mockResolvedValue([]);
       vi.spyOn(agentService, 'getReportsSummary').mockResolvedValue({
-        total_applications: 1,
-        pending_review: 1,
-        active_agents: 0,
-        total_wholesale_revenue: 0,
-        top_markets: [],
+        totalApplications: 1,
+        applicationsByStatus: { Draft: 0, Submitted: 1, 'Under Review': 0, 'More Information Required': 0, Approved: 0, Rejected: 0, Withdrawn: 0 },
+        approvedAgentsByCountry: {},
+        approvedAgentsByCategory: {},
+        agentsByBusinessModel: { 'Wholesale Reseller': 0, 'Commission-Based Agent': 0, 'Country Distributor': 0, 'Premium Market Agent': 0 },
+        totalReplenishmentOrders: 0,
+        replenishmentOrderValue: 0,
+        totalCommissionsEarned: 0,
+        estimatedGrossMargin: 0,
+        outstandingBalance: 0,
       });
       vi.spyOn(agentService, 'updateApplicationStatus').mockResolvedValue(true);
     });

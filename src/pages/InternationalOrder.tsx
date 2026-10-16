@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Globe, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { formatMoney, formatTsh, IntlRequest, statusLabel, tokenFor } from '@/lib/internationalOrders';
 
 export default function InternationalOrder() {
@@ -25,8 +25,8 @@ export default function InternationalOrder() {
     setBusy(true);
     const { error } = await (supabase as any).rpc('respond_international_quote', { p_reference: ref, p_token: token || null, p_accept: accept });
     setBusy(false);
-    if (error) { toast({ title: 'Could not update', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: accept ? 'Order confirmed' : 'Quote declined', description: accept ? 'Our team will send you payment instructions.' : undefined });
+    if (error) { toast.error('Could not update', { description: error.message }); return; }
+    toast.success(accept ? 'Order confirmed' : 'Quote declined', { description: accept ? 'Our team will send you payment instructions.' : undefined });
     load();
   };
 

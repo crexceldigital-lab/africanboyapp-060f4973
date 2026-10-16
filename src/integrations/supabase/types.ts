@@ -14,6 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_applications: {
+        Row: {
+          admin_feedback_to_applicant: string | null
+          application_reference: string
+          business_address: string | null
+          business_name: string | null
+          business_registration_number: string | null
+          business_type: string | null
+          city: string
+          country_code: string
+          country_name: string
+          created_at: string
+          email: string
+          estimated_initial_investment: string | null
+          expected_monthly_sales: string | null
+          full_name: string
+          id: string
+          internal_notes: string | null
+          marketing_activities: string | null
+          motivation: string | null
+          phone_number: string
+          preferred_business_model: string | null
+          preferred_language: string | null
+          preferred_sales_channels: Json | null
+          previous_experience_details: string | null
+          privacy_accepted: boolean
+          proposed_territory_details: string | null
+          requested_categories: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          terms_accepted: boolean
+          updated_at: string
+          user_id: string | null
+          website_or_social: string | null
+          years_of_experience: string | null
+        }
+        Insert: {
+          admin_feedback_to_applicant?: string | null
+          application_reference: string
+          business_address?: string | null
+          business_name?: string | null
+          business_registration_number?: string | null
+          business_type?: string | null
+          city: string
+          country_code: string
+          country_name: string
+          created_at?: string
+          email: string
+          estimated_initial_investment?: string | null
+          expected_monthly_sales?: string | null
+          full_name: string
+          id?: string
+          internal_notes?: string | null
+          marketing_activities?: string | null
+          motivation?: string | null
+          phone_number: string
+          preferred_business_model?: string | null
+          preferred_language?: string | null
+          preferred_sales_channels?: Json | null
+          previous_experience_details?: string | null
+          privacy_accepted?: boolean
+          proposed_territory_details?: string | null
+          requested_categories?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          terms_accepted?: boolean
+          updated_at?: string
+          user_id?: string | null
+          website_or_social?: string | null
+          years_of_experience?: string | null
+        }
+        Update: {
+          admin_feedback_to_applicant?: string | null
+          application_reference?: string
+          business_address?: string | null
+          business_name?: string | null
+          business_registration_number?: string | null
+          business_type?: string | null
+          city?: string
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          email?: string
+          estimated_initial_investment?: string | null
+          expected_monthly_sales?: string | null
+          full_name?: string
+          id?: string
+          internal_notes?: string | null
+          marketing_activities?: string | null
+          motivation?: string | null
+          phone_number?: string
+          preferred_business_model?: string | null
+          preferred_language?: string | null
+          preferred_sales_channels?: Json | null
+          previous_experience_details?: string | null
+          privacy_accepted?: boolean
+          proposed_territory_details?: string | null
+          requested_categories?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          terms_accepted?: boolean
+          updated_at?: string
+          user_id?: string | null
+          website_or_social?: string | null
+          years_of_experience?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           is_public: boolean

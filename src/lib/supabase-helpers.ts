@@ -51,14 +51,13 @@ export function castProducts(data: any[]): Product[] {
     const stock = parseRecord(p.stock);
 
     if (isTShirt) {
-      const stockQty = Number(p.stock_quantity) || 0;
-      const defaultStockPerSize = stockQty > 0 ? Math.ceil(stockQty / TSHIRT_SIZES.length) : 0;
+      // T-shirts use the standard size run, but stock must reflect what is
+      // actually stored — never invent quantities for sizes that were never stocked.
       TSHIRT_SIZES.forEach((sz) => {
         if (stock[sz] === undefined) {
-          stock[sz] = defaultStockPerSize;
+          stock[sz] = 0;
         }
       });
-      // Delete old removed sizes if present (e.g., 'S')
       Object.keys(stock).forEach((key) => {
         if (!TSHIRT_SIZES.includes(key)) {
           delete stock[key];

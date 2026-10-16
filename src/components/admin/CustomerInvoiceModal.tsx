@@ -67,8 +67,8 @@ export default function CustomerInvoiceModal({
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [notes, setNotes] = useState('');
 
-  // Fetch dynamic invoice_settings from database
-  const fetchInvoiceSettings = async () => {
+  // Fetch dynamic invoice_settings from database; returns the loaded settings
+  const fetchInvoiceSettings = async (): Promise<InvoiceSettings> => {
     const storeId = order?.store_id || 1;
     try {
       const { data, error } = await (supabase as any)
@@ -90,31 +90,40 @@ export default function CustomerInvoiceModal({
         if (loaded.default_currency && !order?.currency) {
           setCurrency(loaded.default_currency);
         }
-      } else {
-        setInvoiceSettings(DEFAULT_INVOICE_SETTINGS);
-        if (!notes) {
-          setNotes(DEFAULT_INVOICE_SETTINGS.invoice_notes || '');
-        }
+        return loaded;
+      }
+      setInvoiceSettings(DEFAULT_INVOICE_SETTINGS);
+      if (!notes) {
+        setNotes(DEFAULT_INVOICE_SETTINGS.invoice_notes || '');
       }
     } catch (err) {
       console.warn('Failed to load invoice_settings for invoice rendering:', err);
       setInvoiceSettings(DEFAULT_INVOICE_SETTINGS);
     }
+    return DEFAULT_INVOICE_SETTINGS;
   };
 
   useEffect(() => {
     if (isOpen) {
       setIsEditMode(initialEditMode);
-      fetchInvoiceSettings();
 
-      const prefix = invoiceSettings.invoice_prefix || 'AFB-INV';
-      setInvoiceNumber(generateInvoiceNumber(prefix));
+      const initialise = async () => {
+        const settings = await fetchInvoiceSettings();
 
-      const now = new Date();
-      const dueDays = invoiceSettings.due_days || 14;
-      const calcDueDate = new Date(now.getTime() + dueDays * 24 * 60 * 60 * 1000);
-      setIssueDate(now.toISOString().slice(0, 10));
-      setDueDate(calcDueDate.toISOString().slice(0, 10));
+        const prefix = settings.invoice_prefix || 'AFB-INV';
+        setInvoiceNumber(generateInvoiceNumber(prefix));
+
+        const now = new Date();
+        const dueDays = settings.due_days || 14;
+        const calcDueDate = new Date(now.getTime() + dueDays * 24 * 60 * 60 * 1000);
+        setIssueDate(now.toISOString().slice(0, 10));
+        setDueDate(calcDueDate.toISOString().slice(0, 10));
+
+        if (order && !order.currency && settings.default_currency) {
+          setCurrency(settings.default_currency);
+        }
+      };
+      initialise();
 
       if (customer) {
         setCustomerName(customer.full_name || 'Valued Customer');
@@ -127,7 +136,7 @@ export default function CustomerInvoiceModal({
         setCustomerEmail(order.customer_email || customer?.email || '');
         setCustomerPhone(order.customer_phone || customer?.phone_number || '');
         setDeliveryAddress(order.delivery_zone || '');
-        setCurrency(order.currency || invoiceSettings.default_currency || 'TZS');
+        setCurrency(order.currency || 'TZS');
         setDeliveryFee(Number(order.delivery_fee) || 0);
         setDiscountAmount(Number(order.discount_amount) || 0);
         setPaymentStatus(

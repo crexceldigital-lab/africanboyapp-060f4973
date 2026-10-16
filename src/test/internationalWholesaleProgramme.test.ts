@@ -1,4 +1,23 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock the backend client so application inserts succeed in tests
+vi.mock('@/integrations/supabase/client', () => {
+  const chain: any = {
+    insert: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+  return {
+    supabase: {
+      from: vi.fn(() => chain),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'not available in tests' } }),
+    },
+  };
+});
+
 import {
   wholesaleProgramService,
   DEFAULT_PARTNERSHIP_LEVELS,
@@ -27,7 +46,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         cost_price: 18000, // Confidential cost price - MUST NOT BE LEAKED TO AGENTS
         category: 'T-Shirt',
         stock_quantity: 400,
-        is_active: true,
+        status: 'active',
         image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
         sku: 'AFB-TSHIRT-BLK-01',
         sizes: ['M', 'L', 'XL', 'XXL'],
@@ -43,7 +62,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         cost_price: 12000, // Confidential cost price
         category: 'Caps',
         stock_quantity: 250,
-        is_active: true,
+        status: 'active',
         image_url: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400',
         sku: 'AFB-CAP-GLD-01',
         sizes: ['FREE SIZE'],
@@ -59,7 +78,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         cost_price: 6000,
         category: 'Socks',
         stock_quantity: 150,
-        is_active: true,
+        status: 'active',
         image_url: 'https://images.unsplash.com/photo-1582966772680-860e372bb558?w=400',
         sku: 'AFB-SOCK-01',
         sizes: ['Standard'],
@@ -332,7 +351,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
 
       expect(quotationExWorks.confirmedShippingRate).toBeNull();
       expect(quotationExWorks.grandTotalConverted).toBe(quotationExWorks.merchandiseSubtotalConverted);
-      expect(quotationExWorks.shippingExcludedDisclaimer).toContain('EX-WORKS');
+      expect(quotationExWorks.shippingDisclaimer).toContain('EX-WORKS');
 
       // 2. With confirmed rate
       const quotationWithShipping = wholesaleProgramService.calculateQuotation(
@@ -377,7 +396,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
   // ============================================================================
   describe('4. Admin Application Review & Commercial Offers', () => {
     it('creates, saves, and retrieves persistent commercial offers for an application', async () => {
-      const offer = await wholesaleProgramService.createCommercialOffer({
+      const offer = await wholesaleProgramService.saveOffer({
         applicationId: 'app-ke-001',
         applicantName: 'Amina Odhiambo',
         businessName: 'Nairobi Luxury Collective',
@@ -418,7 +437,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
       });
 
       expect(offer.id).toBeDefined();
-      expect(offer.offerReference).toMatch(/^AB-OFFER-/);
+      expect(offer.offerReference).toMatch(/^ABO-2026-/);
       expect(offer.status).toBe('Draft');
 
       const retrieved = await wholesaleProgramService.getOfferByApplicationId('app-ke-001');
@@ -429,7 +448,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
     });
 
     it('supports recording applicant acceptance with signatory details', async () => {
-      const offer = await wholesaleProgramService.createCommercialOffer({
+      const offer = await wholesaleProgramService.saveOffer({
         applicationId: 'app-ug-002',
         applicantName: 'David Mukasa',
         businessName: 'Kampala Trends Ltd',
@@ -460,7 +479,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
 
       expect(acceptRes.success).toBe(true);
 
-      const updatedOffer = await wholesaleProgramService.getOfferById(offer.id);
+      const updatedOffer = await wholesaleProgramService.getOfferByApplicationId(offer.applicationId);
       expect(updatedOffer?.status).toBe('Accepted');
       expect(updatedOffer?.acceptedBySignature).toBe('David Mukasa (Managing Director)');
       expect(updatedOffer?.acceptedAt).toBeDefined();
@@ -475,18 +494,23 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         country_code: 'KE',
         country_name: 'Kenya',
         city: 'Mombasa',
-        proposed_territory: 'Coast Province',
-        business_model: 'Wholesale Reseller',
-        primary_interest: 'T-Shirts & Caps',
-        preferred_currency: 'USD',
-        categories_of_interest: ['T-Shirt', 'Caps'],
+        proposed_territory_details: 'Coast Province',
+        preferred_business_model: 'Wholesale Reseller',
+        requested_categories: ['T-Shirt', 'Caps'],
+        preferred_language: 'en',
+        business_type: 'Retail Store',
+        years_of_experience: '1-3 years',
+        preferred_sales_channels: ['Retail Storefront'],
+        terms_accepted: true,
+        privacy_accepted: true,
       });
 
       expect(appRes.success).toBe(true);
-      const appId = appRes.application!.id;
+      const submittedApps = await agentService.getApplications();
+      const appId = submittedApps.find(a => a.application_reference === appRes.applicationReference)!.id;
 
       // Step 2: Generate Commercial Offer (Draft)
-      const offer = await wholesaleProgramService.createCommercialOffer({
+      const offer = await wholesaleProgramService.saveOffer({
         applicationId: appId,
         applicantName: 'Grace Mutua',
         businessName: 'Mombasa Coastal Boutique',
@@ -513,7 +537,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
 
       // Step 3: Record Acceptance
       await wholesaleProgramService.recordOfferAcceptance(offer.id, 'Grace Mutua (Owner)');
-      const acceptedOffer = await wholesaleProgramService.getOfferById(offer.id);
+      const acceptedOffer = await wholesaleProgramService.getOfferByApplicationId(offer.applicationId);
       expect(acceptedOffer?.status).toBe('Accepted');
 
       // Step 4: Approve and Activate Agent Profile
@@ -534,7 +558,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
       expect(approveRes.agentProfile?.status).toBe('active');
 
       // Verify offer is activated and linked to the new agent profile
-      const activatedOffer = await wholesaleProgramService.getOfferById(offer.id);
+      const activatedOffer = await wholesaleProgramService.getOfferByApplicationId(offer.applicationId);
       expect(activatedOffer?.status).toBe('Activated');
       expect(activatedOffer?.agentId).toBe(approveRes.agentProfile?.id);
     });
