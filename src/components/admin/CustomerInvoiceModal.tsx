@@ -118,6 +118,10 @@ export default function CustomerInvoiceModal({
         const calcDueDate = new Date(now.getTime() + dueDays * 24 * 60 * 60 * 1000);
         setIssueDate(now.toISOString().slice(0, 10));
         setDueDate(calcDueDate.toISOString().slice(0, 10));
+
+        if (order && !order.currency && settings.default_currency) {
+          setCurrency(settings.default_currency);
+        }
       };
       initialise();
 
@@ -132,7 +136,7 @@ export default function CustomerInvoiceModal({
         setCustomerEmail(order.customer_email || customer?.email || '');
         setCustomerPhone(order.customer_phone || customer?.phone_number || '');
         setDeliveryAddress(order.delivery_zone || '');
-        setCurrency(order.currency || invoiceSettings.default_currency || 'TZS');
+        setCurrency(order.currency || 'TZS');
         setDeliveryFee(Number(order.delivery_fee) || 0);
         setDiscountAmount(Number(order.discount_amount) || 0);
         setPaymentStatus(
