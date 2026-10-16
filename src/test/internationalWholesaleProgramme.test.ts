@@ -8,7 +8,7 @@ vi.mock('@/integrations/supabase/client', () => {
     update: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'db-uuid-1' }, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
   };
   return {
     supabase: {
