@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Order, OrderItem, Product, ProductColor } from '@/types';
-import { TSHIRT_SIZES, isTShirtCategory } from '@/constants';
 
 /**
  * Typed helper to query tables that are not yet in the generated Supabase

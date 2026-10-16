@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { useCart } from '../context/CartContext';
 import { useCountry } from '../context/CountryContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { formatSizeDisplay } from '../constants';
 import { trackEvent } from '@/lib/analytics';
 import {
