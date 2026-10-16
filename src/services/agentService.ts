@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
 import type {
   AgentApplication,
+  AgentApplicationMessage,
   AgentApplicationStatus,
   AgentBusinessModel,
   AgentProfile,
