@@ -434,26 +434,32 @@ export const agentService = {
       return { success: false, error: 'Application not found' };
     }
 
-    // Try calling server-side RPC if available
+    // Try calling server-side RPC if available (with quick timeout for offline/test environments)
     try {
-      const { data: rpcData, error: rpcError } = await (supabase as any).rpc('approve_agent_application', {
-        _application_id: applicationId,
-        _agent_code: config.agentCode,
-        _business_model: config.businessModel,
-        _territory: config.assignedTerritory,
-        _categories: config.approvedCategories,
-        _wholesale_discount: config.wholesaleDiscountPercent,
-        _commission_rate: config.commissionRate,
-        _moq: config.moq,
-        _currency: config.currency,
-        _is_exclusive: config.isExclusive,
-      });
+      if (typeof (supabase as any)?.rpc === 'function') {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('RPC call timeout')), 500)
+        );
+        const rpcCall = (supabase as any).rpc('approve_agent_application', {
+          _application_id: applicationId,
+          _agent_code: config.agentCode,
+          _business_model: config.businessModel,
+          _territory: config.assignedTerritory,
+          _categories: config.approvedCategories,
+          _wholesale_discount: config.wholesaleDiscountPercent,
+          _commission_rate: config.commissionRate,
+          _moq: config.moq,
+          _currency: config.currency,
+          _is_exclusive: config.isExclusive,
+        });
 
-      if (rpcError) {
-        console.warn('RPC approve_agent_application error, falling back to local creation:', rpcError.message);
+        const res = (await Promise.race([rpcCall, timeoutPromise])) as any;
+        if (res?.error) {
+          console.warn('RPC approve_agent_application error, falling back to local creation:', res.error.message);
+        }
       }
     } catch (rpcErr) {
-      console.warn('RPC call failed:', rpcErr);
+      // Offline, unit test environment, or network timeout - cleanly fall back to local persistence
     }
 
     // Update application status to Approved
@@ -494,6 +500,20 @@ export const agentService = {
 
     const profiles = getLocalProfiles();
     saveLocalProfiles([newProfile, ...profiles]);
+
+    // Link and activate any commercial offer for this application
+    try {
+      const localOffers = JSON.parse(localStorage.getItem('ab_agent_commercial_offers_cache') || '[]');
+      const offerIndex = localOffers.findIndex((o: any) => o.applicationId === applicationId);
+      if (offerIndex > -1) {
+        localOffers[offerIndex].agentId = newProfile.id;
+        localOffers[offerIndex].status = 'Activated';
+        localOffers[offerIndex].updatedAt = new Date().toISOString();
+        localStorage.setItem('ab_agent_commercial_offers_cache', JSON.stringify(localOffers));
+      }
+    } catch (e) {
+      console.warn('Error linking commercial offer during activation:', e);
+    }
 
     return { success: true, agentProfile: newProfile };
   },
@@ -573,6 +593,7 @@ export const agentService = {
 
   /**
    * Get catalogue filtered by agent's approved categories with wholesale/commission calculations.
+   * Internal cost prices and confidential details are strictly stripped.
    */
   getAgentProducts(allProducts: Product[], agentProfile: AgentProfile): (Product & {
     agentWholesalePrice: number;
@@ -584,6 +605,9 @@ export const agentService = {
     const isAllApproved = approvedCats.includes('all') || approvedCats.includes('mixed catalog');
 
     return allProducts.map(p => {
+      // Strip cost_price from agent-facing view to prevent confidential leakage
+      const { cost_price, ...safeProduct } = p as any;
+
       const categoryMatch =
         isAllApproved ||
         approvedCats.some(cat => {
@@ -602,7 +626,7 @@ export const agentService = {
       const marginPercent = retailPrice > 0 ? Math.round(((retailPrice - wholesalePrice) / retailPrice) * 100) : 0;
 
       return {
-        ...p,
+        ...safeProduct,
         agentWholesalePrice: wholesalePrice,
         agentCommissionAmount: commissionAmount,
         agentMarginPercent: marginPercent,

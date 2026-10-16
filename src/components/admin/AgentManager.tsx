@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Globe, Briefcase, CheckCircle2, XCircle, Clock, AlertCircle,
   Search, Filter, ChevronRight, Eye, Check, X, Shield, Plus,
-  Download, Edit2, FileText, Send, UserCheck, RefreshCw, Layers
+  Download, Edit2, FileText, Send, UserCheck, RefreshCw, Layers,
+  ExternalLink, Save
 } from 'lucide-react';
 import { agentService } from '@/services/agentService';
 import { INTERNATIONAL_COUNTRIES } from '@/data/internationalCountries';
@@ -17,9 +18,11 @@ import type {
   AgentReplenishmentOrder,
   AgentReportSummary
 } from '@/types';
+import WholesaleProgramSettingsTab from './WholesaleProgramSettingsTab';
+import WholesaleQuotationBuilder from './WholesaleQuotationBuilder';
 
 export default function AgentManager() {
-  const [activeSubTab, setActiveSubTab] = useState<'applications' | 'agents' | 'orders' | 'reports'>('applications');
+  const [activeSubTab, setActiveSubTab] = useState<'applications' | 'agents' | 'orders' | 'wholesale' | 'reports'>('applications');
   const [loading, setLoading] = useState(true);
 
   // Applications State
@@ -86,6 +89,16 @@ export default function AgentManager() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedApp && !showApprovalModal && !showMoreInfoModal && !showRejectModal) {
+        setSelectedApp(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedApp, showApprovalModal, showMoreInfoModal, showRejectModal]);
 
   // Filtered Applications
   const filteredApplications = applications.filter(app => {
@@ -274,6 +287,7 @@ export default function AgentManager() {
           { id: 'applications', label: `Applications (${applications.length})` },
           { id: 'agents', label: `Active Agents (${agents.length})` },
           { id: 'orders', label: `Replenishment Orders (${orders.length})` },
+          { id: 'wholesale', label: 'Wholesale Program & Tiers' },
           { id: 'reports', label: 'Reports & Analytics' },
         ].map(tab => (
           <button
@@ -563,7 +577,12 @@ export default function AgentManager() {
         </div>
       )}
 
-      {/* SUBTAB 4: REPORTS & ANALYTICS */}
+      {/* SUBTAB 4: WHOLESALE PROGRAMME & TIERS */}
+      {activeSubTab === 'wholesale' && (
+        <WholesaleProgramSettingsTab onSettingsUpdated={() => loadData()} />
+      )}
+
+      {/* SUBTAB 5: REPORTS & ANALYTICS */}
       {activeSubTab === 'reports' && reports && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -629,124 +648,272 @@ export default function AgentManager() {
 
       {/* APPLICATION DETAILS MODAL */}
       {selectedApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-          <div className="w-full max-w-3xl bg-card border border-foreground/20 rounded-3xl p-6 sm:p-8 space-y-6 my-auto max-h-[92vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between border-b border-foreground/10 pb-4">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="review-modal-title"
+        >
+          <div className="w-[calc(100%-32px)] max-w-[900px] max-h-[calc(100dvh-40px)] flex flex-col bg-[#141416] border border-white/10 rounded-[20px] shadow-2xl overflow-hidden text-foreground">
+            {/* Header */}
+            <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-white/10 flex items-start justify-between gap-4 flex-shrink-0 bg-zinc-950/60">
+              <div className="min-w-0 pr-2">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-primary block mb-1">
                   APPLICATION REVIEW · {selectedApp.application_reference}
                 </span>
-                <h3 className="text-xl font-black uppercase tracking-tight text-foreground">
-                  {selectedApp.full_name} {selectedApp.business_name ? `(${selectedApp.business_name})` : ''}
-                </h3>
+                <h2 id="review-modal-title" className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white break-words leading-tight">
+                  {selectedApp.full_name} {selectedApp.business_name ? <span className="text-white/60 font-semibold text-base sm:text-lg">({selectedApp.business_name})</span> : null}
+                </h2>
               </div>
-              <button onClick={() => setSelectedApp(null)} className="p-1 rounded-full hover:bg-foreground/10">
+              <button
+                onClick={() => setSelectedApp(null)}
+                aria-label="Close application review modal"
+                className="p-2 sm:p-2.5 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0 -mr-2 -mt-1 active:scale-95"
+              >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Applicant details grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs bg-foreground/5 p-4 rounded-2xl">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Email</span>
-                <span className="font-bold">{selectedApp.email}</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Phone</span>
-                <span className="font-bold">{selectedApp.phone_number}</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Country & City</span>
-                <span className="font-bold">{selectedApp.city}, {selectedApp.country_name}</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Model</span>
-                <span className="font-bold text-primary">{selectedApp.preferred_business_model}</span>
-              </div>
-            </div>
-
-            {/* Commercial Profile info */}
-            <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-3 bg-card border border-foreground/10 rounded-xl space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Business Structure</span>
-                  <p className="font-bold">{selectedApp.business_type} (Exp: {selectedApp.years_of_experience})</p>
-                  {selectedApp.website_or_social && (
-                    <p className="text-primary truncate">{selectedApp.website_or_social}</p>
-                  )}
+            {/* Scrollable Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+              {/* Applicant contact information grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-zinc-900/90 border border-white/5 [grid-template-columns:repeat(1,minmax(0,1fr))] sm:[grid-template-columns:repeat(2,minmax(0,1fr))] lg:[grid-template-columns:repeat(4,minmax(0,1fr))]">
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-white/50 block">Email</span>
+                  <span className="font-bold text-xs sm:text-sm text-white break-all block" title={selectedApp.email}>
+                    {selectedApp.email}
+                  </span>
                 </div>
 
-                <div className="p-3 bg-card border border-foreground/10 rounded-xl space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Requested Categories</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedApp.requested_categories.map(c => (
-                      <span key={c} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-[10px]">
-                        {c}
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-white/50 block">Phone</span>
+                  <span className="font-bold text-xs sm:text-sm text-white break-words block">
+                    {selectedApp.phone_number}
+                  </span>
+                </div>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-white/50 block">Country & City</span>
+                  <span className="font-bold text-xs sm:text-sm text-white break-words block">
+                    {selectedApp.city}, {selectedApp.country_name}
+                  </span>
+                </div>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-white/50 block">Business Model</span>
+                  <span className="font-black text-xs sm:text-sm text-primary break-words block">
+                    {selectedApp.preferred_business_model}
+                  </span>
+                </div>
+              </div>
+
+              {/* Business information and requested categories grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Left card: Business Structure */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-zinc-900/60 border border-white/10 flex flex-col justify-between space-y-3 min-w-0">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white/50">
+                        Business Structure
                       </span>
-                    ))}
+                      {selectedApp.business_registration_number && (
+                        <span className="text-[10px] text-white/40 font-mono">
+                          Reg: {selectedApp.business_registration_number}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-sm font-bold text-white block">
+                        {selectedApp.business_type}
+                      </span>
+                      <span className="text-xs text-white/70 block mt-0.5">
+                        Experience: <strong className="text-white">{selectedApp.years_of_experience}</strong>
+                      </span>
+                      {selectedApp.previous_experience_details && (
+                        <p className="text-xs text-white/60 mt-1 line-clamp-2 leading-relaxed">
+                          {selectedApp.previous_experience_details}
+                        </p>
+                      )}
+                      {selectedApp.business_address && (
+                        <span className="text-[11px] text-white/50 block mt-1">
+                          📍 {selectedApp.business_address}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {selectedApp.website_or_social ? (
+                    <div className="pt-2.5 border-t border-white/5">
+                      <span className="text-[10px] uppercase font-bold text-white/50 block mb-1">
+                        Website / Social Media
+                      </span>
+                      <a
+                        href={
+                          selectedApp.website_or_social.startsWith('http://') || selectedApp.website_or_social.startsWith('https://')
+                            ? selectedApp.website_or_social
+                            : `https://${selectedApp.website_or_social}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary font-bold hover:underline break-all inline-flex items-center gap-1 group"
+                      >
+                        <span>{selectedApp.website_or_social}</span>
+                        <ExternalLink size={12} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
+                      </a>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Right card: Requested Categories */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-zinc-900/60 border border-white/10 flex flex-col justify-between space-y-3 min-w-0">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white/50">
+                        Requested Categories
+                      </span>
+                      <span className="text-[10px] font-bold text-primary">
+                        {selectedApp.requested_categories?.length || 0} SELECTED
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      {selectedApp.requested_categories && selectedApp.requested_categories.length > 0 ? (
+                        selectedApp.requested_categories.map(c => (
+                          <span
+                            key={c}
+                            className="px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary font-bold text-[11px] tracking-wide inline-flex items-center"
+                          >
+                            {c}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-white/40 italic">No specific categories selected</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedApp.proposed_territory_details ? (
+                    <div className="pt-2.5 border-t border-white/5">
+                      <span className="text-[10px] uppercase font-bold text-white/50 block mb-0.5">
+                        Proposed Territory
+                      </span>
+                      <span className="text-xs text-white/80 font-medium block">
+                        {selectedApp.proposed_territory_details}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
+              {/* Applicant Motivation Card */}
               {selectedApp.motivation && (
-                <div className="p-3 bg-card border border-foreground/10 rounded-xl space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Applicant Motivation</span>
-                  <p className="text-muted-foreground leading-relaxed">{selectedApp.motivation}</p>
+                <div className="p-4 sm:p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-2 min-w-0">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/50 block">
+                    Applicant Motivation
+                  </span>
+                  <p className="text-xs sm:text-sm text-white/85 leading-relaxed whitespace-pre-line break-words">
+                    {selectedApp.motivation}
+                  </p>
                 </div>
               )}
+
+              {/* Internal Administrative Review Notes */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-3 min-w-0">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="internal-review-notes" className="text-[10px] font-black uppercase tracking-widest text-white/50 block">
+                    INTERNAL ADMINISTRATIVE REVIEW NOTES
+                  </label>
+                  <span className="text-[10px] text-white/40 italic">Confidential (Admin Only)</span>
+                </div>
+
+                <textarea
+                  id="internal-review-notes"
+                  rows={3}
+                  value={internalNotesText}
+                  onChange={e => setInternalNotesText(e.target.value)}
+                  placeholder="Add confidential vetting notes, background checks, or commercial agreements..."
+                  className="w-full min-h-[88px] p-3.5 bg-zinc-950 border border-white/10 rounded-xl text-xs sm:text-sm text-white placeholder:text-white/30 font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-y leading-relaxed break-words"
+                />
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveNotes}
+                    type="button"
+                    className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-xs font-bold text-white border border-white/10 transition-all flex items-center gap-2 shadow-sm"
+                  >
+                    <Save size={14} className="text-primary" />
+                    <span>SAVE NOTES</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Wholesale Commercial Offer & Quotation Builder */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-3 min-w-0">
+                <WholesaleQuotationBuilder
+                  application={selectedApp}
+                  onOfferSaved={() => {
+                    loadData();
+                  }}
+                  onActivateAgent={(config) => {
+                    setApprovalConfig(config);
+                    setShowApprovalModal(true);
+                  }}
+                />
+              </div>
             </div>
 
-            {/* Internal Review Notes editor */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                Internal Administrative Review Notes
-              </label>
-              <textarea
-                rows={2}
-                value={internalNotesText}
-                onChange={e => setInternalNotesText(e.target.value)}
-                placeholder="Add confidential vetting notes, background checks, or commercial agreements..."
-                className="w-full px-4 py-2.5 bg-background border border-foreground/15 rounded-xl text-xs font-medium outline-none focus:border-primary"
-              />
-              <button
-                onClick={handleSaveNotes}
-                className="px-4 py-1.5 rounded-lg bg-foreground/10 hover:bg-foreground/20 text-xs font-bold text-foreground transition-colors"
-              >
-                Save Notes
-              </button>
-            </div>
+            {/* Action Footer */}
+            <div className="px-6 py-4 sm:px-8 sm:py-5 border-t border-white/10 bg-zinc-950/90 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
+              <div className="flex items-center gap-2.5 justify-between sm:justify-start">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">Status:</span>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border ${
+                    selectedApp.status === 'Approved'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : selectedApp.status === 'Rejected'
+                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      : selectedApp.status === 'Under Review'
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      : 'bg-primary/10 text-primary border-primary/20'
+                  }`}>
+                    {selectedApp.status}
+                  </span>
+                </div>
 
-            {/* Action Buttons */}
-            <div className="border-t border-foreground/10 pt-4 flex flex-wrap gap-2 justify-end">
-              {selectedApp.status === 'Submitted' && (
+                {selectedApp.status === 'Submitted' && (
+                  <button
+                    onClick={handleSetUnderReview}
+                    className="px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-bold text-[11px] uppercase rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    Mark Under Review
+                  </button>
+                )}
+              </div>
+
+              {/* Action Buttons in exact requested order: 1. REQUEST MORE INFO, 2. REJECT APPLICATION, 3. APPROVE & CONFIGURE AGENT */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
                 <button
-                  onClick={handleSetUnderReview}
-                  className="px-4 py-2 bg-yellow-500/20 text-yellow-400 font-bold text-xs uppercase rounded-xl hover:bg-yellow-500/30"
+                  onClick={() => setShowMoreInfoModal(true)}
+                  className="h-11 sm:h-12 px-5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-300 border border-amber-500/30 font-black text-xs uppercase tracking-wider rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2"
                 >
-                  Mark Under Review
+                  <span>REQUEST MORE INFO</span>
                 </button>
-              )}
 
-              <button
-                onClick={() => setShowMoreInfoModal(true)}
-                className="px-4 py-2 bg-orange-500/20 text-orange-400 font-bold text-xs uppercase rounded-xl hover:bg-orange-500/30"
-              >
-                Request More Info
-              </button>
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  className="h-11 sm:h-12 px-5 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-400 border border-red-500/30 font-black text-xs uppercase tracking-wider rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2"
+                >
+                  <span>REJECT APPLICATION</span>
+                </button>
 
-              <button
-                onClick={() => setShowRejectModal(true)}
-                className="px-4 py-2 bg-red-500/20 text-red-400 font-bold text-xs uppercase rounded-xl hover:bg-red-500/30"
-              >
-                Reject Application
-              </button>
-
-              <button
-                onClick={() => setShowApprovalModal(true)}
-                className="px-6 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl hover:scale-105 transition-transform"
-              >
-                Approve & Configure Agent
-              </button>
+                <button
+                  onClick={() => setShowApprovalModal(true)}
+                  className="h-11 sm:h-12 px-6 sm:px-7 bg-primary hover:bg-primary/90 active:scale-95 text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-[0_0_25px_hsl(43,96%,49%,0.3)] transition-all whitespace-nowrap flex items-center justify-center gap-2"
+                >
+                  <span>APPROVE & CONFIGURE AGENT</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -788,8 +955,9 @@ export default function AgentManager() {
                     className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold"
                   >
                     <option value="Wholesale Reseller">Wholesale Reseller</option>
-                    <option value="Commission-Based Agent">Commission-Based Agent</option>
+                    <option value="Premium Market Agent">Premium Market Agent</option>
                     <option value="Country Distributor">Country Distributor</option>
+                    <option value="Commission-Based Agent">Commission-Based Agent</option>
                   </select>
                 </div>
               </div>

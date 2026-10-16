@@ -3,19 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, Package, ShoppingBag, TrendingUp, User, HelpCircle,
   Search, Filter, Plus, CheckCircle2, Clock, Truck, AlertCircle,
-  FileText, ShieldCheck, Download, ExternalLink, ArrowRight, X, Phone, Mail, Globe, Check
+  FileText, ShieldCheck, Download, ExternalLink, ArrowRight, X, Phone, Mail, Globe, Check,
+  Sparkles, DollarSign, Layers
 } from 'lucide-react';
 import { agentService } from '@/services/agentService';
+import { wholesaleProgramService, SHIPPING_TAXES_DISCLAIMER } from '@/services/wholesaleProgramService';
+import AgentWholesalePriceList from '@/components/agent/AgentWholesalePriceList';
+import AgentMarketingAssets from '@/components/agent/AgentMarketingAssets';
 import { useCountry } from '@/context/CountryContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { AgentProfile, AgentReplenishmentOrder, Product, OrderItem } from '@/types';
+import type { AgentProfile, AgentReplenishmentOrder, Product, OrderItem, WholesaleProgramSettings } from '@/types';
 import Login from './Login';
 
 export default function AgentDashboard() {
   const { user } = useCountry();
-  const [activeSection, setActiveSection] = useState<'overview' | 'catalogue' | 'replenishment' | 'performance' | 'profile' | 'support'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'catalogue' | 'pricelist' | 'replenishment' | 'assets' | 'performance' | 'profile' | 'support'>('overview');
   const [agentProfile, setAgentProfile] = useState<AgentProfile | null>(null);
+  const [wholesaleSettings, setWholesaleSettings] = useState<WholesaleProgramSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<AgentReplenishmentOrder[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -27,6 +32,7 @@ export default function AgentDashboard() {
   const [isOrdering, setIsOrdering] = useState(false);
   const [shippingAddress, setShippingAddress] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
+  const [confirmedShippingInput, setConfirmedShippingInput] = useState<string>('');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
   // Territory change request state
@@ -37,8 +43,12 @@ export default function AgentDashboard() {
     const loadAgentData = async () => {
       setLoading(true);
       try {
-        const profile = await agentService.getAgentProfile(user?.id);
+        const [profile, settings] = await Promise.all([
+          agentService.getAgentProfile(user?.id),
+          wholesaleProgramService.getSettings(),
+        ]);
         setAgentProfile(profile);
+        setWholesaleSettings(settings);
 
         if (profile) {
           const ords = await agentService.getAgentReplenishmentOrders(profile.id);
@@ -143,8 +153,14 @@ export default function AgentDashboard() {
     );
   }
 
-  // Catalogue calculations
-  const enrichedProducts = agentService.getAgentProducts(products, agentProfile);
+  // Catalogue calculations - Initial wholesale catalogue enabled categories (T-Shirts and Caps by default)
+  const enabledCategories = wholesaleSettings?.enabledCategories || ['T-Shirt', 'Caps'];
+  const wholesaleEligibleProducts = products.filter(p => {
+    const norm = wholesaleProgramService.normalizeCategory(p.category);
+    return enabledCategories.includes(norm);
+  });
+
+  const enrichedProducts = agentService.getAgentProducts(wholesaleEligibleProducts, agentProfile);
 
   const filteredCatalogue = enrichedProducts.filter(p => {
     const matchesSearch =
@@ -207,12 +223,31 @@ export default function AgentDashboard() {
     });
   };
 
-  const cartTotalQty = replenishmentCart.reduce((sum, i) => sum + i.quantity, 0);
-  const cartSubtotal = replenishmentCart.reduce((sum, i) => {
-    const discount = agentProfile.wholesale_discount_percent || 0;
-    const wholesalePrice = Math.round(i.product.price * (1 - discount / 100));
-    return sum + wholesalePrice * i.quantity;
-  }, 0);
+  // Wholesale Pricing Engine calculation for replenishment cart
+  const confirmedShippingRate = confirmedShippingInput.trim() ? Number(confirmedShippingInput) : null;
+
+  const cartQuotation = wholesaleProgramService.calculateQuotation(
+    replenishmentCart.map(i => ({
+      productId: i.product.id,
+      name: i.product.name,
+      sku: i.product.sku,
+      category: i.product.category,
+      quantity: i.quantity,
+      retailPrice: i.product.price,
+      size: i.selectedSize,
+      color: i.selectedColor,
+      imageUrl: i.product.image_url,
+    })),
+    {
+      targetCurrency: agentProfile.currency,
+      confirmedShippingRate: confirmedShippingRate,
+      settings: wholesaleSettings || undefined,
+      combineMixedQuantities: wholesaleSettings?.combineMixedQuantitiesForTiers,
+    }
+  );
+
+  const cartTotalQty = cartQuotation.totalUnits;
+  const cartSubtotal = cartQuotation.merchandiseSubtotalConverted;
 
   const handleCreateReplenishmentOrder = async () => {
     if (cartTotalQty < agentProfile.minimum_order_quantity) {
@@ -226,18 +261,17 @@ export default function AgentDashboard() {
 
     setIsSubmittingOrder(true);
     try {
-      const items: OrderItem[] = replenishmentCart.map(i => {
-        const discount = agentProfile.wholesale_discount_percent || 0;
-        const wholesalePrice = Math.round(i.product.price * (1 - discount / 100));
+      const items: OrderItem[] = cartQuotation.proposalItems.map(pItem => {
+        const orig = replenishmentCart.find(r => r.product.id === pItem.productId);
         return {
-          product_id: i.product.id,
-          name: i.product.name,
-          price: wholesalePrice,
-          quantity: i.quantity,
-          size: i.selectedSize,
-          color: i.selectedColor,
-          sku: i.product.sku || undefined,
-          image_url: i.product.image_url,
+          product_id: pItem.productId,
+          name: pItem.name,
+          price: pItem.unitPrice,
+          quantity: pItem.quantity,
+          size: pItem.size || orig?.selectedSize,
+          color: pItem.color || orig?.selectedColor,
+          sku: pItem.sku || undefined,
+          image_url: pItem.imageUrl || orig?.product.image_url,
         };
       });
 
@@ -252,6 +286,7 @@ export default function AgentDashboard() {
         toast.success(`Replenishment order #${res.order.order_number} submitted!`);
         setOrders(prev => [res.order!, ...prev]);
         setReplenishmentCart([]);
+        setConfirmedShippingInput('');
         setIsOrdering(false);
         setActiveSection('replenishment');
       } else {
@@ -305,8 +340,15 @@ export default function AgentDashboard() {
           </div>
         </div>
 
-        {/* Quick Replenishment CTA */}
-        <div className="flex items-center gap-3 relative z-10 w-full md:w-auto">
+        {/* Header CTAs */}
+        <div className="flex flex-wrap items-center gap-3 relative z-10 w-full md:w-auto">
+          <button
+            onClick={() => wholesaleProgramService.downloadAgentAgreementPdf(agentProfile)}
+            className="flex-1 md:flex-none px-4 py-3.5 bg-zinc-900 border border-white/20 hover:border-primary/50 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center justify-center gap-2"
+            title="Download Official Agreement & Commercial Offer (PDF)"
+          >
+            <Download size={15} className="text-primary" /> Agreement (PDF)
+          </button>
           <button
             onClick={() => setActiveSection('catalogue')}
             className="flex-1 md:flex-none px-6 py-3.5 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
@@ -321,9 +363,11 @@ export default function AgentDashboard() {
         {[
           { id: 'overview', label: 'Overview', icon: TrendingUp },
           { id: 'catalogue', label: 'Wholesale Catalogue', icon: ShoppingBag },
+          { id: 'pricelist', label: 'Price List & Tiers', icon: DollarSign },
           { id: 'replenishment', label: `Orders (${orders.length})`, icon: Package },
+          { id: 'assets', label: 'Marketing Assets', icon: Sparkles },
           { id: 'performance', label: 'Sales & Margin', icon: TrendingUp },
-          { id: 'profile', label: 'Profile & Territory', icon: User },
+          { id: 'profile', label: 'Profile & Agreement', icon: FileText },
           { id: 'support', label: 'Partner Support', icon: HelpCircle },
         ].map(tab => {
           const Icon = tab.icon;
@@ -463,10 +507,49 @@ export default function AgentDashboard() {
                         Paid: {Number(order.amount_paid).toLocaleString()} {order.currency}
                       </span>
                     </div>
+
+                    {/* Logistics snippet if tracked */}
+                    {(order.courier_name || order.tracking_number) && (
+                      <div className="w-full mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-white/60">
+                        <span className="flex items-center gap-1.5 text-primary">
+                          <Truck size={13} /> {order.courier_name || 'Courier'}: {order.tracking_number || 'Tracking Active'}
+                        </span>
+                        {order.estimated_delivery && (
+                          <span>Est: {order.estimated_delivery}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Quick Partner Tools Banner */}
+          <div className="p-6 rounded-3xl bg-zinc-950 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                <FileText size={20} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black uppercase text-white">Authorized Partner Commercial Document</h4>
+                <p className="text-xs text-white/50">Agreement Reference: {agentProfile.agreement_reference || 'Active'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => setActiveSection('assets')}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-white/15 hover:bg-white/5 text-xs font-bold uppercase tracking-wider text-white flex items-center justify-center gap-1.5"
+              >
+                <Sparkles size={14} className="text-primary" /> Marketing Assets
+              </button>
+              <button
+                onClick={() => wholesaleProgramService.downloadAgentAgreementPdf(agentProfile)}
+                className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 transition-transform flex items-center justify-center gap-1.5"
+              >
+                <Download size={14} /> Download PDF
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -618,6 +701,11 @@ export default function AgentDashboard() {
         </div>
       )}
 
+      {/* SECTION: WHOLESALE PRICE LIST */}
+      {activeSection === 'pricelist' && (
+        <AgentWholesalePriceList agentProfile={agentProfile} settings={wholesaleSettings} />
+      )}
+
       {/* SECTION: REPLENISHMENT ORDERS */}
       {activeSection === 'replenishment' && (
         <div className="space-y-6">
@@ -701,10 +789,51 @@ export default function AgentDashboard() {
                     <strong>Shipping Address:</strong> {order.shipping_address}
                   </p>
                 )}
+
+                {/* Logistics & Courier Tracking Information */}
+                {(order.courier_name || order.tracking_number) && (
+                  <div className="p-4 bg-zinc-900/90 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                        <Truck size={18} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-white">{order.courier_name || 'Designated Freight Forwarder'}</span>
+                          {order.tracking_number && (
+                            <span className="font-mono bg-white/10 px-2.5 py-0.5 rounded text-primary font-bold text-[11px]">
+                              {order.tracking_number}
+                            </span>
+                          )}
+                        </div>
+                        {order.estimated_delivery && (
+                          <span className="text-white/50 text-[11px] block mt-0.5">
+                            Estimated Delivery: {order.estimated_delivery}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {order.tracking_url && (
+                      <a
+                        href={order.tracking_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3.5 py-2 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+                      >
+                        <ExternalLink size={13} /> Track Courier
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {/* SECTION: MARKETING ASSETS */}
+      {activeSection === 'assets' && (
+        <AgentMarketingAssets agentProfile={agentProfile} settings={wholesaleSettings} />
       )}
 
       {/* SECTION: PERFORMANCE */}
@@ -798,6 +927,33 @@ export default function AgentDashboard() {
                 <p className="text-sm font-bold text-white">{agentProfile.minimum_order_quantity} units per replenishment</p>
               </div>
             </div>
+
+            {/* Official Agreement & Commercial Offer Document Block */}
+            <div className="p-6 rounded-2xl bg-zinc-900 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                  <FileText size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black uppercase text-white">Commercial Proposal & Partner Agreement</h4>
+                    <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-400 text-[10px] font-bold uppercase">
+                      Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/50 mt-0.5">
+                    Ref: {agentProfile.agreement_reference || `AGR-${agentProfile.agent_code}-2026`} · Signed Bilateral Commercial Terms
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => wholesaleProgramService.downloadAgentAgreementPdf(agentProfile)}
+                className="w-full sm:w-auto px-5 py-3 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-lg"
+              >
+                <Download size={15} /> Download Agreement (PDF)
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -871,60 +1027,143 @@ export default function AgentDashboard() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-bold text-white/70">Selected Units ({cartTotalQty}):</p>
-              <div className="max-h-48 overflow-y-auto space-y-2 pr-1 no-scrollbar">
-                {replenishmentCart.map((item, i) => (
-                  <div key={i} className="p-3 bg-zinc-900 rounded-xl flex items-center justify-between text-xs">
-                    <div>
-                      <p className="font-bold text-white">{item.product.name}</p>
-                      <p className="text-[11px] text-white/50">Size: {item.selectedSize} · Color: {item.selectedColor}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-white/70">Selected Merchandise Units ({cartTotalQty}):</p>
+                {cartTotalQty < agentProfile.minimum_order_quantity ? (
+                  <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                    Below MOQ ({cartTotalQty}/{agentProfile.minimum_order_quantity})
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/30">
+                    ✓ MOQ Met ({cartTotalQty} units)
+                  </span>
+                )}
+              </div>
+
+              <div className="max-h-56 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                {cartQuotation.proposalItems.map((pItem, i) => {
+                  const origItem = replenishmentCart.find(r => r.product.id === pItem.productId);
+                  return (
+                    <div key={i} className="p-3.5 bg-zinc-900 rounded-2xl border border-white/5 space-y-2 text-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-white truncate">{pItem.name}</p>
+                          <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-white/50">
+                            <span>Size: {origItem?.selectedSize || 'Standard'}</span>
+                            <span>·</span>
+                            <span>Color: {origItem?.selectedColor || 'Standard'}</span>
+                            {pItem.sku && (
+                              <>
+                                <span>·</span>
+                                <span className="font-mono">SKU: {pItem.sku}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => updateCartQty(i, -1)}
+                            className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition-colors"
+                          >
+                            -
+                          </button>
+                          <span className="font-bold w-6 text-center text-sm">{pItem.quantity}</span>
+                          <button
+                            onClick={() => updateCartQty(i, 1)}
+                            className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px]">
+                        <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
+                          {pItem.appliedTierLabel} · {pItem.unitPrice.toLocaleString()} {agentProfile.currency} / unit
+                        </span>
+                        <span className="font-mono font-black text-white text-xs">
+                          Line Total: {pItem.lineTotal.toLocaleString()} {agentProfile.currency}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => updateCartQty(i, -1)} className="w-6 h-6 rounded bg-white/10 font-bold">-</button>
-                      <span className="font-bold w-6 text-center">{item.quantity}</span>
-                      <button onClick={() => updateCartQty(i, 1)} className="w-6 h-6 rounded bg-white/10 font-bold">+</button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-1">
               <div className="space-y-1">
                 <label className="text-[11px] uppercase font-bold text-white/50">Delivery Address / Destination Hub *</label>
                 <input
                   type="text"
                   value={shippingAddress}
                   onChange={e => setShippingAddress(e.target.value)}
-                  placeholder="e.g. Kariakoo Storefront or Warehouse Destination..."
+                  placeholder="e.g. Kariakoo Storefront or Bonded Warehouse Destination..."
                   className="w-full px-4 py-3 bg-zinc-900 border border-white/15 rounded-xl text-xs text-white outline-none focus:border-primary"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] uppercase font-bold text-white/50">Special Instructions / Notes</label>
+                <label className="text-[11px] uppercase font-bold text-white/50">Special Instructions / Dispatch Notes</label>
                 <input
                   type="text"
                   value={orderNotes}
                   onChange={e => setOrderNotes(e.target.value)}
-                  placeholder="e.g. Deliver via standard coastal cargo freight..."
+                  placeholder="e.g. Export packing list and commercial invoice required..."
                   className="w-full px-4 py-3 bg-zinc-900 border border-white/15 rounded-xl text-xs text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] uppercase font-bold text-white/50">
+                    Confirmed International Freight Rate ({agentProfile.currency}) - Optional
+                  </label>
+                  <span className="text-[10px] text-white/40">Leave empty if EX-WORKS</span>
+                </div>
+                <input
+                  type="number"
+                  value={confirmedShippingInput}
+                  onChange={e => setConfirmedShippingInput(e.target.value)}
+                  placeholder="Enter confirmed shipping fee only if quoted by HQ..."
+                  className="w-full px-4 py-2.5 bg-zinc-900 border border-white/15 rounded-xl text-xs text-white outline-none focus:border-primary font-mono"
                 />
               </div>
             </div>
 
-            <div className="p-4 bg-zinc-900 rounded-2xl space-y-1 text-xs">
-              <div className="flex justify-between text-white/60">
-                <span>Wholesale Subtotal:</span>
-                <span>{cartSubtotal.toLocaleString()} {agentProfile.currency}</span>
+            {/* Commercial Subtotal & Shipping Disclaimer */}
+            <div className="p-4 bg-zinc-900 rounded-2xl space-y-2 text-xs border border-white/5">
+              <div className="flex justify-between text-white/70">
+                <span>Merchandise Subtotal ({cartTotalQty} units):</span>
+                <span className="font-mono font-bold text-white">
+                  {cartSubtotal.toLocaleString()} {agentProfile.currency}
+                </span>
               </div>
-              <div className="flex justify-between text-white/60">
-                <span>Freight / Cargo Handling:</span>
-                <span>35,000 {agentProfile.currency}</span>
+
+              <div className="flex justify-between items-center text-white/70">
+                <span>International Shipping & Freight:</span>
+                {confirmedShippingRate ? (
+                  <span className="font-mono font-bold text-green-400">
+                    +{confirmedShippingRate.toLocaleString()} {agentProfile.currency}
+                  </span>
+                ) : (
+                  <span className="font-bold text-amber-400 text-[11px]">
+                    EXCLUDED (EX-WORKS)
+                  </span>
+                )}
               </div>
-              <div className="flex justify-between text-sm font-black text-primary pt-2 border-t border-white/10">
-                <span>Total Amount:</span>
-                <span>{(cartSubtotal + 35000).toLocaleString()} {agentProfile.currency}</span>
+
+              {/* Explicit shipping notice */}
+              <div className="p-2.5 rounded-xl bg-black/60 border border-white/5 text-[10px] text-white/60 leading-relaxed">
+                ℹ <strong>Shipping & Import Policy:</strong> International shipping charges, import tariffs, customs duties, and local taxes are strictly excluded unless confirmed in writing. Never calculated without confirmed rate.
+              </div>
+
+              <div className="flex justify-between text-base font-black text-primary pt-2 border-t border-white/10">
+                <span>Grand Total:</span>
+                <span className="font-mono">
+                  {cartQuotation.grandTotalConverted.toLocaleString()} {agentProfile.currency}
+                </span>
               </div>
             </div>
 

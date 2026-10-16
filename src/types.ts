@@ -441,8 +441,9 @@ export type AgentApplicationStatus =
 
 export type AgentBusinessModel =
   | 'Wholesale Reseller'
-  | 'Commission-Based Agent'
-  | 'Country Distributor';
+  | 'Premium Market Agent'
+  | 'Country Distributor'
+  | 'Commission-Based Agent';
 
 export interface AgentApplication {
   id: string;
@@ -557,6 +558,10 @@ export interface AgentReplenishmentOrder {
   payment_method?: string | null;
   payment_reference?: string | null;
   notes?: string | null;
+  courier_name?: string | null;
+  tracking_number?: string | null;
+  tracking_url?: string | null;
+  estimated_delivery?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -583,4 +588,93 @@ export interface AgentReportSummary {
   estimatedGrossMargin: number;
   outstandingBalance: number;
 }
+
+// ==============================================================================
+// WHOLESALE PROGRAMME TYPES
+// ==============================================================================
+
+export interface WholesalePartnershipLevelConfig {
+  id: string;
+  name: AgentBusinessModel;
+  tagline: string;
+  defaultMoq: number;
+  defaultWholesaleDiscountPercent: number;
+  supportedCurrencies: string[];
+  defaultCurrency: string;
+  eligibilityRules: string[];
+  benefits: string[];
+  exclusivityAllowed: boolean;
+  defaultExclusivityTerms?: string;
+}
+
+export interface WholesalePricingTier {
+  id: string;
+  category: string;
+  label: string;
+  minQuantity: number;
+  maxQuantity: number | null;
+  unitPriceTZS: number;
+}
+
+export interface WholesaleProgramSettings {
+  id: string;
+  partnershipLevels: WholesalePartnershipLevelConfig[];
+  enabledCategories: string[];
+  pricingTiers: Record<string, WholesalePricingTier[]>;
+  combineMixedQuantitiesForTiers: boolean;
+  marketingBenefitTiers: Record<string, string[]>;
+  currencyRates: Record<string, number>;
+  updatedAt: string;
+}
+
+export interface CommercialProposalItem {
+  productId: string;
+  name: string;
+  sku: string;
+  category: string;
+  quantity: number;
+  unitPrice: number;
+  retailPrice: number;
+  lineTotal: number;
+  appliedTierLabel: string;
+  size?: string;
+  color?: string;
+  imageUrl?: string;
+}
+
+export type CommercialOfferStatus = 'Draft' | 'Sent' | 'Accepted' | 'Declined' | 'Activated' | 'Expired';
+
+export interface AgentCommercialOffer {
+  id: string;
+  offerReference: string;
+  applicationId: string;
+  agentId?: string | null;
+  applicantName: string;
+  businessName?: string | null;
+  partnershipLevel: AgentBusinessModel;
+  destinationCountry: string;
+  destinationCity: string;
+  territory: string;
+  isExclusive: boolean;
+  exclusivityTerms?: string | null;
+  currency: string;
+  proposedItems: CommercialProposalItem[];
+  totalUnits: number;
+  merchandiseSubtotal: number;
+  confirmedShippingRate?: number | null;
+  shippingTerms: string;
+  shippingDisclaimer: string;
+  paymentTerms: string;
+  marketingBenefits: string[];
+  artistDisclaimer: string;
+  internalNotes?: string | null;
+  expiryDate: string;
+  status: CommercialOfferStatus;
+  acceptedAt?: string | null;
+  acceptedBySignature?: string | null;
+  acceptanceNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
