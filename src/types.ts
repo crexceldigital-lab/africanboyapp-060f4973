@@ -445,9 +445,24 @@ export type AgentBusinessModel =
   | 'Country Distributor'
   | 'Commission-Based Agent';
 
+export interface AgentApplicationMessage {
+  id: string;
+  application_id: string;
+  sender_type: 'applicant' | 'admin';
+  sender_id?: string | null;
+  sender_name: string;
+  message: string;
+  attachments?: any[];
+  is_internal_note: boolean;
+  delivery_status: 'sent' | 'delivered' | 'read';
+  read_at?: string | null;
+  created_at: string;
+}
+
 export interface AgentApplication {
   id: string;
   application_reference: string;
+  access_token?: string;
   user_id?: string | null;
   full_name: string;
   email: string;
@@ -478,6 +493,9 @@ export interface AgentApplication {
   reviewed_at?: string | null;
   terms_accepted: boolean;
   privacy_accepted: boolean;
+  last_activity_at?: string;
+  unread_applicant_count?: number;
+  unread_admin_count?: number;
   created_at: string;
   updated_at: string;
 }

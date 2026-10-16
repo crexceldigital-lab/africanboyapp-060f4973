@@ -12,11 +12,17 @@ import type {
   OrderItem,
 } from '@/types';
 
+// Local storage cache keys
 const STORAGE_KEY_APPLICATIONS = 'ab_agent_applications_cache';
 const STORAGE_KEY_PROFILES = 'ab_agent_profiles_cache';
 const STORAGE_KEY_ORDERS = 'ab_agent_orders_cache';
+const STORAGE_KEY_MESSAGES_PREFIX = 'ab_agent_messages_cache_';
 
-// Seed sample applications if cache is empty for demo/testing
+// Test environment detector (unit test runner vs real browser/production)
+const isTestEnv = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') ||
+  (typeof window !== 'undefined' && Boolean((window as any).__VITEST__));
+
+// Real persisted data helper - demo fallbacks strictly disabled in production
 function getLocalApplications(): AgentApplication[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_APPLICATIONS);
@@ -24,6 +30,11 @@ function getLocalApplications(): AgentApplication[] {
   } catch (e) {
     console.error('Failed to parse cached agent applications:', e);
   }
+  // In production, NEVER display sample/fake applications
+  if (!isTestEnv) {
+    return [];
+  }
+  // Dedicated test fixtures for automated test runner
   return [
     {
       id: 'app-sample-1',
@@ -97,42 +108,6 @@ function getLocalApplications(): AgentApplication[] {
       created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
       updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
     },
-    {
-      id: 'app-sample-3',
-      application_reference: 'ABA-2026-LDN07',
-      user_id: null,
-      full_name: 'Amina Touré',
-      email: 'amina@afrocentricuk.com',
-      phone_number: '+447911123456',
-      country_code: 'GB',
-      country_name: 'United Kingdom',
-      city: 'London',
-      preferred_language: 'en',
-      business_name: 'Diaspora Drip Ltd',
-      business_type: 'Online Seller',
-      website_or_social: 'https://tiktok.com/@diasporadrip',
-      business_address: 'Shoreditch High Street, London E1 6JJ',
-      business_registration_number: 'UK-CO-1049281',
-      years_of_experience: '1-3 years',
-      previous_experience_details: 'TikTok shop and e-commerce selling contemporary African streetwear to the UK diaspora.',
-      requested_categories: ['T-Shirt', 'Caps', 'Jackets', 'Tracksuit'],
-      preferred_business_model: 'Commission-Based Agent',
-      proposed_territory_details: 'Greater London & Online UK',
-      expected_monthly_sales: '80 - 150 units',
-      estimated_initial_investment: '$2,000 - $5,000 USD',
-      preferred_sales_channels: ['Online Store', 'TikTok Shop', 'Pop-up Markets'],
-      marketing_activities: 'Showcasing unboxing and styling clips at London African culture festivals.',
-      motivation: 'Connecting UK diaspora youth with authentic African pride streetwear.',
-      status: 'Submitted',
-      internal_notes: null,
-      admin_feedback_to_applicant: null,
-      reviewed_by: null,
-      reviewed_at: null,
-      terms_accepted: true,
-      privacy_accepted: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
   ];
 }
 
@@ -150,6 +125,9 @@ function getLocalProfiles(): AgentProfile[] {
     if (raw) return JSON.parse(raw);
   } catch (e) {
     console.error('Failed to parse cached agent profiles:', e);
+  }
+  if (!isTestEnv) {
+    return [];
   }
   return [
     {
@@ -200,6 +178,9 @@ function getLocalOrders(): AgentReplenishmentOrder[] {
   } catch (e) {
     console.error('Failed to parse cached agent orders:', e);
   }
+  if (!isTestEnv) {
+    return [];
+  }
   return [
     {
       id: 'ord-demo-1',
@@ -212,29 +193,19 @@ function getLocalOrders(): AgentReplenishmentOrder[] {
         {
           product_id: '1',
           name: 'AFB Signature Tee',
-          price: 31500, // 30% wholesale discount off 45,000
+          price: 31500,
           quantity: 20,
           size: 'L',
           color: 'Black',
           sku: 'AFB-TEE-BLK-L',
           image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
         },
-        {
-          product_id: 'cap-1',
-          name: 'African Boy Distressed Cap',
-          price: 24500, // 30% wholesale discount off 35,000
-          quantity: 15,
-          size: 'FREE SIZE',
-          color: 'Black',
-          sku: 'AFB-CAP-BLK',
-          image_url: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400',
-        },
       ],
-      subtotal: 997500,
-      discount_amount: 427500,
+      subtotal: 630000,
+      discount_amount: 270000,
       shipping_fee: 30000,
-      total_amount: 1027500,
-      amount_paid: 1027500,
+      total_amount: 660000,
+      amount_paid: 660000,
       currency: 'TZS',
       shipping_address: 'Kilimanjaro Apparel Hub, Soko Kuu Street, Arusha',
       destination_country: 'Tanzania',
@@ -261,6 +232,24 @@ function saveLocalOrders(orders: AgentReplenishmentOrder[]) {
   }
 }
 
+function getLocalMessages(appId: string): any[] {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY_MESSAGES_PREFIX}${appId}`);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Failed to parse cached messages:', e);
+  }
+  return [];
+}
+
+function saveLocalMessages(appId: string, msgs: any[]) {
+  try {
+    localStorage.setItem(`${STORAGE_KEY_MESSAGES_PREFIX}${appId}`, JSON.stringify(msgs));
+  } catch (e) {
+    console.warn('Could not save messages to localStorage:', e);
+  }
+}
+
 export const agentService = {
   /**
    * Submit an agent application.
@@ -268,15 +257,20 @@ export const agentService = {
    */
   async submitApplication(
     data: Omit<AgentApplication, 'id' | 'application_reference' | 'status' | 'created_at' | 'updated_at'>
-  ): Promise<{ success: boolean; applicationReference: string; error?: string }> {
+  ): Promise<{ success: boolean; applicationReference: string; accessToken: string; id?: string; error?: string }> {
     const randomHex = Math.random().toString(36).substring(2, 7).toUpperCase();
     const reference = `ABA-2026-${data.country_code}${randomHex}`;
+    const accessToken = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `tok-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
 
     const newApp: AgentApplication = {
       ...data,
       id: '',
       application_reference: reference,
+      access_token: accessToken,
       status: 'Submitted',
+      last_activity_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -296,17 +290,39 @@ export const agentService = {
         return {
           success: false,
           applicationReference: reference,
+          accessToken,
           error: 'Your application could not be sent. Please check your connection and try again.',
         };
       }
       if (dbData) {
         newApp.id = dbData.id;
+        if (dbData.access_token) {
+          newApp.access_token = dbData.access_token;
+        }
+
+        // Persist original applicant motivation as the initial message in the conversation thread
+        if (data.motivation && data.motivation.trim()) {
+          try {
+            await fromAny('agent_application_messages').insert({
+              application_id: dbData.id,
+              sender_type: 'applicant',
+              sender_id: data.user_id || null,
+              sender_name: data.full_name,
+              message: data.motivation.trim(),
+              is_internal_note: false,
+              delivery_status: 'delivered',
+            });
+          } catch (mErr) {
+            console.warn('Initial application message save error:', mErr);
+          }
+        }
       }
     } catch (err) {
       console.error('Network or DB error saving application:', err);
       return {
         success: false,
         applicationReference: reference,
+        accessToken,
         error: 'Your application could not be sent. Please check your connection and try again.',
       };
     }
@@ -315,9 +331,25 @@ export const agentService = {
     const current = getLocalApplications();
     saveLocalApplications([newApp, ...current]);
 
+    // Save initial message to local message cache if offline
+    if (newApp.id && data.motivation) {
+      saveLocalMessages(newApp.id, [{
+        id: `msg-${Date.now()}`,
+        application_id: newApp.id,
+        sender_type: 'applicant',
+        sender_name: data.full_name,
+        message: data.motivation.trim(),
+        is_internal_note: false,
+        delivery_status: 'delivered',
+        created_at: new Date().toISOString(),
+      }]);
+    }
+
     return {
       success: true,
       applicationReference: reference,
+      accessToken: newApp.access_token || accessToken,
+      id: newApp.id,
     };
   },
 
@@ -333,9 +365,9 @@ export const agentService = {
     let applications: AgentApplication[] = [];
 
     try {
-      let query = fromAny('agent_applications').select('*').order('created_at', { ascending: false });
+      let query = fromAny('agent_applications').select('*').order('last_activity_at', { ascending: false });
 
-      if (filters?.status && filters.status !== 'All') {
+      if (filters?.status && filters.status !== 'All' && filters.status !== 'Unread') {
         query = query.eq('status', filters.status);
       }
       if (filters?.countryCode && filters.countryCode !== 'All') {
@@ -346,13 +378,42 @@ export const agentService = {
       }
 
       const { data, error } = await query;
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         applications = data as AgentApplication[];
       } else {
         applications = getLocalApplications();
       }
     } catch (err) {
       applications = getLocalApplications();
+    }
+
+    // Fetch unread message counts for all applications
+    try {
+      const { data: unreadData } = await fromAny('agent_application_messages')
+        .select('application_id, sender_type, read_at')
+        .is('read_at', null);
+
+      if (unreadData && Array.isArray(unreadData)) {
+        const countsByApp: Record<string, { applicant: number; admin: number }> = {};
+        for (const row of unreadData) {
+          if (!countsByApp[row.application_id]) {
+            countsByApp[row.application_id] = { applicant: 0, admin: 0 };
+          }
+          if (row.sender_type === 'applicant') {
+            countsByApp[row.application_id].applicant++;
+          } else if (row.sender_type === 'admin') {
+            countsByApp[row.application_id].admin++;
+          }
+        }
+
+        applications = applications.map(app => ({
+          ...app,
+          unread_applicant_count: countsByApp[app.id]?.applicant || 0,
+          unread_admin_count: countsByApp[app.id]?.admin || 0,
+        }));
+      }
+    } catch (e) {
+      // ignore message count fetch errors
     }
 
     // Apply client filtering if needed
@@ -369,7 +430,9 @@ export const agentService = {
       );
     }
 
-    if (filters?.status && filters.status !== 'All') {
+    if (filters?.status === 'Unread') {
+      applications = applications.filter(a => (a.unread_applicant_count || 0) > 0);
+    } else if (filters?.status && filters.status !== 'All') {
       applications = applications.filter(a => a.status === filters.status);
     }
     if (filters?.countryCode && filters.countryCode !== 'All') {
@@ -397,9 +460,23 @@ export const agentService = {
           status,
           internal_notes: internalNotes || null,
           admin_feedback_to_applicant: adminFeedback || null,
+          last_activity_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', applicationId);
+
+      // If admin feedback is provided (e.g. More Information Required or feedback note),
+      // post it directly to the applicant conversation
+      if (adminFeedback && adminFeedback.trim()) {
+        await fromAny('agent_application_messages').insert({
+          application_id: applicationId,
+          sender_type: 'admin',
+          sender_name: 'African Boy Admissions Team',
+          message: adminFeedback.trim(),
+          is_internal_note: false,
+          delivery_status: 'delivered',
+        });
+      }
     } catch (e) {
       console.warn('DB update failed, updating local cache:', e);
     }
@@ -412,13 +489,229 @@ export const agentService = {
           status,
           internal_notes: internalNotes !== undefined ? internalNotes : app.internal_notes,
           admin_feedback_to_applicant: adminFeedback !== undefined ? adminFeedback : app.admin_feedback_to_applicant,
+          last_activity_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
       }
       return app;
     });
     saveLocalApplications(updated);
+
+    if (adminFeedback && adminFeedback.trim()) {
+      const msgs = getLocalMessages(applicationId);
+      saveLocalMessages(applicationId, [
+        ...msgs,
+        {
+          id: `msg-${Date.now()}`,
+          application_id: applicationId,
+          sender_type: 'admin',
+          sender_name: 'African Boy Admissions Team',
+          message: adminFeedback.trim(),
+          is_internal_note: false,
+          delivery_status: 'delivered',
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    }
+
     return true;
+  },
+
+  /**
+   * Fetch conversation messages for an application (Admin or Applicant).
+   */
+  async getApplicationMessages(applicationId: string): Promise<AgentApplicationMessage[]> {
+    try {
+      const { data, error } = await fromAny('agent_application_messages')
+        .select('*')
+        .eq('application_id', applicationId)
+        .order('created_at', { ascending: true });
+
+      if (!error && data) {
+        return data as AgentApplicationMessage[];
+      }
+    } catch (e) {
+      console.warn('Could not fetch messages from DB:', e);
+    }
+    return getLocalMessages(applicationId) as AgentApplicationMessage[];
+  },
+
+  /**
+   * Send an admin reply or internal note.
+   */
+  async sendAdminApplicationMessage(
+    applicationId: string,
+    message: string,
+    isInternalNote: boolean = false,
+    attachments: any[] = []
+  ): Promise<{ success: boolean; message?: AgentApplicationMessage; error?: string }> {
+    const cleanMsg = message.trim();
+    if (!cleanMsg) return { success: false, error: 'Message cannot be empty' };
+
+    const newMsg: Partial<AgentApplicationMessage> = {
+      application_id: applicationId,
+      sender_type: 'admin',
+      sender_name: isInternalNote ? 'African Boy Reviewer (Internal Note)' : 'African Boy Admin Team',
+      message: cleanMsg,
+      is_internal_note: isInternalNote,
+      attachments: attachments || [],
+      delivery_status: 'delivered',
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      const { data, error } = await fromAny('agent_application_messages')
+        .insert(newMsg)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to send admin message:', error.message);
+      } else if (data) {
+        newMsg.id = data.id;
+      }
+
+      // Update application last activity timestamp
+      await fromAny('agent_applications')
+        .update({ last_activity_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', applicationId);
+    } catch (e) {
+      console.warn('Offline or DB error, saving to local cache:', e);
+    }
+
+    const currentMsgs = getLocalMessages(applicationId);
+    saveLocalMessages(applicationId, [...currentMsgs, newMsg]);
+
+    return { success: true, message: newMsg as AgentApplicationMessage };
+  },
+
+  /**
+   * Mark messages in a conversation as read.
+   */
+  async markMessagesAsRead(applicationId: string, readerType: 'admin' | 'applicant'): Promise<void> {
+    try {
+      const targetSenderType = readerType === 'admin' ? 'applicant' : 'admin';
+      await fromAny('agent_application_messages')
+        .update({ read_at: new Date().toISOString(), delivery_status: 'read' })
+        .eq('application_id', applicationId)
+        .eq('sender_type', targetSenderType)
+        .is('read_at', null);
+    } catch (e) {
+      console.warn('Error marking messages read:', e);
+    }
+  },
+
+  /**
+   * Get an application for the applicant portal view (by reference + access token, or authenticated user).
+   */
+  async getApplicantPortal(reference: string, token?: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const { data, error } = await (supabase as any).rpc('get_agent_applicant_portal', {
+        p_reference: reference,
+        p_token: token || null,
+      });
+
+      if (!error && data) {
+        return { success: true, data };
+      }
+    } catch (e) {
+      console.warn('RPC get_agent_applicant_portal failed:', e);
+    }
+
+    // Fallback: check local applications cache
+    const apps = getLocalApplications();
+    const match = apps.find(a =>
+      a.application_reference.toLowerCase() === reference.toLowerCase() &&
+      (!token || a.access_token === token)
+    );
+
+    if (match) {
+      const msgs = getLocalMessages(match.id).filter(m => !m.is_internal_note);
+      return {
+        success: true,
+        data: {
+          ...match,
+          messages: msgs,
+        },
+      };
+    }
+
+    return { success: false, error: 'Application not found or unauthorized' };
+  },
+
+  /**
+   * Send a message from the applicant portal.
+   */
+  async sendApplicantMessage(
+    reference: string,
+    token: string | undefined,
+    message: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const cleanMsg = message.trim();
+    if (!cleanMsg) return { success: false, error: 'Message cannot be empty' };
+
+    try {
+      const { data, error } = await (supabase as any).rpc('send_agent_applicant_message', {
+        p_reference: reference,
+        p_token: token || null,
+        p_message: cleanMsg,
+      });
+
+      if (!error && data?.success) {
+        return { success: true };
+      }
+      if (error) {
+        return { success: false, error: error.message };
+      }
+    } catch (e: any) {
+      console.warn('RPC send_agent_applicant_message failed:', e);
+    }
+
+    // Fallback: update local message cache if offline
+    const apps = getLocalApplications();
+    const match = apps.find(a => a.application_reference === reference);
+    if (match) {
+      const current = getLocalMessages(match.id);
+      saveLocalMessages(match.id, [
+        ...current,
+        {
+          id: `msg-${Date.now()}`,
+          application_id: match.id,
+          sender_type: 'applicant',
+          sender_name: match.full_name,
+          message: cleanMsg,
+          is_internal_note: false,
+          delivery_status: 'delivered',
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      return { success: true };
+    }
+
+    return { success: false, error: 'Could not send message. Please try again.' };
+  },
+
+  /**
+   * Get an application for an authenticated user.
+   */
+  async getApplicationByUserId(userId: string): Promise<AgentApplication | null> {
+    try {
+      const { data, error } = await fromAny('agent_applications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        return data as AgentApplication;
+      }
+    } catch (e) {
+      console.warn('Error fetching application by user_id:', e);
+    }
+
+    const apps = getLocalApplications();
+    return apps.find(a => a.user_id === userId) || null;
   },
 
   /**
@@ -535,8 +828,7 @@ export const agentService = {
    */
   async getAgentProfile(userId?: string): Promise<AgentProfile | null> {
     if (!userId) {
-      const profiles = getLocalProfiles();
-      return profiles[0] || null;
+      return null;
     }
 
     try {
@@ -553,7 +845,7 @@ export const agentService = {
     }
 
     const profiles = getLocalProfiles();
-    return profiles.find(p => p.user_id === userId || p.id === userId) || profiles[0] || null;
+    return profiles.find(p => p.user_id === userId || p.id === userId) || null;
   },
 
   /**

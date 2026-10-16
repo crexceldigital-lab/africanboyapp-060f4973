@@ -1,18 +1,74 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export const INTL_STATUSES = [
-  'REQUESTED', 'STOCK_CHECK', 'SHIPPING_QUOTE', 'AWAITING_CUSTOMER', 'PAYMENT_PENDING',
-  'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED',
+  'REQUESTED',
+  'STOCK_CHECK',
+  'SHIPPING_QUOTE_PREPARING',
+  'SHIPPING_QUOTE',
+  'AWAITING_CUSTOMER',
+  'PAYMENT_PENDING',
+  'PAID',
+  'PROCESSING',
+  'DISPATCHED',
+  'IN_TRANSIT',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED',
+  'CANCELLED',
+  'ON_HOLD',
 ] as const;
-export type IntlStatus = typeof INTL_STATUSES[number];
+export type IntlStatus = typeof INTL_STATUSES[number] | 'SHIPPED';
 
 export const INTL_LOCATIONS = [
   { value: 'TANZANIA', label: '🇹🇿 Tanzania' },
   { value: 'NIGERIA', label: '🇳🇬 Nigeria' },
 ] as const;
 
-export function statusLabel(s: string) {
-  return s.toLowerCase().split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+export function statusLabel(s: string): string {
+  switch (s) {
+    case 'REQUESTED':
+      return 'Request Received';
+    case 'STOCK_CHECK':
+      return 'Stock Check in Progress';
+    case 'SHIPPING_QUOTE_PREPARING':
+      return 'Shipping Quote Preparing';
+    case 'SHIPPING_QUOTE':
+      return 'Shipping Quote Issued';
+    case 'AWAITING_CUSTOMER':
+      return 'Awaiting Customer Acceptance';
+    case 'PAYMENT_PENDING':
+      return 'Awaiting Payment';
+    case 'PAID':
+      return 'Payment Confirmed';
+    case 'PROCESSING':
+      return 'Preparing Order';
+    case 'DISPATCHED':
+    case 'SHIPPED':
+      return 'Dispatched';
+    case 'IN_TRANSIT':
+      return 'In Transit';
+    case 'OUT_FOR_DELIVERY':
+      return 'Out for Delivery';
+    case 'DELIVERED':
+      return 'Delivered';
+    case 'CANCELLED':
+      return 'Cancelled';
+    case 'ON_HOLD':
+      return 'On Hold';
+    default:
+      return s.toLowerCase().split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+  }
+}
+
+export interface IntlTimelineEvent {
+  id: string;
+  request_id?: string;
+  status: string;
+  title: string;
+  description?: string | null;
+  actor_type: 'system' | 'admin' | 'customer';
+  actor_id?: string | null;
+  is_customer_visible: boolean;
+  created_at: string;
 }
 
 export interface IntlCartItem {
@@ -47,11 +103,29 @@ export interface IntlRequest {
   shipping_currency: string | null;
   final_total: number | null;
   final_currency: string | null;
+  shipping_method?: string | null;
   shipping_provider: string | null;
   estimated_delivery: string | null;
+  quote_valid_until?: string | null;
+  tracking_number?: string | null;
+  tracking_url?: string | null;
+  dispatched_at?: string | null;
+  delivered_at?: string | null;
   shipping_notes: string | null;
+  internal_notes?: string | null;
+  customer_notes?: string | null;
+  payment_reference?: string | null;
   fulfillment_location?: string | null;
   status: IntlStatus;
+  timeline?: IntlTimelineEvent[];
+  invoice?: {
+    invoice_number: string;
+    total_amount: number;
+    currency: string;
+    payment_status: string;
+    issue_date?: string;
+    access_token?: string;
+  } | null;
   created_at: string;
 }
 
