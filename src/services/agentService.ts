@@ -274,7 +274,7 @@ export const agentService = {
 
     const newApp: AgentApplication = {
       ...data,
-      id: `app-${Date.now()}-${randomHex}`,
+      id: '',
       application_reference: reference,
       status: 'Submitted',
       created_at: new Date().toISOString(),
@@ -282,24 +282,36 @@ export const agentService = {
     };
 
     try {
+      const { id: _omitId, ...insertRow } = newApp;
       const { data: dbData, error } = await fromAny('agent_applications')
         .insert({
-          ...newApp,
+          ...insertRow,
           user_id: data.user_id || null,
         })
         .select()
         .maybeSingle();
 
       if (error) {
-        console.warn('Supabase agent_applications insert warning, using local cache:', error.message);
-      } else if (dbData) {
+        console.error('Failed to save agent application:', error.message);
+        return {
+          success: false,
+          applicationReference: reference,
+          error: 'Your application could not be sent. Please check your connection and try again.',
+        };
+      }
+      if (dbData) {
         newApp.id = dbData.id;
       }
     } catch (err) {
-      console.warn('Network or DB error saving application, cached locally:', err);
+      console.error('Network or DB error saving application:', err);
+      return {
+        success: false,
+        applicationReference: reference,
+        error: 'Your application could not be sent. Please check your connection and try again.',
+      };
     }
 
-    // Always update local cache so the UI works seamlessly
+    // Update local cache for the applicant's own reference
     const current = getLocalApplications();
     saveLocalApplications([newApp, ...current]);
 
