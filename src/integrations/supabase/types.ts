@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_application_messages: {
+        Row: {
+          application_id: string
+          attachments: Json
+          created_at: string
+          delivery_status: string
+          id: string
+          is_internal_note: boolean
+          message: string
+          read_at: string | null
+          sender_name: string | null
+          sender_type: string
+        }
+        Insert: {
+          application_id: string
+          attachments?: Json
+          created_at?: string
+          delivery_status?: string
+          id?: string
+          is_internal_note?: boolean
+          message: string
+          read_at?: string | null
+          sender_name?: string | null
+          sender_type?: string
+        }
+        Update: {
+          application_id?: string
+          attachments?: Json
+          created_at?: string
+          delivery_status?: string
+          id?: string
+          is_internal_note?: boolean
+          message?: string
+          read_at?: string | null
+          sender_name?: string | null
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_application_messages_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "agent_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_applications: {
         Row: {
           admin_feedback_to_applicant: string | null
@@ -32,6 +79,7 @@ export type Database = {
           full_name: string
           id: string
           internal_notes: string | null
+          last_activity_at: string
           marketing_activities: string | null
           motivation: string | null
           phone_number: string
@@ -68,6 +116,7 @@ export type Database = {
           full_name: string
           id?: string
           internal_notes?: string | null
+          last_activity_at?: string
           marketing_activities?: string | null
           motivation?: string | null
           phone_number: string
@@ -104,6 +153,7 @@ export type Database = {
           full_name?: string
           id?: string
           internal_notes?: string | null
+          last_activity_at?: string
           marketing_activities?: string | null
           motivation?: string | null
           phone_number?: string
