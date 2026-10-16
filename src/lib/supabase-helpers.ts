@@ -44,9 +44,25 @@ function parseRecord(value: unknown): Record<string, number> {
  */
 export function castProducts(data: any[]): Product[] {
   return data.map((p: any) => {
+    const isTShirt = isTShirtCategory(p.category, p.subcategory);
     const rawSizes = parseJsonArray<string>(p.sizes);
-    const sizes = rawSizes.length > 0 ? rawSizes : Array.isArray(p.sizes) ? p.sizes : [];
+    const sizes = isTShirt ? TSHIRT_SIZES : rawSizes.length > 0 ? rawSizes : Array.isArray(p.sizes) ? p.sizes : [];
     const stock = parseRecord(p.stock);
+
+    if (isTShirt) {
+      // T-shirts use the standard size run, but stock must reflect what is
+      // actually stored — never invent quantities for sizes that were never stocked.
+      TSHIRT_SIZES.forEach((sz) => {
+        if (stock[sz] === undefined) {
+          stock[sz] = 0;
+        }
+      });
+      Object.keys(stock).forEach((key) => {
+        if (!TSHIRT_SIZES.includes(key)) {
+          delete stock[key];
+        }
+      });
+    }
 
     return {
       ...p,
