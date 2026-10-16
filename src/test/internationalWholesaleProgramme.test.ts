@@ -1,4 +1,23 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock the backend client so application inserts succeed in tests
+vi.mock('@/integrations/supabase/client', () => {
+  const chain: any = {
+    insert: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'db-uuid-1' }, error: null }),
+  };
+  return {
+    supabase: {
+      from: vi.fn(() => chain),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'not available in tests' } }),
+    },
+  };
+});
+
 import {
   wholesaleProgramService,
   DEFAULT_PARTNERSHIP_LEVELS,
