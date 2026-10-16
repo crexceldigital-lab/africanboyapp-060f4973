@@ -54,7 +54,7 @@ export default function InternationalOrderModal({ isOpen, onClose }: Props) {
       setErrors(e);
       return;
     }
-    if (items.length === 0) { toast({ title: 'Your cart is empty', variant: 'destructive' }); return; }
+    if (items.length === 0) { toast.error('Your cart is empty'); return; }
     setErrors({});
     setLoading(true);
     const d = parsed.data;
@@ -65,7 +65,7 @@ export default function InternationalOrderModal({ isOpen, onClose }: Props) {
     });
     setLoading(false);
     if (error || !data) {
-      toast({ title: 'Could not send request', description: error?.message || 'Please try again.', variant: 'destructive' });
+      toast.error('Could not send request', { description: error?.message || 'Please try again.' });
       return;
     }
     rememberRequest(data.reference_number, data.access_token);
