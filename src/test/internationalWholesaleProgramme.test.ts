@@ -27,7 +27,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         cost_price: 18000, // Confidential cost price - MUST NOT BE LEAKED TO AGENTS
         category: 'T-Shirt',
         stock_quantity: 400,
-        is_active: true,
+        status: 'active',
         image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
         sku: 'AFB-TSHIRT-BLK-01',
         sizes: ['M', 'L', 'XL', 'XXL'],
@@ -43,7 +43,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         cost_price: 12000, // Confidential cost price
         category: 'Caps',
         stock_quantity: 250,
-        is_active: true,
+        status: 'active',
         image_url: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400',
         sku: 'AFB-CAP-GLD-01',
         sizes: ['FREE SIZE'],
@@ -59,7 +59,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         cost_price: 6000,
         category: 'Socks',
         stock_quantity: 150,
-        is_active: true,
+        status: 'active',
         image_url: 'https://images.unsplash.com/photo-1582966772680-860e372bb558?w=400',
         sku: 'AFB-SOCK-01',
         sizes: ['Standard'],
@@ -332,7 +332,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
 
       expect(quotationExWorks.confirmedShippingRate).toBeNull();
       expect(quotationExWorks.grandTotalConverted).toBe(quotationExWorks.merchandiseSubtotalConverted);
-      expect(quotationExWorks.shippingExcludedDisclaimer).toContain('EX-WORKS');
+      expect(quotationExWorks.shippingDisclaimer).toContain('EX-WORKS');
 
       // 2. With confirmed rate
       const quotationWithShipping = wholesaleProgramService.calculateQuotation(
@@ -377,7 +377,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
   // ============================================================================
   describe('4. Admin Application Review & Commercial Offers', () => {
     it('creates, saves, and retrieves persistent commercial offers for an application', async () => {
-      const offer = await wholesaleProgramService.createCommercialOffer({
+      const offer = await wholesaleProgramService.saveOffer({
         applicationId: 'app-ke-001',
         applicantName: 'Amina Odhiambo',
         businessName: 'Nairobi Luxury Collective',
@@ -429,7 +429,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
     });
 
     it('supports recording applicant acceptance with signatory details', async () => {
-      const offer = await wholesaleProgramService.createCommercialOffer({
+      const offer = await wholesaleProgramService.saveOffer({
         applicationId: 'app-ug-002',
         applicantName: 'David Mukasa',
         businessName: 'Kampala Trends Ltd',
@@ -460,7 +460,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
 
       expect(acceptRes.success).toBe(true);
 
-      const updatedOffer = await wholesaleProgramService.getOfferById(offer.id);
+      const updatedOffer = await wholesaleProgramService.getOfferByApplicationId(offer.applicationId);
       expect(updatedOffer?.status).toBe('Accepted');
       expect(updatedOffer?.acceptedBySignature).toBe('David Mukasa (Managing Director)');
       expect(updatedOffer?.acceptedAt).toBeDefined();
@@ -475,18 +475,18 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
         country_code: 'KE',
         country_name: 'Kenya',
         city: 'Mombasa',
-        proposed_territory: 'Coast Province',
-        business_model: 'Wholesale Reseller',
-        primary_interest: 'T-Shirts & Caps',
-        preferred_currency: 'USD',
-        categories_of_interest: ['T-Shirt', 'Caps'],
+        proposed_territory_details: 'Coast Province',
+        preferred_business_model: 'Wholesale Reseller',
+        requested_categories: ['T-Shirt', 'Caps'],
+        terms_accepted: true,
+        privacy_accepted: true,
       });
 
       expect(appRes.success).toBe(true);
-      const appId = appRes.application!.id;
+      const appId = 'app-ke-901';
 
       // Step 2: Generate Commercial Offer (Draft)
-      const offer = await wholesaleProgramService.createCommercialOffer({
+      const offer = await wholesaleProgramService.saveOffer({
         applicationId: appId,
         applicantName: 'Grace Mutua',
         businessName: 'Mombasa Coastal Boutique',
@@ -513,7 +513,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
 
       // Step 3: Record Acceptance
       await wholesaleProgramService.recordOfferAcceptance(offer.id, 'Grace Mutua (Owner)');
-      const acceptedOffer = await wholesaleProgramService.getOfferById(offer.id);
+      const acceptedOffer = await wholesaleProgramService.getOfferByApplicationId(offer.applicationId);
       expect(acceptedOffer?.status).toBe('Accepted');
 
       // Step 4: Approve and Activate Agent Profile
@@ -534,7 +534,7 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
       expect(approveRes.agentProfile?.status).toBe('active');
 
       // Verify offer is activated and linked to the new agent profile
-      const activatedOffer = await wholesaleProgramService.getOfferById(offer.id);
+      const activatedOffer = await wholesaleProgramService.getOfferByApplicationId(offer.applicationId);
       expect(activatedOffer?.status).toBe('Activated');
       expect(activatedOffer?.agentId).toBe(approveRes.agentProfile?.id);
     });
