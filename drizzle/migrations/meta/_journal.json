@@ -15,6 +15,13 @@
       "when": 1792160943973,
       "tag": "0001_agent_applications_activity_and_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792160961121,
+      "tag": "0002_applicant_message_insert_policy",
+      "breakpoints": true
     }
   ]
 }
