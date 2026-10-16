@@ -822,6 +822,7 @@ export const agentService = {
       'Wholesale Reseller': 0,
       'Commission-Based Agent': 0,
       'Country Distributor': 0,
+      'Premium Market Agent': 0,
     };
 
     profiles.forEach(p => {
