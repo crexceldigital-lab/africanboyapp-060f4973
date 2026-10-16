@@ -502,7 +502,8 @@ describe('AFRICAN BOY INTERNATIONAL AGENT WHOLESALE PROGRAMME', () => {
       });
 
       expect(appRes.success).toBe(true);
-      const appId = 'app-ke-901';
+      const submittedApps = await agentService.getApplications();
+      const appId = submittedApps.find(a => a.application_reference === appRes.applicationReference)!.id;
 
       // Step 2: Generate Commercial Offer (Draft)
       const offer = await wholesaleProgramService.saveOffer({
