@@ -168,7 +168,6 @@ export function generateCommercialProposalPdf(
   const nameHeight = Math.max(doc.splitTextToSize(partnerName, 79).length, doc.splitTextToSize(companyName, 79).length) * 4.5;
   doc.setFont('Proposal', 'normal'); doc.setFontSize(8);
   const representativeHeight = Math.max(
-    doc.splitTextToSize(clean(business.contact_person), 77).length,
     doc.splitTextToSize(clean(offer.acceptedBySignature), 77).length,
     1
   ) * 4;
@@ -182,7 +181,7 @@ export function generateCommercialProposalPdf(
     text(name, x + 5, y + 12, panelWidth - 10, 9, true);
     let sy = y + 15 + nameHeight;
     const accepted = partnerPanel && (offer.status === 'Accepted' || offer.status === 'Activated') && clean(offer.acceptedBySignature) && offer.acceptedAt;
-    const representative = partnerPanel ? (accepted ? clean(offer.acceptedBySignature) : '') : clean(business.contact_person);
+    const representative = partnerPanel && accepted ? clean(offer.acceptedBySignature) : '';
     text('Authorised representative', x + 5, sy, panelWidth - 10, 8, false, GREY);
     sy += 5;
     if (representative) { text(representative, x + 5, sy, panelWidth - 10, 8); } else { doc.line(x + 5, sy + 4, x + panelWidth - 5, sy + 4); }
