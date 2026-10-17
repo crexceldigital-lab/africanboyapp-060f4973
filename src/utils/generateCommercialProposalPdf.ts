@@ -115,6 +115,10 @@ export function generateCommercialProposalPdf(
     margin: { left: M, right: M, top: 28, bottom: 20 },
     rowPageBreak: 'avoid', showHead: 'everyPage',
     didParseCell: data => {
+      if (data.section === 'body' && data.column.index === 0) {
+        data.cell.styles.cellPadding = 0.5;
+        data.cell.styles.overflow = 'visible';
+      }
       if (data.section === 'body' && data.column.index === 3) {
         const sku = String(data.cell.raw || '—');
         // Fit the entire identifier on one line, rather than inserting arbitrary breaks.
