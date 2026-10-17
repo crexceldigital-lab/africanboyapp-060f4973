@@ -736,6 +736,11 @@ export interface AgentCommercialOffer {
   acceptanceNotes?: string | null;
   createdAt: string;
   updatedAt: string;
+  commercialTerms?: {
+    minimumReplenishmentOrder?: string;
+    processingDispatchTime?: string;
+    potentialShippingOrigins?: string[];
+  };
 }
 
 

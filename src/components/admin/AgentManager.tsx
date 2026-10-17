@@ -306,7 +306,7 @@ export default function AgentManager() {
         customsAndHandlingFee: Number(quoteCustomsFee || 0),
         estimatedDeliveryTime: quoteEstimatedDeliveryTime.trim() || '3-7 business days',
         quoteDate,
-        expiryDate,
+        expiryDate: quoteExpiryDate,
         internalNotes: quoteInternalNotes.trim() || undefined,
       });
 
