@@ -2,12 +2,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the backend client so application inserts succeed in tests
 vi.mock('@/integrations/supabase/client', () => {
+  let savedRow: any;
   const chain: any = {
+    upsert: vi.fn((row: any) => { savedRow = row; return chain; }),
+    single: vi.fn(async () => ({ data: savedRow, error: null })),
     insert: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
   };
   return {

@@ -299,7 +299,7 @@ export default function WholesaleQuotationBuilder({
   const totalUnits = proposalItems.reduce((s, i) => s + i.quantity, 0);
   const merchandiseSubtotal = proposalItems.reduce((s, i) => s + i.lineTotal, 0);
   const confirmedShippingNum = confirmedShippingRate ? Number(confirmedShippingRate) : null;
-  const grandTotal = merchandiseSubtotal + (confirmedShippingNum || 0);
+  const grandTotal = merchandiseSubtotal;
 
   // Construct current offer object
   const getCurrentOfferObject = (): AgentCommercialOffer => ({
@@ -740,11 +740,11 @@ export default function WholesaleQuotationBuilder({
             <div className="flex justify-between text-white/60">
               <span>International Freight / Shipping:</span>
               <strong className={confirmedShippingNum ? 'text-green-400' : 'text-amber-400'}>
-                {confirmedShippingNum ? `${confirmedShippingNum.toLocaleString()} ${currency}` : 'EXCLUDED (EX-WORKS)'}
+                EXCLUDED — QUOTED SEPARATELY
               </strong>
             </div>
             <div className="flex justify-between text-sm font-black text-primary pt-2 border-t border-white/10">
-              <span>Total Quotation:</span>
+              <span>Total Goods Value:</span>
               <span>{grandTotal.toLocaleString()} {currency}</span>
             </div>
           </div>
@@ -760,6 +760,7 @@ export default function WholesaleQuotationBuilder({
             onChange={e => setDeliveryTerms(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-zinc-950 border border-white/15 rounded-xl text-white font-bold outline-none"
           >
+            <option value="Shipping quoted separately; partner responsible for agreed shipping and import costs">Shipping quoted separately</option>
             <option value="Ex Works Dar es Salaam">Ex Works Dar es Salaam (Agent arranges freight)</option>
             <option value="FOB Dar es Salaam Port">FOB Dar es Salaam Port (Loaded on carrier)</option>
             <option value="CIF Airport Destination">CIF Airport Destination (Freight & insurance included)</option>

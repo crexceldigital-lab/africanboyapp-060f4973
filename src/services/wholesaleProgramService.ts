@@ -764,6 +764,11 @@ export const wholesaleProgramService = {
 
     if (!offer) throw new Error('No saved wholesale proposal exists for this partner. Ask the commercial team to prepare an offer.');
 
-    downloadCommercialProposalPdf(offer, null);
+    // Re-read the exact saved row; never export a stale local agreement.
+    const { data, error } = await fromAny('agent_commercial_offers').select('*').eq('id', offer.id).single();
+    if (error || !data) throw new Error('The saved proposal could not be loaded. Please try again.');
+    const { data: application } = await fromAny('agent_applications').select('*').eq('id', data.application_id).maybeSingle();
+    const { data: business } = await fromAny('invoice_settings').select('business_name,business_address,city,country,email,phone,website,contact_person').eq('store_id', 1).maybeSingle();
+    downloadCommercialProposalPdf(this.mapDbOfferToType(data), application, business || {});
   },
 };
