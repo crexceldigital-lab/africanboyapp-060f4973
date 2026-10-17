@@ -56,26 +56,26 @@ export function generateCommercialProposalPdf(
     autoTable(doc, {
       startY: y, body, theme: 'plain',
       margin: { left: M, right: M, top: 28, bottom: 20 },
-      styles: { font: 'Proposal', fontSize: 8.5, cellPadding: 3, textColor: INK, overflow: 'linebreak', valign: 'top', lineWidth: 0.2, lineColor: RULE },
+      styles: { font: 'Proposal', fontStyle: 'normal', fontSize: 8.5, cellPadding: 2, textColor: INK, overflow: 'linebreak', valign: 'top', lineWidth: 0.2, lineColor: RULE },
       alternateRowStyles: { fillColor: LIGHT },
       columnStyles: columns,
       rowPageBreak: 'avoid',
       willDrawPage: () => { if (doc.getCurrentPageInfo().pageNumber > 1) continuation(); },
     });
     y = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
-    y += 8;
+    y += 5;
   };
   const notice = (title: string, content: string) => {
     doc.setFont('Proposal', 'normal'); doc.setFontSize(8.5);
     const lines: string[] = doc.splitTextToSize(content, CW - 10);
-    const height = 16 + lines.length * 4.1;
+    const height = 13 + lines.length * 4.05;
     if (height <= bottom - 28) {
       ensure(height + 6);
       doc.setFillColor(...LIGHT); doc.setDrawColor(...RULE);
       doc.rect(M, y, CW, height, 'FD');
       const titleHeight = text(title, M + 5, y + 4, CW - 10, 8.5, true);
       text(content, M + 5, y + 6 + titleHeight, CW - 10, 8.5, false, GREY);
-      y += height + 8;
+      y += height + 6;
     } else { heading(title); table([[content]]); }
   };
 
@@ -108,8 +108,8 @@ export function generateCommercialProposalPdf(
     headStyles: { fillColor: INK, textColor: GOLD, fontStyle: 'bold', fontSize: 7.5 },
     alternateRowStyles: { fillColor: LIGHT },
     columnStyles: {
-      0: { cellWidth: 7, halign: 'center' }, 1: { cellWidth: 39 }, 2: { cellWidth: 19 },
-      3: { cellWidth: 35 }, 4: { cellWidth: 13, halign: 'center' }, 5: { cellWidth: 13, halign: 'right' },
+      0: { cellWidth: 7, halign: 'center' }, 1: { cellWidth: 39 }, 2: { cellWidth: 17 },
+      3: { cellWidth: 34 }, 4: { cellWidth: 16, halign: 'center' }, 5: { cellWidth: 13, halign: 'right' },
       6: { cellWidth: 27, halign: 'right' }, 7: { cellWidth: 29, halign: 'right' },
     },
     margin: { left: M, right: M, top: 28, bottom: 20 },
@@ -120,7 +120,7 @@ export function generateCommercialProposalPdf(
         // Fit the entire identifier on one line, rather than inserting arbitrary breaks.
         doc.setFont('Proposal', 'normal'); doc.setFontSize(8);
         const measured = doc.getTextWidth(sku);
-        data.cell.styles.fontSize = measured > 31 ? 8 * 31 / measured : 8;
+        data.cell.styles.fontSize = measured > 30 ? 8 * 30 / measured : 8;
         data.cell.styles.overflow = 'visible';
       }
     },

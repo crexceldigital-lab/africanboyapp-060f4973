@@ -708,11 +708,11 @@ export default function WholesaleQuotationBuilder({
               <span>International Shipping & Import Terms</span>
             </div>
             <p className="text-[11px] leading-relaxed text-amber-200/80">
-              International freight shipping, port customs clearance, and import duties are <strong>excluded</strong> unless a confirmed rate has been negotiated and entered here.
+              This proposal covers goods only. Shipping and import costs are quoted separately and are not included in the goods value.
             </p>
             <div className="pt-1">
               <label className="text-[10px] uppercase font-bold text-white/70 block mb-1">
-                Confirmed Freight Rate ({currency}) — <em>Leave blank for EX-WORKS</em>
+                Separate Freight Quote ({currency}) — <em>Not included in goods value</em>
               </label>
               <input
                 type="number"
@@ -721,7 +721,7 @@ export default function WholesaleQuotationBuilder({
                   setConfirmedShippingRate(e.target.value);
                   recalculateItems(proposalItems, currency, e.target.value);
                 }}
-                placeholder="Leave blank (Default: Ex-Works / Excluded)"
+                placeholder="Leave blank until separately quoted"
                 className="w-full px-3 py-2 bg-zinc-950 border border-white/20 rounded-lg text-white font-mono text-xs outline-none"
               />
             </div>
@@ -789,6 +789,29 @@ export default function WholesaleQuotationBuilder({
       </div>
 
       {/* 5. Marketing Support Package */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <label className="space-y-1 text-muted-foreground">
+          <span>Minimum replenishment order</span>
+          <input value={savedCommercialTerms?.minimumReplenishmentOrder || ''}
+            onChange={e => setSavedCommercialTerms(t => ({ ...t, minimumReplenishmentOrder: e.target.value }))}
+            placeholder="Approved offer terms only"
+            className="w-full border border-border bg-background text-foreground rounded-md p-2" />
+        </label>
+        <label className="space-y-1 text-muted-foreground">
+          <span>Processing and dispatch estimate</span>
+          <input value={savedCommercialTerms?.processingDispatchTime || ''}
+            onChange={e => setSavedCommercialTerms(t => ({ ...t, processingDispatchTime: e.target.value }))}
+            placeholder="To be confirmed"
+            className="w-full border border-border bg-background text-foreground rounded-md p-2" />
+        </label>
+        <label className="space-y-1 text-muted-foreground sm:col-span-2">
+          <span>Potential shipping origins</span>
+          <input value={savedCommercialTerms?.potentialShippingOrigins?.join(', ') || ''}
+            onChange={e => setSavedCommercialTerms(t => ({ ...t, potentialShippingOrigins: e.target.value.split(',').map(v => v.trim()).filter(Boolean) }))}
+            placeholder="Approved origins, separated by commas"
+            className="w-full border border-border bg-background text-foreground rounded-md p-2" />
+        </label>
+      </div>
       <div className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-3 text-xs">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black uppercase tracking-widest text-primary">MARKETING VALUE PROPOSITION</span>
