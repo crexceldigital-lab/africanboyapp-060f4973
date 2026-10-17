@@ -108,9 +108,9 @@ export function generateCommercialProposalPdf(
     headStyles: { fillColor: INK, textColor: GOLD, fontStyle: 'bold', fontSize: 7.5 },
     alternateRowStyles: { fillColor: LIGHT },
     columnStyles: {
-      0: { cellWidth: 7, halign: 'center' }, 1: { cellWidth: 39 }, 2: { cellWidth: 17 },
-      3: { cellWidth: 34 }, 4: { cellWidth: 16, halign: 'center' }, 5: { cellWidth: 13, halign: 'right' },
-      6: { cellWidth: 27, halign: 'right' }, 7: { cellWidth: 29, halign: 'right' },
+      0: { cellWidth: 7, halign: 'center' }, 1: { cellWidth: 38 }, 2: { cellWidth: 20 },
+      3: { cellWidth: 34 }, 4: { cellWidth: 19, halign: 'center' }, 5: { cellWidth: 10, halign: 'right' },
+      6: { cellWidth: 26, halign: 'right' }, 7: { cellWidth: 28, halign: 'right' },
     },
     margin: { left: M, right: M, top: 28, bottom: 20 },
     rowPageBreak: 'avoid', showHead: 'everyPage',
@@ -162,7 +162,13 @@ export function generateCommercialProposalPdf(
   const partnerName = clean(offer.businessName) || clean(offer.applicantName) || 'Partner';
   const companyName = clean(business.business_name) || 'African Boy';
   const nameHeight = Math.max(doc.splitTextToSize(partnerName, 79).length, doc.splitTextToSize(companyName, 79).length) * 4.5;
-  const signatureHeight = 62 + nameHeight;
+  doc.setFont('Proposal', 'normal'); doc.setFontSize(8);
+  const representativeHeight = Math.max(
+    doc.splitTextToSize(clean(business.contact_person), 77).length,
+    doc.splitTextToSize(clean(offer.acceptedBySignature), 77).length,
+    1
+  ) * 4;
+  const signatureHeight = 62 + nameHeight + Math.max(0, representativeHeight - 4);
   ensure(signatureHeight + 16);
   heading('SIGNATURE & ACCEPTANCE', signatureHeight);
   const panelWidth = (CW - 8) / 2;
@@ -176,7 +182,7 @@ export function generateCommercialProposalPdf(
     text('Authorised representative', x + 5, sy, panelWidth - 10, 8, false, GREY);
     sy += 5;
     if (representative) { text(representative, x + 5, sy, panelWidth - 10, 8); } else { doc.line(x + 5, sy + 4, x + panelWidth - 5, sy + 4); }
-    sy += 11;
+    sy += 11 + Math.max(0, representativeHeight - 4);
     text('Title', x + 5, sy, panelWidth - 10, 8, false, GREY);
     doc.line(x + 17, sy + 4, x + panelWidth - 5, sy + 4);
     sy += 10;
