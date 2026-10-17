@@ -175,6 +175,119 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_commercial_offers: {
+        Row: {
+          acceptance_notes: string | null
+          accepted_at: string | null
+          accepted_by_signature: string | null
+          agent_id: string | null
+          applicant_name: string
+          application_id: string | null
+          artist_disclaimer: string
+          business_name: string | null
+          commercial_terms: Json
+          confirmed_shipping_rate: number | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          destination_city: string
+          destination_country: string
+          exclusivity_terms: string | null
+          expiry_date: string
+          id: string
+          internal_notes: string | null
+          is_exclusive: boolean
+          marketing_benefits: string[]
+          merchandise_subtotal: number
+          offer_reference: string
+          partnership_level: string
+          payment_terms: string
+          proposed_items: Json
+          shipping_disclaimer: string
+          shipping_terms: string
+          status: string
+          territory: string | null
+          total_units: number
+          updated_at: string
+        }
+        Insert: {
+          acceptance_notes?: string | null
+          accepted_at?: string | null
+          accepted_by_signature?: string | null
+          agent_id?: string | null
+          applicant_name: string
+          application_id?: string | null
+          artist_disclaimer?: string
+          business_name?: string | null
+          commercial_terms?: Json
+          confirmed_shipping_rate?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          destination_city: string
+          destination_country: string
+          exclusivity_terms?: string | null
+          expiry_date: string
+          id?: string
+          internal_notes?: string | null
+          is_exclusive?: boolean
+          marketing_benefits?: string[]
+          merchandise_subtotal?: number
+          offer_reference: string
+          partnership_level: string
+          payment_terms?: string
+          proposed_items?: Json
+          shipping_disclaimer?: string
+          shipping_terms?: string
+          status?: string
+          territory?: string | null
+          total_units?: number
+          updated_at?: string
+        }
+        Update: {
+          acceptance_notes?: string | null
+          accepted_at?: string | null
+          accepted_by_signature?: string | null
+          agent_id?: string | null
+          applicant_name?: string
+          application_id?: string | null
+          artist_disclaimer?: string
+          business_name?: string | null
+          commercial_terms?: Json
+          confirmed_shipping_rate?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          destination_city?: string
+          destination_country?: string
+          exclusivity_terms?: string | null
+          expiry_date?: string
+          id?: string
+          internal_notes?: string | null
+          is_exclusive?: boolean
+          marketing_benefits?: string[]
+          merchandise_subtotal?: number
+          offer_reference?: string
+          partnership_level?: string
+          payment_terms?: string
+          proposed_items?: Json
+          shipping_disclaimer?: string
+          shipping_terms?: string
+          status?: string
+          territory?: string | null
+          total_units?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_commercial_offers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "agent_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           is_public: boolean

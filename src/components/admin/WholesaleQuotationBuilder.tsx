@@ -16,6 +16,7 @@ import type {
   WholesaleProgramSettings
 } from '@/types';
 import RecordOfferAcceptanceModal from './RecordOfferAcceptanceModal';
+import { PROPOSAL_ARTIST_NOTICE, PROPOSAL_SHIPPING_NOTICE, type ProposalBusinessDetails } from '@/lib/commercialProposalData';
 
 interface WholesaleQuotationBuilderProps {
   application: AgentApplication;
@@ -44,6 +45,10 @@ export default function WholesaleQuotationBuilder({
   const [loading, setLoading] = useState(true);
 
   // Commercial Offer State
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [businessDetails, setBusinessDetails] = useState<ProposalBusinessDetails>({});
+  const [savedCreatedAt, setSavedCreatedAt] = useState<string | null>(null);
+  const [savedCommercialTerms, setSavedCommercialTerms] = useState<AgentCommercialOffer['commercialTerms']>({});
   const [offerId, setOfferId] = useState<string | null>(null);
   const [offerRef, setOfferRef] = useState<string>('');
   const [offerStatus, setOfferStatus] = useState<AgentCommercialOffer['status']>('Draft');
@@ -68,7 +73,7 @@ export default function WholesaleQuotationBuilder({
       ? 'National territory exclusivity subject to maintaining minimum 100 units/quarter replenishment.'
       : ''
   );
-  const [deliveryTerms, setDeliveryTerms] = useState('Ex Works Dar es Salaam');
+  const [deliveryTerms, setDeliveryTerms] = useState('Shipping quoted separately; partner responsible for agreed shipping and import costs');
   const [confirmedShippingRate, setConfirmedShippingRate] = useState<string>('');
   const [paymentTerms, setPaymentTerms] = useState('100% Pre-payment via Bank Wire Transfer prior to order dispatch');
   const [expiryDate, setExpiryDate] = useState(
@@ -112,42 +117,18 @@ export default function WholesaleQuotationBuilder({
             colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
             sizes: Array.isArray(p.sizes) ? p.sizes : JSON.parse(p.sizes || '[]'),
           }));
-        } else {
-          // Fallback mock core products if db is empty
-          parsedProducts = [
-            {
-              id: 'p-tshirt-1',
-              name: 'AFB Signature Oversized Tee',
-              price: 45000,
-              sku: 'AFB-TEE-BLK',
-              category: 'T-Shirt',
-              description: 'Heavyweight cotton heritage streetwear graphic tee',
-              image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500',
-              stock_quantity: 450,
-              sizes: ['M', 'L', 'XL', 'XXL'],
-              colors: [{ name: 'Signature Black', hex: '#111111' }],
-            },
-            {
-              id: 'p-cap-1',
-              name: 'African Boy Distressed Vintage Cap',
-              price: 35000,
-              sku: 'AFB-CAP-BLK',
-              category: 'Caps',
-              description: 'Washed cotton dad cap with signature gold embroidery',
-              image_url: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=500',
-              stock_quantity: 300,
-              sizes: ['FREE SIZE'],
-              colors: [{ name: 'Vintage Black', hex: '#111111' }],
-            },
-          ];
         }
 
         setAllProducts(parsedProducts);
+        const { data: savedBusiness } = await supabase.from('invoice_settings').select('business_name,business_address,city,country,email,phone,website,contact_person').eq('store_id', 1).maybeSingle();
+        if (savedBusiness) setBusinessDetails(savedBusiness as ProposalBusinessDetails);
 
         // Check if an offer already exists for this application
         const existingOffer = await wholesaleProgramService.getOfferByApplicationId(application.id);
         if (existingOffer) {
           setOfferId(existingOffer.id);
+          setSavedCreatedAt(existingOffer.createdAt);
+          setSavedCommercialTerms(existingOffer.commercialTerms || {});
           setOfferRef(existingOffer.offerReference);
           setOfferStatus(existingOffer.status);
           setPartnershipLevel(existingOffer.partnershipLevel);
@@ -318,7 +299,7 @@ export default function WholesaleQuotationBuilder({
   const totalUnits = proposalItems.reduce((s, i) => s + i.quantity, 0);
   const merchandiseSubtotal = proposalItems.reduce((s, i) => s + i.lineTotal, 0);
   const confirmedShippingNum = confirmedShippingRate ? Number(confirmedShippingRate) : null;
-  const grandTotal = merchandiseSubtotal + (confirmedShippingNum || 0);
+  const grandTotal = merchandiseSubtotal;
 
   // Construct current offer object
   const getCurrentOfferObject = (): AgentCommercialOffer => ({
@@ -339,16 +320,17 @@ export default function WholesaleQuotationBuilder({
     merchandiseSubtotal,
     confirmedShippingRate: confirmedShippingNum,
     shippingTerms: deliveryTerms,
-    shippingDisclaimer: wholesaleProgramService.calculateQuotation([], { settings: settings || undefined }).shippingDisclaimer,
+    shippingDisclaimer: PROPOSAL_SHIPPING_NOTICE,
     paymentTerms,
     marketingBenefits: selectedBenefits,
-    artistDisclaimer: wholesaleProgramService.calculateQuotation([], { settings: settings || undefined }).shippingDisclaimer,
+    artistDisclaimer: PROPOSAL_ARTIST_NOTICE,
     internalNotes,
     expiryDate,
     status: offerStatus,
     acceptedAt,
     acceptedBySignature: acceptedSignature,
-    createdAt: new Date().toISOString(),
+    commercialTerms: savedCommercialTerms,
+    createdAt: savedCreatedAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
 
@@ -359,14 +341,20 @@ export default function WholesaleQuotationBuilder({
       return;
     }
 
-    const currentOffer = getCurrentOfferObject();
-    const saved = await wholesaleProgramService.saveOffer(currentOffer);
-    setOfferId(saved.id);
-    setOfferStatus(saved.status === 'Draft' ? 'Sent' : saved.status);
-
-    downloadCommercialProposalPdf(saved, application);
-    toast.success(`Proposal PDF generated and downloaded for ${application.full_name}!`);
-    if (onOfferSaved) onOfferSaved(saved);
+    setGeneratingPdf(true);
+    try {
+      const saved = await wholesaleProgramService.saveOffer(getCurrentOfferObject());
+      setOfferId(saved.id);
+      setSavedCreatedAt(saved.createdAt);
+      setOfferStatus(saved.status);
+      downloadCommercialProposalPdf(saved, application, businessDetails);
+      toast.success(`Proposal PDF downloaded for ${application.full_name}.`);
+      onOfferSaved?.(saved);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not save or download the proposal.');
+    } finally {
+      setGeneratingPdf(false);
+    }
   };
 
   // Action 2: Trigger Record Acceptance Modal
@@ -720,11 +708,11 @@ export default function WholesaleQuotationBuilder({
               <span>International Shipping & Import Terms</span>
             </div>
             <p className="text-[11px] leading-relaxed text-amber-200/80">
-              International freight shipping, port customs clearance, and import duties are <strong>excluded</strong> unless a confirmed rate has been negotiated and entered here.
+              This proposal covers goods only. Shipping and import costs are quoted separately and are not included in the goods value.
             </p>
             <div className="pt-1">
               <label className="text-[10px] uppercase font-bold text-white/70 block mb-1">
-                Confirmed Freight Rate ({currency}) — <em>Leave blank for EX-WORKS</em>
+                Separate Freight Quote ({currency}) — <em>Not included in goods value</em>
               </label>
               <input
                 type="number"
@@ -733,7 +721,7 @@ export default function WholesaleQuotationBuilder({
                   setConfirmedShippingRate(e.target.value);
                   recalculateItems(proposalItems, currency, e.target.value);
                 }}
-                placeholder="Leave blank (Default: Ex-Works / Excluded)"
+                placeholder="Leave blank until separately quoted"
                 className="w-full px-3 py-2 bg-zinc-950 border border-white/20 rounded-lg text-white font-mono text-xs outline-none"
               />
             </div>
@@ -752,11 +740,11 @@ export default function WholesaleQuotationBuilder({
             <div className="flex justify-between text-white/60">
               <span>International Freight / Shipping:</span>
               <strong className={confirmedShippingNum ? 'text-green-400' : 'text-amber-400'}>
-                {confirmedShippingNum ? `${confirmedShippingNum.toLocaleString()} ${currency}` : 'EXCLUDED (EX-WORKS)'}
+                EXCLUDED — QUOTED SEPARATELY
               </strong>
             </div>
             <div className="flex justify-between text-sm font-black text-primary pt-2 border-t border-white/10">
-              <span>Total Quotation:</span>
+              <span>Total Goods Value:</span>
               <span>{grandTotal.toLocaleString()} {currency}</span>
             </div>
           </div>
@@ -772,6 +760,7 @@ export default function WholesaleQuotationBuilder({
             onChange={e => setDeliveryTerms(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-zinc-950 border border-white/15 rounded-xl text-white font-bold outline-none"
           >
+            <option value="Shipping quoted separately; partner responsible for agreed shipping and import costs">Shipping quoted separately</option>
             <option value="Ex Works Dar es Salaam">Ex Works Dar es Salaam (Agent arranges freight)</option>
             <option value="FOB Dar es Salaam Port">FOB Dar es Salaam Port (Loaded on carrier)</option>
             <option value="CIF Airport Destination">CIF Airport Destination (Freight & insurance included)</option>
@@ -800,6 +789,29 @@ export default function WholesaleQuotationBuilder({
       </div>
 
       {/* 5. Marketing Support Package */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <label className="space-y-1 text-muted-foreground">
+          <span>Minimum replenishment order</span>
+          <input value={savedCommercialTerms?.minimumReplenishmentOrder || ''}
+            onChange={e => setSavedCommercialTerms(t => ({ ...t, minimumReplenishmentOrder: e.target.value }))}
+            placeholder="Approved offer terms only"
+            className="w-full border border-border bg-background text-foreground rounded-md p-2" />
+        </label>
+        <label className="space-y-1 text-muted-foreground">
+          <span>Processing and dispatch estimate</span>
+          <input value={savedCommercialTerms?.processingDispatchTime || ''}
+            onChange={e => setSavedCommercialTerms(t => ({ ...t, processingDispatchTime: e.target.value }))}
+            placeholder="To be confirmed"
+            className="w-full border border-border bg-background text-foreground rounded-md p-2" />
+        </label>
+        <label className="space-y-1 text-muted-foreground sm:col-span-2">
+          <span>Potential shipping origins</span>
+          <input value={savedCommercialTerms?.potentialShippingOrigins?.join(', ') || ''}
+            onChange={e => setSavedCommercialTerms(t => ({ ...t, potentialShippingOrigins: e.target.value.split(',').map(v => v.trim()).filter(Boolean) }))}
+            placeholder="Approved origins, separated by commas"
+            className="w-full border border-border bg-background text-foreground rounded-md p-2" />
+        </label>
+      </div>
       <div className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-3 text-xs">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black uppercase tracking-widest text-primary">MARKETING VALUE PROPOSITION</span>
@@ -859,6 +871,7 @@ export default function WholesaleQuotationBuilder({
           <button
             type="button"
             onClick={handleGeneratePdf}
+            disabled={generatingPdf}
             className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-2"
           >
             <Download size={15} className="text-primary" />

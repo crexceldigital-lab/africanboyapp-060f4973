@@ -1,5 +1,6 @@
 import { fromAny } from '@/lib/supabase-helpers';
 import { supabase } from '@/integrations/supabase/client';
+import { getProposalAmounts } from '@/lib/commercialProposalData';
 import type {
   WholesaleProgramSettings,
   WholesalePartnershipLevelConfig,
@@ -537,7 +538,7 @@ export const wholesaleProgramService = {
       `ABO-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
     const newOffer: AgentCommercialOffer = {
-      id: offer.id || `offer-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: offer.id && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(offer.id) ? offer.id : crypto.randomUUID(),
       offerReference,
       applicationId: offer.applicationId,
       agentId: offer.agentId || null,
@@ -554,7 +555,7 @@ export const wholesaleProgramService = {
       totalUnits: offer.totalUnits || 0,
       merchandiseSubtotal: offer.merchandiseSubtotal || 0,
       confirmedShippingRate: offer.confirmedShippingRate !== undefined ? offer.confirmedShippingRate : null,
-      shippingTerms: offer.shippingTerms || 'Ex Works Dar es Salaam',
+      shippingTerms: offer.shippingTerms || '',
       shippingDisclaimer: offer.shippingDisclaimer || SHIPPING_TAXES_DISCLAIMER,
       paymentTerms: offer.paymentTerms || '100% Pre-payment via Bank Wire Transfer prior to order dispatch',
       marketingBenefits: offer.marketingBenefits || [],
@@ -567,11 +568,16 @@ export const wholesaleProgramService = {
       acceptanceNotes: offer.acceptanceNotes || null,
       createdAt: offer.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      commercialTerms: offer.commercialTerms || {},
     };
+    const amounts = getProposalAmounts(newOffer);
+    newOffer.proposedItems = amounts.items;
+    newOffer.totalUnits = amounts.totalUnits;
+    newOffer.merchandiseSubtotal = amounts.goodsValue;
 
-    // Try Supabase insert/update
+    // Persist before returning a downloadable offer
     try {
-      await fromAny('agent_commercial_offers').upsert({
+      const { data, error } = await fromAny('agent_commercial_offers').upsert({
         id: newOffer.id,
         offer_reference: newOffer.offerReference,
         application_id: newOffer.applicationId,
@@ -600,10 +606,15 @@ export const wholesaleProgramService = {
         accepted_at: newOffer.acceptedAt,
         accepted_by_signature: newOffer.acceptedBySignature,
         acceptance_notes: newOffer.acceptanceNotes,
+        created_at: newOffer.createdAt,
+        commercial_terms: newOffer.commercialTerms,
         updated_at: new Date().toISOString(),
-      });
+      }).select('*').single();
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error('The offer was not saved. Please try again.');
+      Object.assign(newOffer, this.mapDbOfferToType(data));
     } catch (e) {
-      console.warn('Failed to upsert offer in Supabase, cached locally:', e);
+      throw new Error(`Could not save the proposal: ${e instanceof Error ? e.message : 'unknown error'}`);
     }
 
     if (existingIndex > -1) {
@@ -625,6 +636,7 @@ export const wholesaleProgramService = {
         .select('*')
         .eq('application_id', applicationId)
         .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (!error && data) {
@@ -647,6 +659,7 @@ export const wholesaleProgramService = {
         .select('*')
         .eq('agent_id', agentId)
         .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (!error && data) {
@@ -720,7 +733,7 @@ export const wholesaleProgramService = {
       totalUnits: Number(data.total_units) || 0,
       merchandiseSubtotal: Number(data.merchandise_subtotal) || 0,
       confirmedShippingRate: data.confirmed_shipping_rate != null ? Number(data.confirmed_shipping_rate) : null,
-      shippingTerms: data.shipping_terms || 'Ex Works Dar es Salaam',
+      shippingTerms: data.shipping_terms || '',
       shippingDisclaimer: data.shipping_disclaimer || SHIPPING_TAXES_DISCLAIMER,
       paymentTerms: data.payment_terms,
       marketingBenefits: Array.isArray(data.marketing_benefits) ? data.marketing_benefits : [],
@@ -733,6 +746,7 @@ export const wholesaleProgramService = {
       acceptanceNotes: data.acceptance_notes,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
+      commercialTerms: data.commercial_terms || {},
     };
   },
 
@@ -748,81 +762,13 @@ export const wholesaleProgramService = {
       offer = await this.getOfferByApplicationId(agentProfile.application_id);
     }
 
-    if (!offer) {
-      // Build dynamic agreement offer representation based on profile terms
-      const discount = agentProfile.wholesale_discount_percent || 30;
-      const tshirtPrice = Math.round(45000 * (1 - discount / 100));
-      const capPrice = Math.round(35000 * (1 - discount / 100));
-      const moq = agentProfile.minimum_order_quantity || 30;
+    if (!offer) throw new Error('No saved wholesale proposal exists for this partner. Ask the commercial team to prepare an offer.');
 
-      const mockItems: CommercialProposalItem[] = [
-        {
-          productId: 'p-tshirt-core',
-          name: 'African Boy Signature Tee (Authorized Wholesale)',
-          sku: 'AFB-TEE-CORE',
-          category: 'T-Shirt',
-          quantity: moq,
-          unitPrice: tshirtPrice,
-          retailPrice: 45000,
-          lineTotal: moq * tshirtPrice,
-          appliedTierLabel: 'Approved Commercial Rate',
-          size: 'Mixed Sizes (M-XXL)',
-          color: 'Signature Black',
-        },
-        {
-          productId: 'p-cap-core',
-          name: 'African Boy Vintage Cap (Authorized Wholesale)',
-          sku: 'AFB-CAP-CORE',
-          category: 'Caps',
-          quantity: 20,
-          unitPrice: capPrice,
-          retailPrice: 35000,
-          lineTotal: 20 * capPrice,
-          appliedTierLabel: 'Approved Commercial Rate',
-          size: 'FREE SIZE',
-          color: 'Vintage Black',
-        },
-      ];
-
-      const subtotal = mockItems.reduce((s, i) => s + i.lineTotal, 0);
-      offer = {
-        id: `offer-${agentProfile.id}`,
-        offerReference: agentProfile.agreement_reference || `AGR-${agentProfile.agent_code}-2026`,
-        applicationId: agentProfile.application_id || 'app-authorized',
-        agentId: agentProfile.id,
-        applicantName: agentProfile.full_name,
-        businessName: agentProfile.business_name || null,
-        partnershipLevel: agentProfile.business_model,
-        destinationCountry: agentProfile.assigned_country_name,
-        destinationCity: agentProfile.assigned_territory.split(',')[0] || agentProfile.assigned_country_name,
-        territory: agentProfile.assigned_territory,
-        isExclusive: agentProfile.is_exclusive,
-        exclusivityTerms: agentProfile.exclusivity_conditions || null,
-        currency: agentProfile.currency || 'TZS',
-        proposedItems: mockItems,
-        totalUnits: mockItems.reduce((s, i) => s + i.quantity, 0),
-        merchandiseSubtotal: subtotal,
-        confirmedShippingRate: null,
-        shippingTerms: 'Ex Works Dar es Salaam',
-        shippingDisclaimer: SHIPPING_TAXES_DISCLAIMER,
-        paymentTerms: agentProfile.payment_terms || '100% Pre-payment via Bank Wire Transfer prior to order dispatch',
-        marketingBenefits: [
-          'High-resolution digital lookbook & official African Boy logo suite',
-          'Product marketing guidelines & brand asset pack',
-          'Social media launch creative assets & story templates',
-          'Official African Boy website and social channels stockist listing',
-        ],
-        artistDisclaimer: LEGAL_ARTIST_DISCLAIMER,
-        internalNotes: null,
-        expiryDate: agentProfile.agreement_end_date || '2026-12-31',
-        status: 'Accepted',
-        acceptedAt: agentProfile.created_at,
-        acceptedBySignature: `${agentProfile.full_name} (Commercial Partner Signatory)`,
-        createdAt: agentProfile.created_at,
-        updatedAt: agentProfile.updated_at,
-      };
-    }
-
-    downloadCommercialProposalPdf(offer, null);
+    // Re-read the exact saved row; never export a stale local agreement.
+    const { data, error } = await fromAny('agent_commercial_offers').select('*').eq('id', offer.id).single();
+    if (error || !data) throw new Error('The saved proposal could not be loaded. Please try again.');
+    const { data: application } = await fromAny('agent_applications').select('*').eq('id', data.application_id).maybeSingle();
+    const { data: business } = await fromAny('invoice_settings').select('business_name,business_address,city,country,email,phone,website,contact_person').eq('store_id', 1).maybeSingle();
+    downloadCommercialProposalPdf(this.mapDbOfferToType(data), application, business || {});
   },
 };

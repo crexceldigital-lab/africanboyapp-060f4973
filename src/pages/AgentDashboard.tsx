@@ -409,7 +409,7 @@ export default function AgentDashboard() {
       invoice_number: `INV-${order.order_number}`,
       customer_name: agentProfile?.full_name || 'African Boy Agent',
       customer_email: agentProfile?.email || null,
-      customer_phone: agentProfile?.phone_whatsapp || null,
+      customer_phone: agentProfile?.phone_number || null,
       delivery_address: order.shipping_address,
       issue_date: new Date(order.created_at).toLocaleDateString(),
       currency: order.currency,
