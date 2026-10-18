@@ -140,13 +140,30 @@ export function generateCommercialProposalPdf(
   ], { 0: { cellWidth: 98 }, 1: { cellWidth: 84, fontStyle: 'bold' } });
 
   notice('SHIPPING & IMPORT COSTS — QUOTED SEPARATELY', PROPOSAL_SHIPPING_NOTICE);
+
+  // Annual Collection Commitment for Country Distributors
+  if (offer.partnershipLevel === 'Country Distributor' || offer.annualCollectionCommitment) {
+    heading('ANNUAL COLLECTION COMMITMENT', 28);
+    const commitmentRows = [
+      ['Contract term', '12 Months (1-Year Commercial Agreement)'],
+      ['Annual collections', '4 collections per year'],
+      ['Minimum order per collection', '1,000 pieces per collection across catalogue lines'],
+      ['Planned annual minimum', '4,000 pieces per year (calculated from 4 collections × 1,000 pieces)'],
+      ['Annual collection policy', 'Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.'],
+      ['Collection schedule terms', 'Each collection order must be placed and fulfilled under the agreed collection schedule and commercial terms. The 1,000-piece requirement applies to EACH new collection, not merely to the distributor\'s initial opening order or total annual purchases.'],
+    ];
+    table(commitmentRows, { 0: { cellWidth: 58, fontStyle: 'bold' }, 1: { cellWidth: CW - 58 } });
+    ensure(12);
+  }
+
   heading('COMMERCIAL TERMS & LOGISTICS', 22);
   const terms = offer.commercialTerms;
   const rows = [
+    ['Commercial programme', clean(offer.partnershipLevel) || 'Country Distributor'],
     ['Payment terms', clean(offer.paymentTerms) || 'Not specified in this offer'],
     ['Shipping responsibility', clean(offer.shippingTerms) || 'Shipping quotation to be agreed separately'],
-    ['Potential shipping origins', terms?.potentialShippingOrigins?.filter(Boolean).join(', ') || 'See separate shipping arrangement above'],
-    ['Minimum replenishment order', clean(terms?.minimumReplenishmentOrder) || 'Not specified in this offer'],
+    ['Potential shipping origins', terms?.potentialShippingOrigins?.filter(Boolean).join(', ') || 'Tanzania (Dar es Salaam Hub) or China (Factory Direct)'],
+    ['Minimum replenishment order', clean(terms?.minimumReplenishmentOrder) || '1,000 pieces per new collection across 4 annual collections (4,000 pcs/year)'],
     ['Processing and dispatch estimate', clean(terms?.processingDispatchTime) || 'To be confirmed'],
     ...(offer.isExclusive && clean(offer.exclusivityTerms) ? [['Exclusivity terms', clean(offer.exclusivityTerms)]] : []),
   ];

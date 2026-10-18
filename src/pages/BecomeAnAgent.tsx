@@ -36,23 +36,23 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
     },
     {
       q: 'What is the contract term and exclusivity policy?',
-      a: 'Country Distributors operate under a formal 12-month commercial distribution agreement with agreed performance expectations and renewal criteria. Exclusivity is not automatic; it is granted strictly in writing based on confirmed territory reach, sales commitments, and mutual performance reviews.',
+      a: 'Country Distributors operate under a formal 12-month commercial distribution agreement with agreed performance expectations and renewal criteria. Exclusivity is not automatic; it is governed strictly by the signed agreement and its stated performance conditions. Where an existing offer states specific replenishment conditions, it is preserved in the historical record and requires authorised review before issuing revised terms.',
     },
     {
-      q: 'What is the minimum opening order requirement?',
-      a: 'The minimum initial opening order is 1,000 pieces across available catalogue lines. This ensures distributors maintain adequate stock depth, provide instant fulfillment in their domestic market, and represent the brand with full category presence.',
-    },
-    {
-      q: 'What are the authoritative wholesale pricing tiers?',
-      a: 'Wholesale prices are structured in Tanzanian Shillings (TZS): African Boy T-Shirts are priced at TZS 35,000 (500–999 units) and TZS 30,000 (1,000+ units). African Boy Caps are priced at TZS 18,000 (300+ units). Quantities below category tiers require authorised review.',
-    },
-    {
-      q: 'Why are product sales and shipping costs handled separately?',
-      a: 'To guarantee transparent commercial pricing and avoid inflated estimates, merchandise invoices cover product sales only. Shipping arrangements are quoted separately based on your destination and preferred dispatch origin: Option A (Dar es Salaam, Tanzania) or Option B (Factory Direct, China). Verified freight quotes are approved prior to shipment.',
+      q: 'What is the annual collection commitment and order policy?',
+      a: '“Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.” The 1,000-piece requirement applies to EACH new collection, not merely to the distributor’s initial opening order or total annual purchases. The annual figure is a calculation of the collection commitments (4 collections × 1,000 pieces) and is not permission to purchase all 4,000 pieces in one collection or skip the required order for another collection.',
     },
     {
       q: 'What business capability and financial documentation are required?',
-      a: 'Applicants must provide evidence of business capability and financial capacity, including a 1-year market-entry plan, sales forecast, operating budget allocation, proof of working capital to fund opening stock and operations, and details on existing sales staff and retail or warehousing infrastructure.',
+      a: 'Applicants must demonstrate the financial and operational capacity to support all four annual collections. The business-capability assessment asks applicants to explain how they will fund and sell at least 1,000 pieces per collection, how they plan to sustain the business across the full 12-month contract, and to provide evidence of working capital, operating budget allocation, and retail/warehousing infrastructure.',
+    },
+    {
+      q: 'What are the authoritative wholesale pricing tiers?',
+      a: 'Wholesale prices are based on the current approved wholesale pricing configuration in Tanzanian Shillings (TZS): African Boy T-Shirts are priced at TZS 35,000 (500–999 units) and TZS 30,000 (1,000+ units). African Boy Caps are priced at TZS 18,000 (300+ units). Unit prices are never changed or invented arbitrarily.',
+    },
+    {
+      q: 'Why are product sales and shipping costs handled separately?',
+      a: 'To guarantee transparent commercial pricing and avoid inflated estimates, merchandise invoices cover product sales only. Shipping arrangements are quoted and approved separately for each shipment based on your destination and preferred dispatch origin: Option A (Dar es Salaam, Tanzania) or Option B (Factory Direct, China).',
     },
   ];
 
@@ -96,7 +96,7 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
               </span>
             </h1>
             <p className="max-w-3xl mx-auto text-sm sm:text-base md:text-lg text-white/80 font-medium leading-relaxed pt-2">
-              Become an authorised African Boy Country Distributor and develop the brand in your market through a structured wholesale and distribution partnership.
+              Become an authorised African Boy Country Distributor. Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.
             </p>
           </motion.div>
 
@@ -125,9 +125,9 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
           {/* Key Value Badges */}
           <div className="pt-10 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto border-t border-white/10">
             {[
-              { label: '12-Month Contract', sub: '1-Year Commercial Agreement' },
-              { label: '1,000 Pcs Opening Order', sub: 'Minimum Opening Allocation' },
-              { label: 'Authoritative Pricing', sub: 'Factory Wholesale TZS Tiers' },
+              { label: '12-Month Contract', sub: '1-Year Agreement' },
+              { label: '4 Annual Collections', sub: '1,000 Pcs Each Drop' },
+              { label: '4,000 Pcs Annual Minimum', sub: 'Planned Commitment' },
               { label: 'Separate Shipping', sub: 'Tanzania or China Fulfillment' },
             ].map((item, i) => (
               <div key={i} className="text-center p-2">
@@ -252,24 +252,24 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
             <div className="space-y-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary">PILLAR 2</span>
               <h3 className="text-xl font-black uppercase tracking-tight text-white">
-                Business Capability & Working Capital
+                Financial Capacity & 4-Drop Execution
               </h3>
               <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
-                Distributors must demonstrate the operational muscle and financial liquidity required to support sustained market penetration.
+                Applicants must demonstrate the financial and operational capacity to fund and sell at least 1,000 pieces per collection across all four annual collections (4,000 pieces per year) and sustain the business across the full 12-month contract.
               </p>
             </div>
             <ul className="space-y-2 pt-2 border-t border-white/10">
               <li className="flex items-start gap-2.5 text-xs text-white/80">
                 <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
-                <span><strong>1-Year Business Plan:</strong> Structured market-entry strategy, sales forecast, and operating budget plan.</span>
+                <span><strong>1-Year Business Strategy:</strong> Comprehensive plan explaining how you will fund and sell at least 1,000 pieces per collection.</span>
               </li>
               <li className="flex items-start gap-2.5 text-xs text-white/80">
                 <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
-                <span><strong>Financial Capacity:</strong> Evidence of working capital to fund opening stock inventory and ongoing retail operations.</span>
+                <span><strong>Working Capital Liquidity:</strong> Verifiable capital resources to fund initial and subsequent collection commitments without disruptions.</span>
               </li>
               <li className="flex items-start gap-2.5 text-xs text-white/80">
                 <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
-                <span><strong>Infrastructure & Team:</strong> Established retail boutiques, warehousing space, sales representatives, and logistics.</span>
+                <span><strong>Infrastructure & Distribution:</strong> Physical retail boutiques, secure warehousing, active sales reps, and delivery networks.</span>
               </li>
             </ul>
           </div>
@@ -282,24 +282,24 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
             <div className="space-y-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary">PILLAR 3</span>
               <h3 className="text-xl font-black uppercase tracking-tight text-white">
-                1,000 Pieces Minimum Opening Order
+                4 Annual Collections · 1,000 Pcs Each
               </h3>
               <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
-                Every newly appointed Country Distributor launches with a substantial opening allocation to ensure immediate retail presence.
+                African Boy releases four collections per year. Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.
               </p>
             </div>
             <ul className="space-y-2 pt-2 border-t border-white/10">
               <li className="flex items-start gap-2.5 text-xs text-white/80">
                 <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
-                <span><strong>1,000 Units MOQ:</strong> Minimum initial opening order across available catalogue lines.</span>
+                <span><strong>Commitment to EACH Drop:</strong> The 1,000-piece requirement applies to EACH new collection individually, not merely to the opening order or total annual purchases.</span>
               </li>
               <li className="flex items-start gap-2.5 text-xs text-white/80">
                 <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
-                <span><strong>Full Size Curve Allocation:</strong> Balanced size distribution from S to 3XL to serve all customer profiles.</span>
+                <span><strong>Planned Annual 4,000 Pcs Minimum:</strong> Calculated from 4 collection commitments. Orders cannot be lumped into a single drop or skipped.</span>
               </li>
               <li className="flex items-start gap-2.5 text-xs text-white/80">
                 <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
-                <span><strong>Priority Production Slot:</strong> Guaranteed factory allocation and expedited fulfillment turnaround.</span>
+                <span><strong>Opening Order vs Subsequent Drops:</strong> The initial opening order serves as Drop 1. Subsequent drops require separate orders and are tracked individually.</span>
               </li>
             </ul>
           </div>
@@ -568,8 +568,8 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
             },
             {
               step: '04',
-              title: '1,000 Pcs Opening Order',
-              desc: 'Confirm your opening allocation in the Agent Portal, approve separate freight logistics, and launch nationwide distribution.',
+              title: '1,000 Pcs / Collection Commitment',
+              desc: 'Confirm your Drop 1 opening order (1,000 pcs), approve separate freight logistics, and plan your remaining 3 annual collections (4,000 pcs total).',
             },
           ].map((item, i) => (
             <div key={i} className="p-6 rounded-3xl bg-zinc-950 border border-white/10 space-y-4 relative">

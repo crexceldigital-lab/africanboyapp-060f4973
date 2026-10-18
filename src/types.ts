@@ -664,6 +664,49 @@ export interface AgentReportSummary {
 // WHOLESALE PROGRAMME TYPES
 // ==============================================================================
 
+export interface AnnualCollectionCommitment {
+  contractTermMonths: number;
+  collectionsPerYear: number;
+  minimumOrderPerCollection: number;
+  plannedAnnualMinimum: number;
+  statement: string;
+  distinctionRule: string;
+  complianceNotes?: string;
+}
+
+export interface DistributorCollectionScheduleItem {
+  id: string;
+  collectionNumber: number; // 1, 2, 3, 4
+  name: string;
+  launchDate: string;
+  orderDeadline: string;
+  minimumOrderPieces: number;
+  isOpeningOrder?: boolean;
+  notes?: string;
+}
+
+export interface DistributorCollectionOrderRecord {
+  id: string;
+  agentId?: string | null;
+  applicationId?: string | null;
+  distributorName?: string;
+  countryName?: string;
+  collectionId: string;
+  collectionNumber: number;
+  collectionName: string;
+  isOpeningOrder: boolean;
+  minimumCommitment: number;
+  quantityOrdered: number;
+  quantityPaid: number;
+  quantityFulfilled: number;
+  outstandingCommitment: number;
+  status: 'Pending Order' | 'Order Placed' | 'Partially Paid' | 'Paid' | 'In Production' | 'Dispatched' | 'Fulfilled' | 'Overdue';
+  orderReference?: string;
+  orderDate?: string;
+  notes?: string;
+  updatedAt: string;
+}
+
 export interface WholesalePartnershipLevelConfig {
   id: string;
   name: AgentBusinessModel;
@@ -678,6 +721,10 @@ export interface WholesalePartnershipLevelConfig {
   defaultExclusivityTerms?: string;
   contractTermMonths?: number;
   minimumOpeningOrder?: number;
+  collectionsPerYear?: number;
+  minimumOrderPerCollection?: number;
+  plannedAnnualMinimum?: number;
+  annualCollectionCommitmentStatement?: string;
   isLegacy?: boolean;
 }
 
@@ -700,6 +747,11 @@ export interface WholesaleProgramSettings {
   marketingBenefitTiers: Record<string, string[]>;
   currencyRates: Record<string, number>;
   updatedAt: string;
+  annualCollectionsCount?: number;
+  collectionMinimumPieces?: number;
+  plannedAnnualMinimumPieces?: number;
+  contractTermMonths?: number;
+  collectionSchedule?: DistributorCollectionScheduleItem[];
 }
 
 export interface CommercialProposalItem {
@@ -754,7 +806,20 @@ export interface AgentCommercialOffer {
     minimumReplenishmentOrder?: string;
     processingDispatchTime?: string;
     potentialShippingOrigins?: string[];
+    contractTermMonths?: number;
+    annualCollections?: number;
+    minimumOrderPerCollection?: number;
+    plannedAnnualMinimum?: number;
+    collectionScheduleAgreement?: string;
   };
+  annualCollectionCommitment?: AnnualCollectionCommitment;
+  flaggedForReview?: boolean;
+  reviewRequiredReason?: string;
+  isHistoricalBaseline?: boolean;
+  supersededByOfferId?: string | null;
+  supersededByOfferRef?: string | null;
+  parentOfferReference?: string | null;
+  version?: number;
 }
 
 

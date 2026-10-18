@@ -80,6 +80,12 @@ export default function WholesaleQuotationBuilder({
     new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0]
   );
   const [internalNotes, setInternalNotes] = useState(application.internal_notes || '');
+  const [flaggedForReview, setFlaggedForReview] = useState(false);
+  const [reviewRequiredReason, setReviewRequiredReason] = useState<string | undefined>(undefined);
+  const [isHistoricalBaseline, setIsHistoricalBaseline] = useState(false);
+  const [parentOfferReference, setParentOfferReference] = useState<string | null>(null);
+  const [version, setVersion] = useState(1);
+  const [isIssuingRevision, setIsIssuingRevision] = useState(false);
 
   // Line items state
   const [proposalItems, setProposalItems] = useState<CommercialProposalItem[]>([]);
@@ -147,6 +153,11 @@ export default function WholesaleQuotationBuilder({
           setSelectedBenefits(existingOffer.marketingBenefits);
           setAcceptedSignature(existingOffer.acceptedBySignature || null);
           setAcceptedAt(existingOffer.acceptedAt || null);
+          setFlaggedForReview(Boolean(existingOffer.flaggedForReview));
+          setReviewRequiredReason(existingOffer.reviewRequiredReason);
+          setIsHistoricalBaseline(Boolean(existingOffer.isHistoricalBaseline));
+          setParentOfferReference(existingOffer.parentOfferReference || null);
+          setVersion(existingOffer.version || 1);
         } else {
           // Initialize default opening order with T-shirts and Caps from enabled catalogue
           const initialRef = `ABA-OFF-2026-${application.country_code}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -301,6 +312,33 @@ export default function WholesaleQuotationBuilder({
   const confirmedShippingNum = confirmedShippingRate ? Number(confirmedShippingRate) : null;
   const grandTotal = merchandiseSubtotal;
 
+  // Issue Revised Proposal action for historical flagged offers (e.g. ABA-OFF-2026-KEX97J)
+  const handleIssueRevision = async () => {
+    if (!offerId && !offerRef) return;
+    setIsIssuingRevision(true);
+    try {
+      const revised = await wholesaleProgramService.issueRevisedProposal(offerId || offerRef);
+      setOfferId(revised.id);
+      setOfferRef(revised.offerReference);
+      setOfferStatus(revised.status);
+      setExclusivityTerms(revised.exclusivityTerms || '');
+      setInternalNotes(revised.internalNotes || '');
+      setSavedCommercialTerms(revised.commercialTerms || {});
+      setFlaggedForReview(false);
+      setReviewRequiredReason(undefined);
+      setParentOfferReference(revised.parentOfferReference || null);
+      setVersion(revised.version || 2);
+      setIsHistoricalBaseline(false);
+      setSavedCreatedAt(revised.createdAt);
+      toast.success(`Revised proposal ${revised.offerReference} created successfully.`);
+      onOfferSaved?.(revised);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to issue revised offer.');
+    } finally {
+      setIsIssuingRevision(false);
+    }
+  };
+
   // Construct current offer object
   const getCurrentOfferObject = (): AgentCommercialOffer => ({
     id: offerId || `offer-${Date.now()}`,
@@ -329,7 +367,33 @@ export default function WholesaleQuotationBuilder({
     status: offerStatus,
     acceptedAt,
     acceptedBySignature: acceptedSignature,
-    commercialTerms: savedCommercialTerms,
+    commercialTerms: {
+      ...savedCommercialTerms,
+      contractTermMonths: 12,
+      annualCollections: 4,
+      minimumOrderPerCollection: 1000,
+      plannedAnnualMinimum: 4000,
+      collectionScheduleAgreement:
+        'Each collection order must be placed and fulfilled under the agreed collection schedule and commercial terms.',
+    },
+    annualCollectionCommitment:
+      partnershipLevel === 'Country Distributor'
+        ? {
+            contractTermMonths: 12,
+            collectionsPerYear: 4,
+            minimumOrderPerCollection: 1000,
+            plannedAnnualMinimum: 4000,
+            statement:
+              'Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.',
+            distinctionRule:
+              'The 1,000-piece requirement applies to EACH new collection, not merely to the distributor\'s initial opening order or total annual purchases.',
+          }
+        : undefined,
+    flaggedForReview,
+    reviewRequiredReason,
+    isHistoricalBaseline,
+    parentOfferReference,
+    version,
     createdAt: savedCreatedAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
@@ -434,6 +498,43 @@ export default function WholesaleQuotationBuilder({
           </span>
         </div>
       </div>
+
+      {flaggedForReview && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="text-amber-400 shrink-0" size={16} />
+                <span className="font-black text-amber-400 uppercase tracking-wider text-[11px]">
+                  Historical Proposal Flagged for Review (Reference: {offerRef})
+                </span>
+              </div>
+              <p className="text-white/80 leading-relaxed text-[11px]">
+                {reviewRequiredReason ||
+                  'This proposal contains historical replenishment terms (100 units/quarter). Under current Country Distributor policy, partners commit to 1,000 pieces per collection across 4 annual collections (4,000 units/year). Original proposal is preserved as historical evidence.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleIssueRevision}
+              disabled={isIssuingRevision}
+              className="px-4 py-2.5 bg-primary hover:bg-primary/90 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shrink-0 flex items-center gap-1.5"
+            >
+              {isIssuingRevision ? 'Issuing Revision...' : 'Issue Revised Offer (4 Collections / 4,000 Pcs)'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {parentOfferReference && (
+        <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] flex items-center justify-between">
+          <span>
+            Revised Offer (Version {version}) — Linked to historical baseline proposal{' '}
+            <strong>{parentOfferReference}</strong> (preserved intact in audit archive).
+          </span>
+          <span className="text-[10px] uppercase font-bold text-blue-400/80">Active Revised Terms</span>
+        </div>
+      )}
 
       {acceptedSignature && (
         <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between">
@@ -747,6 +848,39 @@ export default function WholesaleQuotationBuilder({
               <span>Total Goods Value:</span>
               <span>{grandTotal.toLocaleString()} {currency}</span>
             </div>
+          </div>
+
+          {/* Country Distributor Collection Commitment Status */}
+          <div className={`p-3.5 rounded-xl border text-xs space-y-1 ${
+            totalUnits >= 1000 ? 'bg-primary/5 border-primary/25 text-white' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+          }`}>
+            <div className="flex items-center justify-between font-bold">
+              <span>Collection Commitment Progress:</span>
+              <span className="font-mono">{totalUnits} / 1,000 units</span>
+            </div>
+            {totalUnits < 1000 ? (
+              <p className="text-[11px] text-amber-400">
+                ⚠️ Opening order total is below the 1,000-piece collection requirement. Requires authorised administrative review.
+              </p>
+            ) : (
+              <p className="text-[11px] text-white/60">
+                ✓ Meets the 1,000-piece opening collection requirement.
+              </p>
+            )}
+          </div>
+
+          {/* Annual Collection Commitment Notice Card */}
+          <div className="p-4 rounded-xl bg-zinc-950 border border-white/10 space-y-1.5 text-xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-primary block">
+              ANNUAL COLLECTION COMMITMENT
+            </span>
+            <p className="text-white/90 font-bold text-[11px] leading-relaxed">
+              “Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.”
+            </p>
+            <p className="text-[10px] text-white/50 leading-relaxed">
+              Term: 12 Months · 4 Annual Collections · 1,000 Pcs/Collection · 4,000 Pcs Annual Commitment.
+              The 1,000-piece requirement applies to EACH new collection, not merely to the initial opening order or total annual purchases.
+            </p>
           </div>
         </div>
       </div>

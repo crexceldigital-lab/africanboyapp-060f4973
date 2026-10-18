@@ -41,6 +41,30 @@ export default function AgentWholesalePriceList({ agentProfile, settings }: Agen
         </div>
       </div>
 
+      {/* Country Distributor Annual Collection Commitment Banner */}
+      <div className="p-6 rounded-3xl bg-zinc-950 border border-primary/30 space-y-3 shadow-xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full bg-primary text-black font-black text-[9px] uppercase tracking-wider">
+              ANNUAL COMMITMENT
+            </span>
+            <h3 className="text-sm font-black uppercase text-white tracking-wide">
+              4 Annual Collections · 1,000 Pieces Each Drop
+            </h3>
+          </div>
+          <span className="text-xs font-mono font-bold text-primary">
+            4,000 Pieces Planned Annual Total
+          </span>
+        </div>
+        <p className="text-xs text-white/90 font-medium leading-relaxed">
+          “Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.”
+        </p>
+        <p className="text-[11px] text-white/60 leading-relaxed">
+          The 1,000-piece requirement applies to <strong>EACH new collection individually</strong>, not merely to your initial opening order or total annual purchases.
+          Each collection order must be placed and fulfilled under the agreed collection schedule and commercial terms.
+        </p>
+      </div>
+
       {/* Pricing Cards for T-shirts and Caps */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {['T-Shirt', 'Caps'].map(cat => {

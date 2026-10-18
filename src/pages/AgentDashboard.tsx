@@ -605,6 +605,52 @@ export default function AgentDashboard() {
             </div>
           </div>
 
+          {/* Annual Collection Commitment Card */}
+          <div className="p-6 rounded-3xl bg-zinc-950 border border-primary/30 space-y-4 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-primary text-black font-black text-[9px] uppercase tracking-wider">
+                  ANNUAL COMMITMENT
+                </span>
+                <h3 className="text-sm font-black uppercase text-white tracking-wide">
+                  Country Distributor Collection Commitments
+                </h3>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-mono font-black text-xs">
+                4 Collections · 1,000 Pcs / Collection · 4,000 Pcs Annual
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-zinc-900 border border-white/5 space-y-2 text-xs">
+              <p className="text-white font-bold text-xs sm:text-sm leading-relaxed">
+                “Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.”
+              </p>
+              <p className="text-white/60 text-[11px] leading-relaxed">
+                The 1,000-piece requirement applies to <strong>EACH new collection individually</strong>, not merely to your initial opening order or total annual purchases.
+                The system tracks each quarterly release separately to support your planned annual minimum of 4,000 pieces.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 bg-zinc-900/60 rounded-xl border border-white/5 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-white/50">Contract Term</span>
+                <p className="text-sm font-black text-white">12 Months</p>
+              </div>
+              <div className="p-3 bg-zinc-900/60 rounded-xl border border-white/5 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-white/50">Annual Drops</span>
+                <p className="text-sm font-black text-white">4 Collections</p>
+              </div>
+              <div className="p-3 bg-zinc-900/60 rounded-xl border border-white/5 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-white/50">MOQ / Collection</span>
+                <p className="text-sm font-black text-primary font-mono">1,000 Pieces</p>
+              </div>
+              <div className="p-3 bg-zinc-900/60 rounded-xl border border-white/5 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-white/50">Planned Annual Total</span>
+                <p className="text-sm font-black text-primary font-mono">4,000 Pieces</p>
+              </div>
+            </div>
+          </div>
+
           {/* Approved Categories Banner */}
           <div className="p-6 rounded-3xl bg-zinc-950 border border-white/10 space-y-3">
             <div className="flex items-center justify-between">

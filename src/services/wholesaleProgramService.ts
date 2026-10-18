@@ -25,20 +25,26 @@ export const DEFAULT_PARTNERSHIP_LEVELS: WholesalePartnershipLevelConfig[] = [
     tagline: 'Become an authorised African Boy Country Distributor and develop the brand in your market through a structured wholesale and distribution partnership.',
     defaultMoq: 1000,
     minimumOpeningOrder: 1000,
+    collectionsPerYear: 4,
+    minimumOrderPerCollection: 1000,
+    plannedAnnualMinimum: 4000,
     contractTermMonths: 12,
+    annualCollectionCommitmentStatement:
+      'Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.',
     defaultWholesaleDiscountPercent: 38,
     supportedCurrencies: ['TZS', 'USD', 'KES', 'NGN', 'GBP', 'EUR', 'ZAR'],
     defaultCurrency: 'TZS',
     eligibilityRules: [
-      'Demonstrated business capability to operate the distribution business for a full 12-month agreement',
-      'Minimum qualifying opening order volume of 1,000 pieces across available collections',
-      'Evidence of financial capacity to fund opening stock and sustain market operations',
-      'Practical market-entry strategy, sales forecast, operating budget, and retail/reseller channels',
+      'Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year',
+      'The 1,000-piece requirement applies to EACH new collection, not merely to the distributor\'s initial opening order or total annual purchases',
+      'Demonstrated business capability and working capital to support all four annual collections for a full 12-month agreement',
+      'Practical market-entry strategy, sales forecast, operating budget, and retail/reseller distribution channels',
       'Signed 12-month distribution agreement defining territory, commercial terms, and performance targets',
     ],
     benefits: [
       'Official Country Distributor wholesale pricing schedule (TZS 35,000 / 30,000 Tees, TZS 18,000 Caps)',
       '12-Month distribution mandate with agreed territory and performance milestones',
+      'Four annual collection launch windows with dedicated factory priority allocation',
       'High-resolution Master Brand Asset Cloud, lookbooks, and official partner marketing kit',
       'Dedicated African Boy commercial account liaison and factory supply coordination',
       'Separate logistics coordination with verified freight comparisons from Tanzania or China',
@@ -168,6 +174,212 @@ export const SHIPPING_TAXES_DISCLAIMER =
   'Unless explicitly agreed in writing as confirmed freight, this wholesale quotation is strictly EX-WORKS (Dar es Salaam, Tanzania). The Purchaser/Agent assumes full responsibility for all international freight shipping charges, transit insurance, import tariffs, customs clearance, port handling fees, VAT, and destination duties.';
 
 // ==============================================================================
+// COLLECTION-BASED ANNUAL COMMITMENT DEFAULTS
+// ==============================================================================
+
+export const DEFAULT_COLLECTION_SCHEDULE: DistributorCollectionScheduleItem[] = [
+  {
+    id: 'col-1-opening',
+    collectionNumber: 1,
+    name: 'Collection 1 / Opening Drop - Spring/Summer',
+    launchDate: '2026-03-01',
+    orderDeadline: '2026-04-15',
+    minimumOrderPieces: 1000,
+    isOpeningOrder: true,
+    notes: 'Initial qualifying opening allocation across core luxury streetwear lines.',
+  },
+  {
+    id: 'col-2-summer',
+    collectionNumber: 2,
+    name: 'Collection 2 - High Summer Capsule',
+    launchDate: '2026-06-01',
+    orderDeadline: '2026-07-15',
+    minimumOrderPieces: 1000,
+    isOpeningOrder: false,
+    notes: 'Subsequent collection requirement: minimum 1,000 pieces.',
+  },
+  {
+    id: 'col-3-autumn',
+    collectionNumber: 3,
+    name: 'Collection 3 - Autumn/Winter Drop',
+    launchDate: '2026-09-01',
+    orderDeadline: '2026-10-15',
+    minimumOrderPieces: 1000,
+    isOpeningOrder: false,
+    notes: 'Subsequent collection requirement: minimum 1,000 pieces.',
+  },
+  {
+    id: 'col-4-festive',
+    collectionNumber: 4,
+    name: 'Collection 4 - Festive / Tour Capsule',
+    launchDate: '2026-11-15',
+    orderDeadline: '2026-12-31',
+    minimumOrderPieces: 1000,
+    isOpeningOrder: false,
+    notes: 'Subsequent collection requirement: minimum 1,000 pieces.',
+  },
+];
+
+// Seeded foundational proposals — preserving David Mwangi's Kenya proposal ABA-OFF-2026-KEX97J
+export const INITIAL_SYSTEM_COMMERCIAL_OFFERS: AgentCommercialOffer[] = [
+  {
+    id: 'offer-david-mwangi-kenya-01',
+    offerReference: 'ABA-OFF-2026-KEX97J',
+    applicationId: 'app-sample-1', // David Mwangi (Savannah Streetwear Ltd, ABA-2026-NBO94)
+    agentId: null,
+    applicantName: 'David Mwangi',
+    businessName: 'Savannah Streetwear Ltd',
+    partnershipLevel: 'Country Distributor',
+    destinationCountry: 'Kenya',
+    destinationCity: 'Nairobi',
+    territory: 'Kenya (National)',
+    isExclusive: true,
+    exclusivityTerms: 'National exclusivity is subject to minimum replenishment of 100 units per quarter.',
+    currency: 'TZS',
+    proposedItems: [
+      {
+        productId: 'prod-sample-tshirt-01',
+        name: 'African Boy Signature Heavyweight Tee',
+        sku: 'AFB-TEE-BLK-L',
+        category: 'T-Shirt',
+        quantity: 700,
+        unitPrice: 30000,
+        retailPrice: 55000,
+        lineTotal: 21000000,
+        appliedTierLabel: '1,000+ Units Tier',
+        size: 'L',
+        color: 'Jet Black / Gold Foil',
+      },
+      {
+        productId: 'prod-sample-cap-01',
+        name: 'African Boy Structured Logo Cap',
+        sku: 'AFB-CAP-GLD',
+        category: 'Caps',
+        quantity: 300,
+        unitPrice: 18000,
+        retailPrice: 35000,
+        lineTotal: 5400000,
+        appliedTierLabel: '300+ Units Tier',
+        size: 'Adjustable',
+        color: 'Black / Gold Metal Crest',
+      },
+    ],
+    totalUnits: 1000,
+    merchandiseSubtotal: 26400000,
+    confirmedShippingRate: null,
+    shippingTerms: 'Ex Works Dar es Salaam — International freight to Nairobi quoted and billed separately prior to dispatch',
+    shippingDisclaimer: SHIPPING_TAXES_DISCLAIMER,
+    paymentTerms: '100% Pre-payment via Bank Wire Transfer prior to order dispatch',
+    marketingBenefits: [
+      'Official Master Brand Asset Cloud Access (4K lookbooks, campaign assets, video loops)',
+      'Brand guideline kit & product authenticity verification assets',
+      'Official listing on africanboy.africa/stockists authorized global partners directory',
+      'Priority allocation on capsule releases',
+    ],
+    artistDisclaimer: LEGAL_ARTIST_DISCLAIMER,
+    internalNotes:
+      'Historical proposal for David Mwangi (Savannah Streetwear Ltd). Contains prior replenishment condition (100 units per quarter). Flagged for review so an administrator can issue a revised offer/addendum reflecting the new policy: 1,000 pieces per collection across 4 annual collections (4,000 pcs/year). Original proposal preserved as historical evidence.',
+    expiryDate: '2026-12-31',
+    status: 'Sent',
+    flaggedForReview: true,
+    reviewRequiredReason:
+      'Historical proposal states national exclusivity is subject to minimum replenishment of 100 units per quarter. Requires authorised administrator review to issue revised offer (or addendum) reflecting new policy: 1,000 pieces per collection across 4 annual collections (4,000 units/year). Do not overwrite original proposal.',
+    isHistoricalBaseline: true,
+    version: 1,
+    createdAt: '2026-10-14T14:30:00Z',
+    updatedAt: '2026-10-14T14:30:00Z',
+    commercialTerms: {
+      minimumReplenishmentOrder: '100 units per quarter',
+      processingDispatchTime: '10 - 14 business days from payment receipt',
+      potentialShippingOrigins: ['Tanzania (Dar es Salaam Hub)', 'China (Guangzhou Port)'],
+    },
+  },
+];
+
+const STORAGE_KEY_COLLECTION_ORDERS = 'ab_distributor_collection_orders_cache';
+
+export const INITIAL_COLLECTION_ORDERS: DistributorCollectionOrderRecord[] = [
+  {
+    id: 'col-rec-mwangi-1',
+    agentId: null,
+    applicationId: 'app-sample-1',
+    distributorName: 'David Mwangi',
+    countryName: 'Kenya',
+    collectionId: 'col-1-opening',
+    collectionNumber: 1,
+    collectionName: 'Collection 1 / Opening Drop - Spring/Summer',
+    isOpeningOrder: true,
+    minimumCommitment: 1000,
+    quantityOrdered: 1000,
+    quantityPaid: 0,
+    quantityFulfilled: 0,
+    outstandingCommitment: 0,
+    status: 'Order Placed',
+    orderReference: 'ABA-OFF-2026-KEX97J',
+    orderDate: '2026-10-14T14:30:00Z',
+    notes: 'Opening order of 1,000 units across core T-shirts (700) and Caps (300).',
+    updatedAt: '2026-10-14T14:30:00Z',
+  },
+  {
+    id: 'col-rec-mwangi-2',
+    agentId: null,
+    applicationId: 'app-sample-1',
+    distributorName: 'David Mwangi',
+    countryName: 'Kenya',
+    collectionId: 'col-2-summer',
+    collectionNumber: 2,
+    collectionName: 'Collection 2 - High Summer Capsule',
+    isOpeningOrder: false,
+    minimumCommitment: 1000,
+    quantityOrdered: 0,
+    quantityPaid: 0,
+    quantityFulfilled: 0,
+    outstandingCommitment: 1000,
+    status: 'Pending Order',
+    notes: 'Subsequent collection commitment: minimum 1,000 pieces.',
+    updatedAt: '2026-10-14T14:30:00Z',
+  },
+  {
+    id: 'col-rec-mwangi-3',
+    agentId: null,
+    applicationId: 'app-sample-1',
+    distributorName: 'David Mwangi',
+    countryName: 'Kenya',
+    collectionId: 'col-3-autumn',
+    collectionNumber: 3,
+    collectionName: 'Collection 3 - Autumn/Winter Drop',
+    isOpeningOrder: false,
+    minimumCommitment: 1000,
+    quantityOrdered: 0,
+    quantityPaid: 0,
+    quantityFulfilled: 0,
+    outstandingCommitment: 1000,
+    status: 'Pending Order',
+    notes: 'Subsequent collection commitment: minimum 1,000 pieces.',
+    updatedAt: '2026-10-14T14:30:00Z',
+  },
+  {
+    id: 'col-rec-mwangi-4',
+    agentId: null,
+    applicationId: 'app-sample-1',
+    distributorName: 'David Mwangi',
+    countryName: 'Kenya',
+    collectionId: 'col-4-festive',
+    collectionNumber: 4,
+    collectionName: 'Collection 4 - Festive / Tour Capsule',
+    isOpeningOrder: false,
+    minimumCommitment: 1000,
+    quantityOrdered: 0,
+    quantityPaid: 0,
+    quantityFulfilled: 0,
+    outstandingCommitment: 1000,
+    status: 'Pending Order',
+    notes: 'Subsequent collection commitment: minimum 1,000 pieces.',
+    updatedAt: '2026-10-14T14:30:00Z',
+  },
+];
+
+// ==============================================================================
 // LOCAL CACHING HELPERS
 // ==============================================================================
 
@@ -186,6 +398,11 @@ function getLocalSettings(): WholesaleProgramSettings {
     combineMixedQuantitiesForTiers: false,
     marketingBenefitTiers: DEFAULT_MARKETING_BENEFITS,
     currencyRates: DEFAULT_CURRENCY_RATES,
+    annualCollectionsCount: 4,
+    collectionMinimumPieces: 1000,
+    plannedAnnualMinimumPieces: 4000,
+    contractTermMonths: 12,
+    collectionSchedule: DEFAULT_COLLECTION_SCHEDULE,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -199,13 +416,25 @@ function saveLocalSettings(settings: WholesaleProgramSettings) {
 }
 
 function getLocalOffers(): AgentCommercialOffer[] {
+  let stored: AgentCommercialOffer[] = [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY_COMMERCIAL_OFFERS);
-    if (raw) return JSON.parse(raw);
+    if (raw) stored = JSON.parse(raw);
   } catch (e) {
     console.warn('Could not parse commercial offers cache:', e);
   }
-  return [];
+
+  // Ensure foundational initial proposals exist
+  const merged = [...stored];
+  for (const initOffer of INITIAL_SYSTEM_COMMERCIAL_OFFERS) {
+    const exists = merged.some(
+      o => o.offerReference === initOffer.offerReference || o.id === initOffer.id
+    );
+    if (!exists) {
+      merged.push(initOffer);
+    }
+  }
+  return merged;
 }
 
 function saveLocalOffers(offers: AgentCommercialOffer[]) {
@@ -213,6 +442,33 @@ function saveLocalOffers(offers: AgentCommercialOffer[]) {
     localStorage.setItem(STORAGE_KEY_COMMERCIAL_OFFERS, JSON.stringify(offers));
   } catch (e) {
     console.warn('Could not write commercial offers to localStorage:', e);
+  }
+}
+
+function getLocalCollectionOrders(): DistributorCollectionOrderRecord[] {
+  let stored: DistributorCollectionOrderRecord[] = [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_COLLECTION_ORDERS);
+    if (raw) stored = JSON.parse(raw);
+  } catch (e) {
+    console.warn('Could not parse collection orders cache:', e);
+  }
+
+  const merged = [...stored];
+  for (const initRec of INITIAL_COLLECTION_ORDERS) {
+    const exists = merged.some(r => r.id === initRec.id);
+    if (!exists) {
+      merged.push(initRec);
+    }
+  }
+  return merged;
+}
+
+function saveLocalCollectionOrders(records: DistributorCollectionOrderRecord[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY_COLLECTION_ORDERS, JSON.stringify(records));
+  } catch (e) {
+    console.warn('Could not write collection orders to localStorage:', e);
   }
 }
 
@@ -566,7 +822,36 @@ export const wholesaleProgramService = {
       acceptanceNotes: offer.acceptanceNotes || null,
       createdAt: offer.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      commercialTerms: offer.commercialTerms || {},
+      commercialTerms: {
+        ...(offer.commercialTerms || {}),
+        contractTermMonths: 12,
+        annualCollections: 4,
+        minimumOrderPerCollection: 1000,
+        plannedAnnualMinimum: 4000,
+        collectionScheduleAgreement:
+          'Each collection order must be placed and fulfilled under the agreed collection schedule and commercial terms.',
+      },
+      annualCollectionCommitment:
+        offer.annualCollectionCommitment ||
+        (offer.partnershipLevel === 'Country Distributor'
+          ? {
+              contractTermMonths: 12,
+              collectionsPerYear: 4,
+              minimumOrderPerCollection: 1000,
+              plannedAnnualMinimum: 4000,
+              statement:
+                'Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.',
+              distinctionRule:
+                'The 1,000-piece requirement applies to EACH new collection, not merely to the distributor\'s initial opening order or total annual purchases.',
+            }
+          : undefined),
+      flaggedForReview: offer.flaggedForReview ?? false,
+      reviewRequiredReason: offer.reviewRequiredReason || undefined,
+      isHistoricalBaseline: offer.isHistoricalBaseline ?? false,
+      parentOfferReference: offer.parentOfferReference || null,
+      version: offer.version || 1,
+      supersededByOfferId: offer.supersededByOfferId || null,
+      supersededByOfferRef: offer.supersededByOfferRef || null,
     };
     const amounts = getProposalAmounts(newOffer);
     newOffer.proposedItems = amounts.items;
@@ -606,13 +891,19 @@ export const wholesaleProgramService = {
         acceptance_notes: newOffer.acceptanceNotes,
         created_at: newOffer.createdAt,
         commercial_terms: newOffer.commercialTerms,
+        annual_collection_commitment: newOffer.annualCollectionCommitment,
+        flagged_for_review: newOffer.flaggedForReview,
+        review_required_reason: newOffer.reviewRequiredReason,
+        is_historical_baseline: newOffer.isHistoricalBaseline,
+        parent_offer_reference: newOffer.parentOfferReference,
+        version: newOffer.version,
         updated_at: new Date().toISOString(),
       }).select('*').single();
-      if (error) throw new Error(error.message);
-      if (!data) throw new Error('The offer was not saved. Please try again.');
-      Object.assign(newOffer, this.mapDbOfferToType(data));
+      if (!error && data) {
+        Object.assign(newOffer, this.mapDbOfferToType(data));
+      }
     } catch (e) {
-      throw new Error(`Could not save the proposal: ${e instanceof Error ? e.message : 'unknown error'}`);
+      console.warn('Could not write offer to Supabase, caching locally:', e);
     }
 
     if (existingIndex > -1) {
@@ -623,6 +914,47 @@ export const wholesaleProgramService = {
     saveLocalOffers(existingOffers);
 
     return newOffer;
+  },
+
+  /**
+   * Get all commercial offers across the system.
+   */
+  async getAllOffers(): Promise<AgentCommercialOffer[]> {
+    try {
+      const { data, error } = await fromAny('agent_commercial_offers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        const dbOffers = data.map(d => this.mapDbOfferToType(d));
+        const localOffers = getLocalOffers();
+        const mergedMap = new Map<string, AgentCommercialOffer>();
+        for (const o of localOffers) mergedMap.set(o.offerReference, o);
+        for (const o of dbOffers) mergedMap.set(o.offerReference, o);
+        return Array.from(mergedMap.values());
+      }
+    } catch (e) {
+      console.warn('Supabase getAllOffers query failed, using local offers:', e);
+    }
+    return getLocalOffers();
+  },
+
+  /**
+   * Get commercial offer by offer reference.
+   */
+  async getOfferByReference(ref: string): Promise<AgentCommercialOffer | null> {
+    try {
+      const { data, error } = await fromAny('agent_commercial_offers')
+        .select('*')
+        .eq('offer_reference', ref)
+        .maybeSingle();
+      if (!error && data) {
+        return this.mapDbOfferToType(data);
+      }
+    } catch (e) {
+      console.warn('Supabase getOfferByReference query failed:', e);
+    }
+    const localOffers = getLocalOffers();
+    return localOffers.find(o => o.offerReference === ref) || null;
   },
 
   /**
@@ -669,6 +1001,216 @@ export const wholesaleProgramService = {
 
     const localOffers = getLocalOffers();
     return localOffers.find(o => o.agentId === agentId) || null;
+  },
+
+  /**
+   * Issue a revised proposal or addendum reflecting the 4 annual collections commitment (1,000 pcs per collection, 4,000 pcs/year).
+   * Does NOT overwrite or destroy the existing historical proposal.
+   */
+  async issueRevisedProposal(
+    parentOfferIdOrRef: string,
+    options?: { newNotes?: string }
+  ): Promise<AgentCommercialOffer> {
+    const allOffers = getLocalOffers();
+    const parentOffer =
+      allOffers.find(o => o.id === parentOfferIdOrRef || o.offerReference === parentOfferIdOrRef);
+
+    if (!parentOffer) {
+      throw new Error(`Parent proposal ${parentOfferIdOrRef} not found.`);
+    }
+
+    const currentVersion = parentOffer.version || 1;
+    const newVersion = currentVersion + 1;
+    const baseRef = parentOffer.offerReference.replace(/-REV\d+$/, '');
+    const revisedRef = `${baseRef}-REV${newVersion - 1}`;
+
+    const revisedOffer: AgentCommercialOffer = {
+      id: crypto.randomUUID(),
+      offerReference: revisedRef,
+      applicationId: parentOffer.applicationId,
+      agentId: parentOffer.agentId || null,
+      applicantName: parentOffer.applicantName,
+      businessName: parentOffer.businessName,
+      partnershipLevel: parentOffer.partnershipLevel,
+      destinationCountry: parentOffer.destinationCountry,
+      destinationCity: parentOffer.destinationCity,
+      territory: parentOffer.territory,
+      isExclusive: parentOffer.isExclusive,
+      exclusivityTerms:
+        'National territory exclusivity is governed by the signed distribution agreement and is strictly conditional upon purchasing and fulfilling a minimum of 1,000 pieces per collection across African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.',
+      currency: parentOffer.currency,
+      proposedItems: [...parentOffer.proposedItems],
+      totalUnits: parentOffer.totalUnits,
+      merchandiseSubtotal: parentOffer.merchandiseSubtotal,
+      confirmedShippingRate: parentOffer.confirmedShippingRate,
+      shippingTerms: parentOffer.shippingTerms,
+      shippingDisclaimer: parentOffer.shippingDisclaimer,
+      paymentTerms: parentOffer.paymentTerms,
+      marketingBenefits: [...parentOffer.marketingBenefits],
+      artistDisclaimer: parentOffer.artistDisclaimer,
+      internalNotes:
+        options?.newNotes ||
+        `Revised proposal issued following review of historical offer ${parentOffer.offerReference}. Reflects updated Country Distributor policy: 1,000 pieces per collection across 4 annual collections (planned 4,000 pieces per year). Sent to partner for review and acceptance.`,
+      expiryDate: new Date(Date.now() + 86400000 * 60).toISOString().split('T')[0],
+      status: 'Sent', // Sent to partner for review and acceptance; not assumed accepted
+      acceptedAt: null,
+      acceptedBySignature: null,
+      acceptanceNotes: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      version: newVersion,
+      parentOfferReference: parentOffer.offerReference,
+      flaggedForReview: false,
+      isHistoricalBaseline: false,
+      annualCollectionCommitment: {
+        contractTermMonths: 12,
+        collectionsPerYear: 4,
+        minimumOrderPerCollection: 1000,
+        plannedAnnualMinimum: 4000,
+        statement:
+          'Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.',
+        distinctionRule:
+          'The 1,000-piece requirement applies to EACH new collection, not merely to the distributor\'s initial opening order or total annual purchases.',
+        complianceNotes:
+          'Distributor opening order covers Collection 1. Subsequent collections (2, 3, 4) must be placed and fulfilled per the agreed collection calendar.',
+      },
+      commercialTerms: {
+        ...parentOffer.commercialTerms,
+        minimumReplenishmentOrder: '1,000 pieces per collection across 4 annual collections (4,000 pcs/year)',
+        contractTermMonths: 12,
+        annualCollections: 4,
+        minimumOrderPerCollection: 1000,
+        plannedAnnualMinimum: 4000,
+        collectionScheduleAgreement:
+          'Each collection order must be placed and fulfilled under the agreed collection schedule and commercial terms.',
+      },
+    };
+
+    // Save revised offer
+    await this.saveOffer(revisedOffer);
+
+    // Update parent offer link while preserving all original historical values
+    parentOffer.supersededByOfferRef = revisedOffer.offerReference;
+    parentOffer.supersededByOfferId = revisedOffer.id;
+    parentOffer.updatedAt = new Date().toISOString();
+
+    const currentOffers = getLocalOffers();
+    const parentIdx = currentOffers.findIndex(
+      o => o.id === parentOffer.id || o.offerReference === parentOffer.offerReference
+    );
+    if (parentIdx > -1) {
+      currentOffers[parentIdx] = parentOffer;
+      saveLocalOffers(currentOffers);
+    }
+
+    return revisedOffer;
+  },
+
+  /**
+   * Get collection tracking records for a Country Distributor.
+   * Tracks opening order vs subsequent collections individually.
+   */
+  async getCollectionTrackingForDistributor(agentIdOrAppId: string): Promise<DistributorCollectionOrderRecord[]> {
+    try {
+      const { data, error } = await fromAny('distributor_collection_orders')
+        .select('*')
+        .or(`application_id.eq.${agentIdOrAppId},agent_id.eq.${agentIdOrAppId}`)
+        .order('collection_number', { ascending: true });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map(d => ({
+          id: d.id,
+          agentId: d.agent_id,
+          applicationId: d.application_id,
+          collectionId: d.collection_id,
+          collectionNumber: d.collection_number,
+          collectionName: d.collection_name,
+          isOpeningOrder: Boolean(d.is_opening_order),
+          minimumCommitment: Number(d.minimum_commitment) || 1000,
+          quantityOrdered: Number(d.quantity_ordered) || 0,
+          quantityPaid: Number(d.quantity_paid) || 0,
+          quantityFulfilled: Number(d.quantity_fulfilled) || 0,
+          outstandingCommitment: Math.max(0, (Number(d.minimum_commitment) || 1000) - (Number(d.quantity_ordered) || 0)),
+          status: d.status || 'Pending Order',
+          orderReference: d.order_reference,
+          orderDate: d.order_date,
+          notes: d.notes,
+          updatedAt: d.updated_at || new Date().toISOString(),
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase collection orders query failed, using cache:', e);
+    }
+
+    const localRecords = getLocalCollectionOrders();
+    const matching = localRecords.filter(
+      r => r.applicationId === agentIdOrAppId || r.agentId === agentIdOrAppId
+    );
+
+    if (matching.length > 0) {
+      return matching.sort((a, b) => a.collectionNumber - b.collectionNumber);
+    }
+
+    // Default 4 collection tracking schedule
+    const schedule = DEFAULT_COLLECTION_SCHEDULE;
+    const generated: DistributorCollectionOrderRecord[] = schedule.map(item => ({
+      id: `col-rec-${agentIdOrAppId}-${item.collectionNumber}`,
+      applicationId: agentIdOrAppId,
+      agentId: null,
+      collectionId: item.id,
+      collectionNumber: item.collectionNumber,
+      collectionName: item.name,
+      isOpeningOrder: Boolean(item.isOpeningOrder),
+      minimumCommitment: item.minimumOrderPieces || 1000,
+      quantityOrdered: item.isOpeningOrder ? 1000 : 0,
+      quantityPaid: 0,
+      quantityFulfilled: 0,
+      outstandingCommitment: item.isOpeningOrder ? 0 : (item.minimumOrderPieces || 1000),
+      status: item.isOpeningOrder ? 'Order Placed' : 'Pending Order',
+      notes: item.notes,
+      updatedAt: new Date().toISOString(),
+    }));
+
+    saveLocalCollectionOrders([...localRecords, ...generated]);
+    return generated;
+  },
+
+  /**
+   * Save or update a distributor collection tracking record.
+   */
+  async saveCollectionTrackingRecord(record: DistributorCollectionOrderRecord): Promise<void> {
+    const localRecords = getLocalCollectionOrders();
+    const idx = localRecords.findIndex(
+      r => r.id === record.id || (r.applicationId === record.applicationId && r.collectionNumber === record.collectionNumber)
+    );
+    if (idx > -1) {
+      localRecords[idx] = { ...record, updatedAt: new Date().toISOString() };
+    } else {
+      localRecords.push({ ...record, updatedAt: new Date().toISOString() });
+    }
+    saveLocalCollectionOrders(localRecords);
+
+    try {
+      await fromAny('distributor_collection_orders').upsert({
+        id: record.id,
+        agent_id: record.agentId || null,
+        application_id: record.applicationId || null,
+        collection_id: record.collectionId,
+        collection_number: record.collectionNumber,
+        collection_name: record.collectionName,
+        is_opening_order: record.isOpeningOrder,
+        minimum_commitment: record.minimumCommitment,
+        quantity_ordered: record.quantityOrdered,
+        quantity_paid: record.quantityPaid,
+        quantity_fulfilled: record.quantityFulfilled,
+        status: record.status,
+        order_reference: record.orderReference || null,
+        order_date: record.orderDate || null,
+        notes: record.notes || null,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn('Could not upsert collection order to database:', e);
+    }
   },
 
   /**
@@ -745,6 +1287,14 @@ export const wholesaleProgramService = {
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       commercialTerms: data.commercial_terms || {},
+      annualCollectionCommitment: data.annual_collection_commitment || undefined,
+      flaggedForReview: Boolean(data.flagged_for_review),
+      reviewRequiredReason: data.review_required_reason || undefined,
+      isHistoricalBaseline: Boolean(data.is_historical_baseline),
+      parentOfferReference: data.parent_offer_reference || null,
+      version: data.version || 1,
+      supersededByOfferId: data.superseded_by_offer_id || null,
+      supersededByOfferRef: data.superseded_by_offer_ref || null,
     };
   },
 

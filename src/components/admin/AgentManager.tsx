@@ -20,14 +20,21 @@ import type {
   AgentShippingQuote,
   ShippingOrigin,
   ShippingQuoteStatus,
-  ShippingPaymentStatus
+  ShippingPaymentStatus,
+  DistributorCollectionOrderRecord,
+  AgentCommercialOffer
 } from '@/types';
+import { wholesaleProgramService } from '@/services/wholesaleProgramService';
 import WholesaleProgramSettingsTab from './WholesaleProgramSettingsTab';
 import WholesaleQuotationBuilder from './WholesaleQuotationBuilder';
 
 export default function AgentManager() {
-  const [activeSubTab, setActiveSubTab] = useState<'applications' | 'agents' | 'orders' | 'shipping' | 'wholesale' | 'reports'>('applications');
+  const [activeSubTab, setActiveSubTab] = useState<'applications' | 'agents' | 'orders' | 'shipping' | 'collections' | 'wholesale' | 'reports'>('applications');
   const [loading, setLoading] = useState(true);
+  const [collectionRecords, setCollectionRecords] = useState<DistributorCollectionOrderRecord[]>([]);
+  const [flaggedOffers, setFlaggedOffers] = useState<AgentCommercialOffer[]>([]);
+  const [editingCollectionRecord, setEditingCollectionRecord] = useState<DistributorCollectionOrderRecord | null>(null);
+  const [isSavingCollection, setIsSavingCollection] = useState(false);
 
   // Applications State
   const [applications, setApplications] = useState<AgentApplication[]>([]);
@@ -114,18 +121,22 @@ export default function AgentManager() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [apps, agts, ords, rep, quotes] = await Promise.all([
+      const [apps, agts, ords, rep, quotes, allOffers, distroCols] = await Promise.all([
         agentService.getApplications(),
         agentService.getAllAgentProfiles(),
         agentService.getAllReplenishmentOrders(),
         agentService.getReportsSummary(),
         agentService.getAllShippingQuotes(),
+        wholesaleProgramService.getAllOffers(),
+        wholesaleProgramService.getCollectionTrackingForDistributor('app-sample-1'),
       ]);
       setApplications(apps);
       setAgents(agts);
       setOrders(ords);
       setReports(rep);
       setShippingQuotes(quotes);
+      setFlaggedOffers(allOffers.filter(o => o.flaggedForReview));
+      setCollectionRecords(distroCols);
     } catch (err) {
       console.error('Error loading Agent Manager data:', err);
     } finally {
@@ -454,7 +465,21 @@ export default function AgentManager() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Agent management report exported to CSV.');
+  // Save Collection Order Tracking Record
+  const handleSaveCollectionRecord = async () => {
+    if (!editingCollectionRecord) return;
+    try {
+      const updated = {
+        ...editingCollectionRecord,
+        outstandingCommitment: Math.max(0, editingCollectionRecord.minimumCommitment - (Number(editingCollectionRecord.quantityOrdered) || 0)),
+      };
+      await wholesaleProgramService.saveCollectionTrackingRecord(updated);
+      toast.success(`Updated Drop ${updated.collectionNumber} (${updated.collectionName}) tracking record.`);
+      setEditingCollectionRecord(null);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update collection tracking record.');
+    }
   };
 
   return (
@@ -497,6 +522,7 @@ export default function AgentManager() {
           { id: 'agents', label: `Active Agents (${agents.length})` },
           { id: 'orders', label: `Replenishment Orders (${orders.length})` },
           { id: 'shipping', label: `Shipping Quotes (${shippingQuotes.length})` },
+          { id: 'collections', label: 'Collection Commitments' },
           { id: 'wholesale', label: 'Wholesale Program & Tiers' },
           { id: 'reports', label: 'Reports & Analytics' },
         ].map(tab => (
@@ -1083,6 +1109,188 @@ export default function AgentManager() {
                   ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* SUBTAB: COLLECTION COMMITMENTS & TRACKING */}
+      {activeSubTab === 'collections' && (
+        <div className="space-y-6">
+          {/* Top Specification Header */}
+          <div className="p-6 rounded-3xl bg-card border border-foreground/10 space-y-4 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-foreground/10 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                  AUTHORITATIVE POLICY
+                </span>
+                <h3 className="text-xl font-black uppercase tracking-tight text-foreground mt-0.5">
+                  Country Distributor Collection Commitments
+                </h3>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-black uppercase">
+                4 Collections · 1,000 Pcs Each · 4,000 Pcs Annual
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-background border border-foreground/10 space-y-2 text-xs">
+              <p className="text-foreground font-bold text-sm leading-relaxed">
+                “Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.”
+              </p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                The 1,000-piece requirement applies to <strong>EACH new collection</strong>, not merely to the distributor’s initial opening order or total annual purchases.
+                The system distinguishes the opening order from subsequent collection orders. Do not automatically mark a distributor as compliant with a collection commitment merely because they placed an opening order.
+              </p>
+            </div>
+
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3.5 rounded-xl bg-background border border-foreground/5 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Contract Term</span>
+                <p className="text-base font-black text-foreground">12 Months</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-background border border-foreground/5 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Annual Collections</span>
+                <p className="text-base font-black text-foreground">4 Drops</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-background border border-foreground/5 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Commitment / Drop</span>
+                <p className="text-base font-black text-primary font-mono">1,000 Pieces</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-background border border-foreground/5 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Planned Annual Total</span>
+                <p className="text-base font-black text-primary font-mono">4,000 Pieces</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Flagged Proposals Review Notice */}
+          {flaggedOffers.length > 0 && (
+            <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-3">
+              <div className="flex items-center gap-2 text-amber-400 font-black text-xs uppercase tracking-wider">
+                <AlertCircle size={18} />
+                <span>Historical Commercial Proposal Flagged for Review</span>
+              </div>
+              {flaggedOffers.map(fo => (
+                <div key={fo.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-black/40 rounded-xl border border-amber-500/20">
+                  <div className="space-y-0.5 text-xs">
+                    <span className="font-bold text-white block">
+                      Offer Ref: {fo.offerReference} — {fo.applicantName} ({fo.businessName || fo.destinationCountry})
+                    </span>
+                    <p className="text-white/70 text-[11px] leading-relaxed">
+                      {fo.reviewRequiredReason || 'Contains historical quarterly replenishment term (100 units/quarter). Must be reviewed to issue revised offer/addendum reflecting 4 annual collections commitment (1,000 pcs/collection, 4,000 pcs/year).'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const app = applications.find(a => a.id === fo.applicationId);
+                      if (app) handleOpenDetails(app);
+                    }}
+                    className="px-4 py-2 bg-primary text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shrink-0 flex items-center gap-1.5"
+                  >
+                    <span>Open Proposal Builder</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Distributor Collections Tracking Table */}
+          <div className="p-6 rounded-3xl bg-card border border-foreground/10 space-y-5 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-foreground/10 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary">DISTRIBUTOR FULFILMENT TRACKING</span>
+                <h4 className="text-base font-black uppercase text-foreground">
+                  David Mwangi · Savannah Streetwear Ltd (Kenya)
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Appointed Country Distributor · Territory: Kenya (National) · Term: 12 Months
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Annual Commitment Progress:</span>
+                <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-mono font-black text-xs">
+                  1 / 4 Collections Ordered (1,000 / 4,000 Units)
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-foreground/10 text-muted-foreground uppercase text-[10px] tracking-wider font-bold">
+                    <th className="py-3 px-3">Collection #</th>
+                    <th className="py-3 px-3">Collection Name</th>
+                    <th className="py-3 px-3">Order Type</th>
+                    <th className="py-3 px-3 text-right">Commitment</th>
+                    <th className="py-3 px-3 text-right">Ordered</th>
+                    <th className="py-3 px-3 text-right">Paid</th>
+                    <th className="py-3 px-3 text-right">Fulfilled</th>
+                    <th className="py-3 px-3 text-right">Outstanding</th>
+                    <th className="py-3 px-3 text-center">Status</th>
+                    <th className="py-3 px-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-foreground/5">
+                  {collectionRecords.map((col) => (
+                    <tr key={col.id} className="hover:bg-foreground/[0.02] transition-colors">
+                      <td className="py-3.5 px-3 font-mono font-bold text-foreground">
+                        Drop {col.collectionNumber}
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="font-bold text-foreground block">{col.collectionName}</span>
+                        {col.notes && <span className="text-[10px] text-muted-foreground">{col.notes}</span>}
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                          col.isOpeningOrder
+                            ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                            : 'bg-purple-500/15 text-purple-400 border border-purple-500/20'
+                        }`}>
+                          {col.isOpeningOrder ? 'Opening Order' : 'Subsequent Drop'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono font-bold text-foreground">
+                        {col.minimumCommitment.toLocaleString()} pcs
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono font-bold text-primary">
+                        {col.quantityOrdered.toLocaleString()} pcs
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono text-muted-foreground">
+                        {col.quantityPaid.toLocaleString()} pcs
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono text-muted-foreground">
+                        {col.quantityFulfilled.toLocaleString()} pcs
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono font-bold text-amber-400">
+                        {col.outstandingCommitment.toLocaleString()} pcs
+                      </td>
+                      <td className="py-3.5 px-3 text-center">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border ${
+                          col.status === 'Completed' || col.status === 'Fulfilled'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : col.status === 'Order Placed'
+                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                            : col.status === 'In Production' || col.status === 'Paid'
+                            ? 'bg-primary/10 text-primary border-primary/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {col.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-right">
+                        <button
+                          onClick={() => setEditingCollectionRecord(col)}
+                          className="px-3 py-1 bg-foreground/5 hover:bg-foreground/10 text-foreground rounded-lg font-bold text-xs transition-colors"
+                        >
+                          Update
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -2228,6 +2436,163 @@ export default function AgentManager() {
                 className="px-4 py-2 rounded-xl bg-foreground/10 text-xs font-bold"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT COLLECTION COMMITMENT TRACKING RECORD */}
+      {editingCollectionRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="w-full max-w-lg bg-card border border-foreground/20 rounded-3xl p-6 space-y-5 text-foreground max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-start border-b border-foreground/10 pb-3">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  FULFILMENT UPDATE · DROP {editingCollectionRecord.collectionNumber}
+                </span>
+                <h3 className="text-base font-black uppercase tracking-tight text-foreground mt-0.5">
+                  {editingCollectionRecord.collectionName}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {editingCollectionRecord.isOpeningOrder ? 'Initial Opening Order' : 'Subsequent Annual Drop'} · Minimum Commitment: {editingCollectionRecord.minimumCommitment.toLocaleString()} pieces
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingCollectionRecord(null)}
+                className="p-1.5 rounded-full hover:bg-foreground/10 text-muted-foreground hover:text-foreground"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-muted-foreground block text-[11px] uppercase">
+                    Quantity Ordered (Pieces)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingCollectionRecord.quantityOrdered}
+                    onChange={e => setEditingCollectionRecord({
+                      ...editingCollectionRecord,
+                      quantityOrdered: Math.max(0, parseInt(e.target.value, 10) || 0)
+                    })}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold font-mono text-sm focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-muted-foreground block text-[11px] uppercase">
+                    Quantity Paid (Pieces)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingCollectionRecord.quantityPaid}
+                    onChange={e => setEditingCollectionRecord({
+                      ...editingCollectionRecord,
+                      quantityPaid: Math.max(0, parseInt(e.target.value, 10) || 0)
+                    })}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold font-mono text-sm focus:border-primary outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-muted-foreground block text-[11px] uppercase">
+                    Quantity Fulfilled (Pieces)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingCollectionRecord.quantityFulfilled}
+                    onChange={e => setEditingCollectionRecord({
+                      ...editingCollectionRecord,
+                      quantityFulfilled: Math.max(0, parseInt(e.target.value, 10) || 0)
+                    })}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold font-mono text-sm focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-muted-foreground block text-[11px] uppercase">
+                    Fulfilment Status
+                  </label>
+                  <select
+                    value={editingCollectionRecord.status}
+                    onChange={e => setEditingCollectionRecord({
+                      ...editingCollectionRecord,
+                      status: e.target.value as any
+                    })}
+                    className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-bold text-xs focus:border-primary outline-none"
+                  >
+                    <option value="Pending Commitment">Pending Commitment</option>
+                    <option value="Order Placed">Order Placed</option>
+                    <option value="Paid">Paid</option>
+                    <option value="In Production">In Production</option>
+                    <option value="Dispatched">Dispatched</option>
+                    <option value="Fulfilled">Fulfilled</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-muted-foreground block text-[11px] uppercase">
+                  Order Reference
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. ABA-ORD-2026-001"
+                  value={editingCollectionRecord.orderReference || ''}
+                  onChange={e => setEditingCollectionRecord({
+                    ...editingCollectionRecord,
+                    orderReference: e.target.value
+                  })}
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl font-mono text-xs focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-muted-foreground block text-[11px] uppercase">
+                  Fulfillment Notes & Deadlines
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Notes on production schedules, dispatch batches, or partner communication..."
+                  value={editingCollectionRecord.notes || ''}
+                  onChange={e => setEditingCollectionRecord({
+                    ...editingCollectionRecord,
+                    notes: e.target.value
+                  })}
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl text-xs focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="p-3 bg-foreground/5 rounded-xl border border-foreground/10 flex items-center justify-between text-xs font-mono">
+                <span className="text-muted-foreground">Calculated Outstanding:</span>
+                <span className="font-bold text-amber-400">
+                  {Math.max(0, editingCollectionRecord.minimumCommitment - (Number(editingCollectionRecord.quantityOrdered) || 0)).toLocaleString()} pieces
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-3 border-t border-foreground/10">
+              <button
+                onClick={() => setEditingCollectionRecord(null)}
+                className="px-4 py-2 rounded-xl border border-foreground/15 text-xs font-bold hover:bg-foreground/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCollectionRecord}
+                className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md"
+              >
+                Save Record
               </button>
             </div>
           </div>

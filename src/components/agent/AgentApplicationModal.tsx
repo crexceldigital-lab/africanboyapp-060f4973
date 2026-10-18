@@ -369,7 +369,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   Your distributor application and 1-year business capability credentials have been submitted for executive review.
-                  Our administrative committee conducts due diligence and responds within 48–72 hours.
+                  Our administrative committee conducts due diligence on your capacity to support all four annual collections (1,000 pieces per collection, planned 4,000 pieces annual total) and responds within 48–72 hours.
                 </p>
               </div>
 
@@ -525,7 +525,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                       <Building2 size={18} className="text-primary" /> Step 2: Business Capability & Financial Capacity
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Country Distributors must demonstrate working capital, infrastructure, and a 1-year market-entry plan.
+                      Country Distributors must demonstrate working capital, infrastructure, and the capacity to support all four annual collections (1,000 pieces per collection, planned 4,000 pieces annual total).
                     </p>
                   </div>
 
@@ -582,7 +582,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                       rows={2}
                       value={formData.marketEntryPlan}
                       onChange={e => setFormData({ ...formData, marketEntryPlan: e.target.value })}
-                      placeholder="Outline your launch strategy, wholesale pricing markup plan, and marketing activities in your territory..."
+                      placeholder="Explain how you will fund and sell at least 1,000 pieces per collection across all four annual collections, your launch strategy, wholesale pricing markup, and how you plan to sustain the business across the full 12-month contract..."
                       className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
                     />
                   </div>
@@ -591,26 +591,26 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        Working Capital & Financial Capacity Statement *
+                        Working Capital & 4-Collection Funding Plan *
                       </label>
                       <textarea
                         rows={2}
                         value={formData.financialCapacityStatement}
                         onChange={e => setFormData({ ...formData, financialCapacityStatement: e.target.value })}
-                        placeholder="State your available working capital to fund opening stock and operations..."
+                        placeholder="Explain how you will fund at least 1,000 pieces for Drop 1 (opening order) and each subsequent collection, stating your available liquid capital, credit lines, and cash flow plan..."
                         className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        1-Year Sales Forecast & Operating Budget
+                        1-Year Sales Forecast & 4-Collection Operating Budget
                       </label>
                       <textarea
                         rows={2}
                         value={formData.operatingBudgetPlan}
                         onChange={e => setFormData({ ...formData, operatingBudgetPlan: e.target.value })}
-                        placeholder="Annual unit sales target and operating expenditure allocation..."
+                        placeholder="Projected sales volume across 4 drops (planned 4,000 pieces total) and operating expenditure allocation across the 12-month contract..."
                         className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
                       />
                     </div>
@@ -651,28 +651,32 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                 <div className="space-y-5">
                   <div className="border-b border-foreground/10 pb-3">
                     <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-                      <Briefcase size={18} className="text-primary" /> Step 3: Programme Terms & Opening Order Commitment
+                      <Briefcase size={18} className="text-primary" /> Step 3: Programme Terms & 4-Collection Commitment
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Country Distributors must commit to the authoritative 1,000-piece opening order and 12-month contract.
+                      Country Distributors must commit to purchasing a minimum of 1,000 pieces from each of African Boy’s four annual collections.
                     </p>
                   </div>
 
-                  {/* Active Model Confirmation Box */}
-                  <div className="p-4 rounded-2xl bg-primary/10 border-2 border-primary/40 space-y-2">
+                  {/* Authoritative Policy Box */}
+                  <div className="p-4 rounded-2xl bg-primary/10 border-2 border-primary/40 space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-0.5 rounded-full bg-primary text-black font-black text-[9px] uppercase tracking-wider">
-                          EXCLUSIVE PROGRAMME
+                          AUTHORITATIVE POLICY
                         </span>
                         <h4 className="text-sm font-black uppercase text-foreground">
-                          Country Distributor Programme
+                          4 Annual Collections · 1,000 Pieces Each
                         </h4>
                       </div>
                       <span className="text-xs font-bold text-primary">12-Month Agreement</span>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Authorised distributors receive factory wholesale pricing in Tanzanian Shillings (T-Shirts: 35k/30k, Caps: 18k), priority production slots, and verified territory alignment.
+                    <p className="text-foreground font-bold text-xs leading-relaxed">
+                      “Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.”
+                    </p>
+                    <p className="text-muted-foreground text-[11px] leading-relaxed">
+                      The 1,000-piece requirement applies to <strong>EACH new collection</strong>, not merely to the distributor’s initial opening order or total annual purchases.
+                      The annual figure is a calculation of the collection commitments (4 drops × 1,000 pcs = 4,000 pcs) and cannot be purchased in a single drop or skipped.
                     </p>
                   </div>
 
@@ -686,7 +690,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                         className="mt-1 w-4 h-4 rounded border-foreground/30 accent-primary cursor-pointer"
                       />
                       <span className="text-xs text-foreground/90 leading-relaxed font-medium">
-                        <strong>Minimum Opening Order Commitment:</strong> I acknowledge and agree to the <strong>1,000-piece total opening order</strong> across available catalogue lines upon appointment.
+                        <strong>Collection Commitment:</strong> I acknowledge and agree to purchase a minimum of <strong>1,000 pieces from each of African Boy’s four annual collections</strong>, representing a planned minimum commitment of <strong>4,000 pieces per year</strong>.
                       </span>
                     </label>
 
@@ -698,7 +702,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                         className="mt-1 w-4 h-4 rounded border-foreground/30 accent-primary cursor-pointer"
                       />
                       <span className="text-xs text-foreground/90 leading-relaxed font-medium">
-                        <strong>12-Month Distribution Agreement:</strong> I commit to a formal <strong>1-year commercial distribution agreement</strong> defining territory obligations, performance reviews, and non-automatic exclusivity (granted strictly in writing).
+                        <strong>12-Month Distribution Agreement:</strong> I commit to a formal <strong>1-year commercial distribution agreement</strong> defining territory obligations, collection schedules, performance reviews, and non-automatic exclusivity (governed strictly by the signed contract and its performance conditions).
                       </span>
                     </label>
                   </div>
@@ -808,8 +812,8 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                         <span className="font-bold text-primary">Country Distributor</span>
                       </div>
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Term & Opening MOQ</span>
-                        <span className="font-bold text-foreground">12 Months · 1,000 Pcs</span>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Term & Commitment</span>
+                        <span className="font-bold text-foreground">12 Months · 4 Drops / 4,000 Pcs</span>
                       </div>
                     </div>
 
@@ -840,7 +844,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                         className="mt-1 w-4 h-4 rounded border-foreground/30 accent-primary cursor-pointer"
                       />
                       <span className="text-xs text-foreground/90 leading-relaxed">
-                        I agree to the <strong>African Boy Country Distributor Programme Terms</strong>. I understand that submitting this application does not automatically grant distributor rights or territory exclusivity, and all agreements require executive review, 1,000 pcs opening order commitment, and formal 12-month contract signing.
+                        I agree to the <strong>African Boy Country Distributor Programme Terms</strong>. I understand that submitting this application does not automatically grant distributor rights or territory exclusivity, and all agreements require executive review, commitment to purchase at least 1,000 pieces from each of the 4 annual collections (4,000 pieces planned annual total), and formal 12-month contract signing.
                       </span>
                     </label>
 

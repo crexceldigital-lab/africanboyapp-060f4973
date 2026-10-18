@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Settings, Save, RefreshCw, Plus, Trash2, CheckCircle2,
-  DollarSign, Package, Shield, Sparkles, Layers, AlertCircle, HelpCircle
+  DollarSign, Package, Shield, Sparkles, Layers, AlertCircle, HelpCircle, Calendar
 } from 'lucide-react';
-import { wholesaleProgramService, DEFAULT_PARTNERSHIP_LEVELS, DEFAULT_PRICING_TIERS, DEFAULT_MARKETING_BENEFITS } from '@/services/wholesaleProgramService';
+import { wholesaleProgramService, DEFAULT_PARTNERSHIP_LEVELS, DEFAULT_PRICING_TIERS, DEFAULT_MARKETING_BENEFITS, DEFAULT_COLLECTION_SCHEDULE } from '@/services/wholesaleProgramService';
 import { PRODUCT_CATEGORIES } from '@/constants';
 import { toast } from 'sonner';
-import type { WholesaleProgramSettings, WholesalePricingTier, WholesalePartnershipLevelConfig } from '@/types';
+import type { WholesaleProgramSettings, WholesalePricingTier, WholesalePartnershipLevelConfig, DistributorCollectionScheduleItem } from '@/types';
 
 interface WholesaleProgramSettingsTabProps {
   onSettingsUpdated?: (settings: WholesaleProgramSettings) => void;
@@ -16,7 +16,7 @@ export default function WholesaleProgramSettingsTab({ onSettingsUpdated }: Whole
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<WholesaleProgramSettings | null>(null);
-  const [activeSubSection, setActiveSubSection] = useState<'tiers' | 'levels' | 'categories' | 'mixed' | 'benefits'>('tiers');
+  const [activeSubSection, setActiveSubSection] = useState<'tiers' | 'levels' | 'collections' | 'categories' | 'mixed' | 'benefits'>('collections');
 
   const loadSettings = async () => {
     setLoading(true);
@@ -72,6 +72,22 @@ export default function WholesaleProgramSettingsTab({ onSettingsUpdated }: Whole
       updatedCats = [...settings.enabledCategories, cat];
     }
     setSettings({ ...settings, enabledCategories: updatedCats });
+  };
+
+  // Collection Schedule Handlers
+  const handleUpdateCollectionSchedule = (index: number, field: keyof DistributorCollectionScheduleItem, value: any) => {
+    if (!settings) return;
+    const currentSchedule = settings.collectionSchedule && settings.collectionSchedule.length > 0
+      ? settings.collectionSchedule
+      : DEFAULT_COLLECTION_SCHEDULE;
+    const updated = [...currentSchedule];
+    updated[index] = { ...updated[index], [field]: value };
+    const totalPieces = updated.reduce((sum, item) => sum + (Number(item.minimumOrderPieces) || 0), 0);
+    setSettings({
+      ...settings,
+      collectionSchedule: updated,
+      plannedAnnualMinimumPieces: totalPieces,
+    });
   };
 
   // Tier pricing handlers
@@ -190,6 +206,7 @@ export default function WholesaleProgramSettingsTab({ onSettingsUpdated }: Whole
       {/* Navigation Pills */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {[
+          { id: 'collections', label: 'Collections Schedule (4 Drops)', icon: Calendar },
           { id: 'tiers', label: 'Quantity Pricing Tiers', icon: DollarSign },
           { id: 'levels', label: 'Partnership Levels (3)', icon: Shield },
           { id: 'categories', label: `Enabled Categories (${settings.enabledCategories.length})`, icon: Package },
@@ -214,6 +231,134 @@ export default function WholesaleProgramSettingsTab({ onSettingsUpdated }: Whole
           );
         })}
       </div>
+
+      {/* 0. ANNUAL COLLECTIONS COMMITMENT SCHEDULE */}
+      {activeSubSection === 'collections' && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl bg-card border border-foreground/10 space-y-4 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-foreground/10 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                  AUTHORITATIVE POLICY SPECIFICATION
+                </span>
+                <h4 className="text-base font-black uppercase text-foreground">
+                  Country Distributor Collection Commitment Rules
+                </h4>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase">
+                4 Collections · 1,000 Pcs Each · 4,000 Pcs Annual
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-background border border-foreground/10 space-y-2 text-xs">
+              <p className="text-foreground font-bold text-sm leading-relaxed">
+                “Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.”
+              </p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                The annual figure is a calculation of the collection commitments (4 collections × 1,000 pcs = 4,000 pcs). Do not treat it as permission to purchase all 4,000 pieces in one collection or skip the required order for another collection.
+                The system must distinguish the opening order from orders for subsequent collections. Do not automatically mark a distributor as compliant with a collection commitment merely because they placed an opening order.
+              </p>
+            </div>
+
+            {/* Quick Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3.5 rounded-xl bg-background border border-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Contract Term</span>
+                <p className="text-base font-black text-foreground">12 Months</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-background border border-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Annual Collections</span>
+                <p className="text-base font-black text-foreground">4 Drops / Year</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-background border border-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Minimum Order / Drop</span>
+                <p className="text-base font-black text-primary font-mono">1,000 Pieces</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-background border border-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Planned Annual Commitment</span>
+                <p className="text-base font-black text-primary font-mono">{settings.plannedAnnualMinimumPieces || 4000} Pieces</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Collection Schedule Configuration Table */}
+          <div className="p-6 rounded-3xl bg-card border border-foreground/10 space-y-5 shadow-xl">
+            <div className="flex items-center justify-between border-b border-foreground/10 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary">ANNUAL PRODUCTION CALENDAR</span>
+                <h4 className="text-base font-black uppercase text-foreground">
+                  Configurable 4-Collection Release Schedule
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Set release names, launch targets, and order deadlines for each quarterly drop.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {(settings.collectionSchedule && settings.collectionSchedule.length > 0
+                ? settings.collectionSchedule
+                : DEFAULT_COLLECTION_SCHEDULE
+              ).map((drop, idx) => (
+                <div
+                  key={drop.id || idx}
+                  className="p-4 rounded-2xl bg-background/80 border border-foreground/10 space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-foreground/5 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-mono font-black text-xs">
+                        Drop {drop.collectionNumber}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                        drop.isOpeningOrder
+                          ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                          : 'bg-purple-500/15 text-purple-400 border border-purple-500/20'
+                      }`}>
+                        {drop.isOpeningOrder ? 'Opening Order Drop' : 'Subsequent Collection'}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-muted-foreground">
+                      MOQ: {drop.minimumOrderPieces.toLocaleString()} pieces
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Collection Name</label>
+                      <input
+                        type="text"
+                        value={drop.collectionName}
+                        onChange={e => handleUpdateCollectionSchedule(idx, 'collectionName', e.target.value)}
+                        className="w-full px-3 py-2 bg-card border border-foreground/15 rounded-xl font-bold text-xs focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Target Launch Date</label>
+                      <input
+                        type="date"
+                        value={drop.targetLaunchDate}
+                        onChange={e => handleUpdateCollectionSchedule(idx, 'targetLaunchDate', e.target.value)}
+                        className="w-full px-3 py-2 bg-card border border-foreground/15 rounded-xl font-bold text-xs focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Distributor Order Deadline</label>
+                      <input
+                        type="date"
+                        value={drop.orderDeadline}
+                        onChange={e => handleUpdateCollectionSchedule(idx, 'orderDeadline', e.target.value)}
+                        className="w-full px-3 py-2 bg-card border border-foreground/15 rounded-xl font-bold text-xs focus:border-primary outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1. QUANTITY PRICING TIERS */}
       {activeSubSection === 'tiers' && (
