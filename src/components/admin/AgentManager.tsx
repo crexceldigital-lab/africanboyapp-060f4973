@@ -172,16 +172,35 @@ export default function AgentManager() {
     const codeNum = String(agents.length + 1).padStart(3, '0');
     setApprovalConfig({
       agentCode: `${prefix}-${codeNum}`,
-      businessModel: app.preferred_business_model,
+      businessModel: 'Country Distributor',
       assignedTerritory: app.proposed_territory_details || `${app.city}, ${app.country_name}`,
-      isExclusive: app.preferred_business_model === 'Country Distributor',
-      approvedCategories: app.requested_categories.length > 0 ? app.requested_categories : ['T-Shirt'],
-      wholesaleDiscountPercent: app.preferred_business_model === 'Country Distributor' ? 35 : 30,
+      isExclusive: app.preferred_business_model === 'Country Distributor' || true,
+      approvedCategories: app.requested_categories.length > 0 ? app.requested_categories : ['T-Shirt', 'Caps'],
+      wholesaleDiscountPercent: 35,
       commissionRate: 15,
-      moq: app.preferred_business_model === 'Country Distributor' ? 50 : 15,
+      moq: 1000,
       currency: app.country_code === 'TZ' ? 'TZS' : 'USD',
       paymentTerms: 'Pre-payment',
     });
+  };
+
+  // Handle Legacy Application Transition Action
+  const handleTransitionLegacy = async (action: 'assessed_for_distributor' | 'more_info_requested' | 'legacy_retained') => {
+    if (!selectedApp) return;
+    const res = await agentService.transitionLegacyApplication(selectedApp.id, action);
+    if (res.success && res.application) {
+      setSelectedApp(res.application);
+      toast.success(
+        action === 'assessed_for_distributor'
+          ? 'Application successfully assessed and updated to Country Distributor Programme.'
+          : action === 'more_info_requested'
+          ? 'Requested updated distributor capability information.'
+          : 'Preserved application under historical legacy terms.'
+      );
+      loadData();
+    } else {
+      toast.error(res.error || 'Failed to transition application.');
+    }
   };
 
   // Save Internal Notes
@@ -602,7 +621,20 @@ export default function AgentManager() {
                           {app.city}, {app.country_name}
                         </td>
                         <td className="px-5 py-4">
-                          <span className="font-bold text-foreground">{app.preferred_business_model}</span>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="font-bold text-foreground">{app.preferred_business_model}</span>
+                            {(app.is_legacy_application || app.preferred_business_model !== 'Country Distributor') && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[9px] font-black uppercase tracking-wider">
+                                Legacy Model
+                              </span>
+                            )}
+                            {app.programme_transition_action && (
+                              <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[9px] font-black uppercase">
+                                {app.programme_transition_action === 'assessed_for_distributor' ? 'Assessed for Distributor' :
+                                 app.programme_transition_action === 'more_info_requested' ? 'More Info Requested' : 'Legacy Terms Retained'}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex flex-wrap gap-1 max-w-[180px]">
@@ -1293,6 +1325,157 @@ export default function AgentManager() {
                   <p className="text-xs sm:text-sm text-white/85 leading-relaxed whitespace-pre-line break-words">
                     {selectedApp.motivation}
                   </p>
+                </div>
+              )}
+
+              {/* Country Distributor Capability & Financial Assessment Card */}
+              {(selectedApp.market_entry_plan ||
+                selectedApp.financial_capacity_statement ||
+                selectedApp.team_and_infrastructure ||
+                selectedApp.supporting_documents_url ||
+                selectedApp.first_year_sales_forecast) && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-zinc-900/80 border-2 border-primary/30 space-y-4 min-w-0">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full bg-primary text-black font-black text-[9px] uppercase tracking-wider">
+                        ASSESSMENT DATA
+                      </span>
+                      <h4 className="text-xs font-black uppercase tracking-wide text-white">
+                        Distributor Capability & Financial Capacity
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-primary font-bold">12-Mo Contract & 1,000 Pcs Opening Order</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    {selectedApp.market_entry_plan && (
+                      <div className="space-y-1 p-3 rounded-xl bg-zinc-950/70 border border-white/5">
+                        <span className="text-[10px] font-bold uppercase text-white/50 block">
+                          1-Year Market-Entry & Business Plan
+                        </span>
+                        <p className="text-white/80 leading-relaxed whitespace-pre-line">
+                          {selectedApp.market_entry_plan}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedApp.financial_capacity_statement && (
+                      <div className="space-y-1 p-3 rounded-xl bg-zinc-950/70 border border-white/5">
+                        <span className="text-[10px] font-bold uppercase text-white/50 block">
+                          Financial Capacity & Working Capital
+                        </span>
+                        <p className="text-white/80 leading-relaxed whitespace-pre-line">
+                          {selectedApp.financial_capacity_statement}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedApp.team_and_infrastructure && (
+                      <div className="space-y-1 p-3 rounded-xl bg-zinc-950/70 border border-white/5">
+                        <span className="text-[10px] font-bold uppercase text-white/50 block">
+                          Team & Infrastructure Readiness
+                        </span>
+                        <p className="text-white/80 leading-relaxed whitespace-pre-line">
+                          {selectedApp.team_and_infrastructure}
+                        </p>
+                      </div>
+                    )}
+
+                    {(selectedApp.first_year_sales_forecast || selectedApp.operating_budget_plan) && (
+                      <div className="space-y-1 p-3 rounded-xl bg-zinc-950/70 border border-white/5">
+                        <span className="text-[10px] font-bold uppercase text-white/50 block">
+                          Sales Forecast & Operating Budget
+                        </span>
+                        <p className="text-white/80 leading-relaxed whitespace-pre-line">
+                          {[
+                            selectedApp.first_year_sales_forecast ? `Forecast: ${selectedApp.first_year_sales_forecast}` : '',
+                            selectedApp.operating_budget_plan ? `Budget: ${selectedApp.operating_budget_plan}` : '',
+                          ].filter(Boolean).join('\n')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedApp.supporting_documents_url && (
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold text-white/50">
+                        Supporting Documents / Pitch Deck
+                      </span>
+                      <a
+                        href={selectedApp.supporting_documents_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary font-bold hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>View Supporting Credentials</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Historical Programme Transition Review Card */}
+              {(selectedApp.is_legacy_application || selectedApp.preferred_business_model !== 'Country Distributor') && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black font-black text-[9px] uppercase tracking-wider">
+                        LEGACY APPLICATION
+                      </span>
+                      <h4 className="text-xs font-black uppercase tracking-wide text-amber-300">
+                        Historical Programme Review Action
+                      </h4>
+                    </div>
+                    {selectedApp.programme_transition_action && (
+                      <span className="text-[10px] font-bold text-amber-200">
+                        Action Taken: {selectedApp.programme_transition_action.replace(/_/g, ' ').toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    This applicant submitted under the historical <strong>{selectedApp.preferred_business_model}</strong> tier.
+                    As the platform has transitioned exclusively to the <strong>Country Distributor Programme</strong> (12-month agreement, 1,000 pcs opening order MOQ), select an administrative review action:
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleTransitionLegacy('assessed_for_distributor')}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                        selectedApp.programme_transition_action === 'assessed_for_distributor'
+                          ? 'bg-primary text-black font-black shadow-md'
+                          : 'bg-white/10 hover:bg-white/20 text-white'
+                      }`}
+                    >
+                      Assess for Country Distributor
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleTransitionLegacy('more_info_requested')}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                        selectedApp.programme_transition_action === 'more_info_requested'
+                          ? 'bg-orange-500 text-black font-black shadow-md'
+                          : 'bg-white/10 hover:bg-white/20 text-white'
+                      }`}
+                    >
+                      Request Updated Information
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleTransitionLegacy('legacy_retained')}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                        selectedApp.programme_transition_action === 'legacy_retained'
+                          ? 'bg-zinc-700 text-white font-black shadow-md'
+                          : 'bg-white/10 hover:bg-white/20 text-white/80'
+                      }`}
+                    >
+                      Retain Legacy Terms
+                    </button>
+                  </div>
                 </div>
               )}
 

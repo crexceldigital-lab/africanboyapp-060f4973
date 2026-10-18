@@ -57,16 +57,16 @@ export default function WholesaleQuotationBuilder({
 
   // Offer fields
   const [partnershipLevel, setPartnershipLevel] = useState<AgentBusinessModel>(
-    (application.preferred_business_model as any) || 'Wholesale Reseller'
+    (application.preferred_business_model as any) || 'Country Distributor'
   );
-  const [currency, setCurrency] = useState<string>(application.country_code === 'TZ' ? 'TZS' : 'USD');
+  const [currency, setCurrency] = useState<string>('TZS');
   const [destinationCity, setDestinationCity] = useState(application.city || '');
   const [destinationCountry, setDestinationCountry] = useState(application.country_name || '');
   const [territory, setTerritory] = useState(
     application.proposed_territory_details || `${application.city}, ${application.country_name}`
   );
   const [isExclusive, setIsExclusive] = useState(
-    application.preferred_business_model === 'Country Distributor'
+    application.preferred_business_model === 'Country Distributor' || true
   );
   const [exclusivityTerms, setExclusivityTerms] = useState(
     application.preferred_business_model === 'Country Distributor'
@@ -84,7 +84,7 @@ export default function WholesaleQuotationBuilder({
   // Line items state
   const [proposalItems, setProposalItems] = useState<CommercialProposalItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [selectedProductQty, setSelectedProductQty] = useState<number>(30);
+  const [selectedProductQty, setSelectedProductQty] = useState<number>(100);
   const [selectedProductSize, setSelectedProductSize] = useState<string>('Standard');
 
   // Marketing benefits
@@ -171,7 +171,7 @@ export default function WholesaleQuotationBuilder({
               name: initialTshirt.name,
               sku: initialTshirt.sku || 'AFB-TEE-BLK',
               category: 'T-Shirt',
-              quantity: 30,
+              quantity: 700,
               retailPrice: initialTshirt.price,
             });
           }
@@ -181,14 +181,14 @@ export default function WholesaleQuotationBuilder({
               name: initialCap.name,
               sku: initialCap.sku || 'AFB-CAP-BLK',
               category: 'Caps',
-              quantity: 20,
+              quantity: 300,
               retailPrice: initialCap.price,
             });
           }
 
           if (initialLines.length > 0) {
             const quotation = wholesaleProgramService.calculateQuotation(initialLines, {
-              targetCurrency: application.country_code === 'TZ' ? 'TZS' : 'USD',
+              targetCurrency: 'TZS',
               settings: loadedSettings,
             });
             setProposalItems(quotation.proposalItems);
@@ -460,9 +460,9 @@ export default function WholesaleQuotationBuilder({
             }}
             className="w-full px-3 py-2 bg-zinc-950 border border-white/15 rounded-xl text-white font-bold outline-none focus:border-primary"
           >
-            <option value="Wholesale Reseller">Wholesale Reseller (MOQ: 30)</option>
-            <option value="Premium Market Agent">Premium Market Agent (MOQ: 50)</option>
-            <option value="Country Distributor">Country Distributor (MOQ: 100+)</option>
+            <option value="Country Distributor">Country Distributor (Active Programme · 1,000 Pcs Opening Order · 12 Mo)</option>
+            <option value="Wholesale Reseller">Wholesale Reseller [Legacy] (MOQ: 30)</option>
+            <option value="Premium Market Agent">Premium Market Agent [Legacy] (MOQ: 50)</option>
           </select>
         </div>
 

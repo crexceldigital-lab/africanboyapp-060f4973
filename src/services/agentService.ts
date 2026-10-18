@@ -28,93 +28,166 @@ const STORAGE_KEY_MESSAGES_PREFIX = 'ab_agent_messages_cache_';
 const isTestEnv = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') ||
   (typeof window !== 'undefined' && Boolean((window as any).__VITEST__));
 
-// Real persisted data helper - demo fallbacks strictly disabled in production
+// The 3 foundational agent applications in the African Boy system
+export const INITIAL_SYSTEM_APPLICATIONS: AgentApplication[] = [
+  {
+    id: 'app-sample-1',
+    application_reference: 'ABA-2026-NBO94',
+    user_id: null,
+    full_name: 'David Mwangi',
+    email: 'david.mwangi@africandistro.ke',
+    phone_number: '+254712345678',
+    country_code: 'KE',
+    country_name: 'Kenya',
+    city: 'Nairobi',
+    preferred_language: 'en',
+    business_name: 'Savannah Streetwear Ltd',
+    business_type: 'Existing Fashion Business',
+    website_or_social: 'https://instagram.com/savannahstreetwear',
+    business_address: 'Westlands Commercial Hub, Suite 4B, Nairobi',
+    business_registration_number: 'CPR/2023/94821',
+    years_of_experience: '3-5 years',
+    previous_experience_details: 'Importing and retailing streetwear brands across Nairobi and Mombasa for 4 years.',
+    requested_categories: ['T-Shirt', 'Caps', 'Footwear'],
+    preferred_business_model: 'Country Distributor',
+    proposed_territory_details: 'Nairobi Metropolis and Coast Region',
+    expected_monthly_sales: '150 - 300 units',
+    estimated_initial_investment: '$5,000 - $10,000 USD',
+    preferred_sales_channels: ['Retail Storefront', 'Instagram / WhatsApp Shop', 'Pop-up Events'],
+    marketing_activities: 'Influencer gifting with top Kenyan creators, pop-up events at Westgate and Alchemist.',
+    motivation: 'African Boy is the most authentic luxury streetwear brand in East Africa. The demand in Nairobi is immense.',
+    market_entry_plan: 'Secure premium retail distribution across high-footfall lifestyle spaces in Westlands, Kilimani, and Mombasa. Host co-branded launch pop-up.',
+    first_year_sales_forecast: '1,500 - 2,500 units across core luxury tees and structured caps.',
+    operating_budget_plan: 'USD $18,000 working capital allocated for inventory acquisition, local marketing, and regional freight logistics.',
+    financial_capacity_statement: 'Fully self-funded through existing retail apparel operations with pre-approved commercial bank letter of credit.',
+    team_and_infrastructure: '4 full-time staff, bonded storage facility in Westlands Commercial Hub, dedicated delivery van for Nairobi CBD retail accounts.',
+    contract_term_months: 12,
+    opening_order_pieces: 1000,
+    is_legacy_application: false,
+    status: 'Under Review',
+    internal_notes: 'Strong retail background in Westlands. Ready for initial 1,000 unit Country Distributor opening order.',
+    admin_feedback_to_applicant: null,
+    reviewed_by: null,
+    reviewed_at: null,
+    terms_accepted: true,
+    privacy_accepted: true,
+    created_at: '2026-10-14T10:00:00Z',
+    updated_at: '2026-10-14T10:00:00Z',
+  },
+  {
+    id: 'app-sample-2',
+    application_reference: 'ABA-2026-LOS21',
+    user_id: null,
+    full_name: 'Chinedu Okafor',
+    email: 'chinedu.o@lagosvibe.ng',
+    phone_number: '+2348039281726',
+    country_code: 'NG',
+    country_name: 'Nigeria',
+    city: 'Lagos',
+    preferred_language: 'en',
+    business_name: 'Mainland Kicks & Apparel',
+    business_type: 'Retail Store',
+    website_or_social: 'https://instagram.com/mainlandkicks',
+    business_address: 'Admiralty Way, Lekki Phase 1, Lagos',
+    business_registration_number: 'RC-1849204',
+    years_of_experience: '5+ years',
+    previous_experience_details: 'Operating physical boutique in Lekki with 40,000+ active customers across Nigeria.',
+    requested_categories: ['T-Shirt', 'Caps', 'Socks', 'Boxer'],
+    preferred_business_model: 'Wholesale Reseller', // Legacy category preserved
+    proposed_territory_details: 'Lekki & Lagos Island',
+    expected_monthly_sales: '200 - 500 units',
+    estimated_initial_investment: '$10,000+ USD',
+    preferred_sales_channels: ['Retail Storefront', 'E-commerce Website'],
+    marketing_activities: 'Collaborating with Afrobeats recording artists, billboards on Lekki-Epe expressway.',
+    motivation: 'Jux has massive respect in Nigeria, and the quality of African Boy apparel matches international luxury standards.',
+    market_entry_plan: 'Prominent display in Lekki flagship boutique and online drops targeting Lagos and Abuja fashion consumers.',
+    first_year_sales_forecast: '1,200 - 2,000 units',
+    operating_budget_plan: 'USD $15,000 inventory budget from current store reserves.',
+    financial_capacity_statement: 'Self-financing with active POS merchant accounts across Nigeria.',
+    team_and_infrastructure: '6 sales staff, 2 retail store locations in Lagos.',
+    contract_term_months: 6,
+    opening_order_pieces: 100,
+    is_legacy_application: true,
+    programme_transition_action: null,
+    status: 'Submitted',
+    internal_notes: null,
+    admin_feedback_to_applicant: null,
+    reviewed_by: null,
+    reviewed_at: null,
+    terms_accepted: true,
+    privacy_accepted: true,
+    created_at: '2026-10-15T12:00:00Z',
+    updated_at: '2026-10-15T12:00:00Z',
+  },
+  {
+    id: 'app-sample-3',
+    application_reference: 'ABA-2026-LDN07',
+    user_id: null,
+    full_name: 'Amina Touré',
+    email: 'amina@afrocentricuk.com',
+    phone_number: '+447911123456',
+    country_code: 'GB',
+    country_name: 'United Kingdom',
+    city: 'London',
+    preferred_language: 'en',
+    business_name: 'Diaspora Drip Ltd',
+    business_type: 'Online Seller',
+    website_or_social: 'https://tiktok.com/@diasporadrip',
+    business_address: 'Shoreditch High Street, London E1 6JJ',
+    business_registration_number: 'UK-CO-1049281',
+    years_of_experience: '1-3 years',
+    previous_experience_details: 'TikTok shop and e-commerce selling contemporary African streetwear to the UK diaspora.',
+    requested_categories: ['T-Shirt', 'Caps', 'Jackets', 'Tracksuit'],
+    preferred_business_model: 'Commission-Based Agent', // Legacy category preserved
+    proposed_territory_details: 'Greater London & Online UK',
+    expected_monthly_sales: '80 - 150 units',
+    estimated_initial_investment: '$2,000 - $5,000 USD',
+    preferred_sales_channels: ['Online Store', 'TikTok Shop', 'Pop-up Markets'],
+    marketing_activities: 'Showcasing unboxing and styling clips at London African culture festivals.',
+    motivation: 'Connecting UK diaspora youth with authentic African pride streetwear.',
+    market_entry_plan: 'Target UK diaspora community via TikTok creator network and summer cultural festivals.',
+    first_year_sales_forecast: '800 - 1,200 units',
+    operating_budget_plan: 'GBP £5,000 digital marketing and fulfillment budget.',
+    financial_capacity_statement: 'Online business cash flow with active UK Stripe account.',
+    team_and_infrastructure: '2 founders, third-party logistics (3PL) fulfillment partner in East London.',
+    contract_term_months: 12,
+    opening_order_pieces: 50,
+    is_legacy_application: true,
+    programme_transition_action: null,
+    status: 'Submitted',
+    internal_notes: null,
+    admin_feedback_to_applicant: null,
+    reviewed_by: null,
+    reviewed_at: null,
+    terms_accepted: true,
+    privacy_accepted: true,
+    created_at: '2026-10-16T09:30:00Z',
+    updated_at: '2026-10-16T09:30:00Z',
+  },
+];
+
+// Real persisted data helper - preserves the 3 original applications and cached records
 function getLocalApplications(): AgentApplication[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_APPLICATIONS);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: AgentApplication[] = JSON.parse(raw);
+      // Ensure all 3 foundational applications remain present and not lost
+      const existingRefs = new Set(parsed.map(a => a.application_reference));
+      const missingInitial = INITIAL_SYSTEM_APPLICATIONS.filter(init => !existingRefs.has(init.application_reference));
+      if (missingInitial.length > 0) {
+        const merged = [...parsed, ...missingInitial];
+        saveLocalApplications(merged);
+        return merged;
+      }
+      return parsed;
+    }
   } catch (e) {
     console.error('Failed to parse cached agent applications:', e);
   }
-  // In production, NEVER display sample/fake applications
-  if (!isTestEnv) {
-    return [];
-  }
-  // Dedicated test fixtures for automated test runner
-  return [
-    {
-      id: 'app-sample-1',
-      application_reference: 'ABA-2026-NBO94',
-      user_id: null,
-      full_name: 'David Mwangi',
-      email: 'david.mwangi@africandistro.ke',
-      phone_number: '+254712345678',
-      country_code: 'KE',
-      country_name: 'Kenya',
-      city: 'Nairobi',
-      preferred_language: 'en',
-      business_name: 'Savannah Streetwear Ltd',
-      business_type: 'Existing Fashion Business',
-      website_or_social: 'https://instagram.com/savannahstreetwear',
-      business_address: 'Westlands Commercial Hub, Suite 4B, Nairobi',
-      business_registration_number: 'CPR/2023/94821',
-      years_of_experience: '3-5 years',
-      previous_experience_details: 'Importing and retailing streetwear brands across Nairobi and Mombasa for 4 years.',
-      requested_categories: ['T-Shirt', 'Caps', 'Footwear'],
-      preferred_business_model: 'Country Distributor',
-      proposed_territory_details: 'Nairobi Metropolis and Coast Region',
-      expected_monthly_sales: '150 - 300 units',
-      estimated_initial_investment: '$5,000 - $10,000 USD',
-      preferred_sales_channels: ['Retail Storefront', 'Instagram / WhatsApp Shop', 'Pop-up Events'],
-      marketing_activities: 'Influencer gifting with top Kenyan creators, pop-up events at Westgate and Alchemist.',
-      motivation: 'African Boy is the most authentic luxury streetwear brand in East Africa. The demand in Nairobi is immense.',
-      status: 'Under Review',
-      internal_notes: 'Strong retail background in Westlands. Ready for initial 250 unit distribution order.',
-      admin_feedback_to_applicant: null,
-      reviewed_by: null,
-      reviewed_at: null,
-      terms_accepted: true,
-      privacy_accepted: true,
-      created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-      updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    },
-    {
-      id: 'app-sample-2',
-      application_reference: 'ABA-2026-LOS21',
-      user_id: null,
-      full_name: 'Chinedu Okafor',
-      email: 'chinedu.o@lagosvibe.ng',
-      phone_number: '+2348039281726',
-      country_code: 'NG',
-      country_name: 'Nigeria',
-      city: 'Lagos',
-      preferred_language: 'en',
-      business_name: 'Mainland Kicks & Apparel',
-      business_type: 'Retail Store',
-      website_or_social: 'https://instagram.com/mainlandkicks',
-      business_address: 'Admiralty Way, Lekki Phase 1, Lagos',
-      business_registration_number: 'RC-1849204',
-      years_of_experience: '5+ years',
-      previous_experience_details: 'Operating physical boutique in Lekki with 40,000+ active customers across Nigeria.',
-      requested_categories: ['T-Shirt', 'Caps', 'Socks', 'Boxer'],
-      preferred_business_model: 'Wholesale Reseller',
-      proposed_territory_details: 'Lekki & Lagos Island',
-      expected_monthly_sales: '200 - 500 units',
-      estimated_initial_investment: '$10,000+ USD',
-      preferred_sales_channels: ['Retail Storefront', 'E-commerce Website'],
-      marketing_activities: 'Collaborating with Afrobeats recording artists, billboards on Lekki-Epe expressway.',
-      motivation: 'Jux has massive respect in Nigeria, and the quality of African Boy apparel matches international luxury standards.',
-      status: 'Submitted',
-      internal_notes: null,
-      admin_feedback_to_applicant: null,
-      reviewed_by: null,
-      reviewed_at: null,
-      terms_accepted: true,
-      privacy_accepted: true,
-      created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-      updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-    },
-  ];
+  // Initialize cache with all three preserved applications
+  saveLocalApplications(INITIAL_SYSTEM_APPLICATIONS);
+  return INITIAL_SYSTEM_APPLICATIONS;
 }
 
 function saveLocalApplications(apps: AgentApplication[]) {
@@ -317,6 +390,10 @@ export const agentService = {
       id: '',
       application_reference: reference,
       access_token: accessToken,
+      preferred_business_model: 'Country Distributor', // Country Distributor is the only active programme
+      contract_term_months: 12,
+      opening_order_pieces: data.opening_order_pieces || 1000,
+      is_legacy_application: false,
       status: 'Submitted',
       last_activity_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
@@ -426,8 +503,11 @@ export const agentService = {
       }
 
       const { data, error } = await query;
-      if (!error && data) {
-        applications = data as AgentApplication[];
+      if (!error && data && data.length > 0) {
+        const dbRefs = new Set((data as AgentApplication[]).map(a => a.application_reference));
+        const localApps = getLocalApplications();
+        const missing = localApps.filter(l => !dbRefs.has(l.application_reference));
+        applications = [...(data as AgentApplication[]), ...missing];
       } else {
         applications = getLocalApplications();
       }
@@ -563,6 +643,61 @@ export const agentService = {
     }
 
     return true;
+  },
+
+  /**
+   * Administrator-controlled review action to assess existing applicants against the new Country Distributor programme.
+   */
+  async transitionLegacyApplication(
+    applicationId: string,
+    action: 'assessed_for_distributor' | 'more_info_requested' | 'legacy_retained',
+    notes?: string
+  ): Promise<{ success: boolean; application?: AgentApplication; error?: string }> {
+    const currentApps = getLocalApplications();
+    const target = currentApps.find(a => a.id === applicationId);
+    if (!target) {
+      return { success: false, error: 'Application not found' };
+    }
+
+    let updatedModel = target.preferred_business_model;
+    let newStatus = target.status;
+    let internalNotes = target.internal_notes || '';
+
+    if (action === 'assessed_for_distributor') {
+      updatedModel = 'Country Distributor';
+      internalNotes = `${internalNotes}\n[${new Date().toISOString()}] Assessed and transitioned to Country Distributor Programme by administrator. ${notes || ''}`.trim();
+    } else if (action === 'more_info_requested') {
+      newStatus = 'More Information Required';
+      internalNotes = `${internalNotes}\n[${new Date().toISOString()}] Requested updated information to assess against Country Distributor 12-month contract and 1,000-piece opening order requirements. ${notes || ''}`.trim();
+    } else {
+      internalNotes = `${internalNotes}\n[${new Date().toISOString()}] Retained as legacy application record. ${notes || ''}`.trim();
+    }
+
+    const updatedApp: AgentApplication = {
+      ...target,
+      preferred_business_model: updatedModel,
+      status: newStatus,
+      programme_transition_action: action,
+      internal_notes: internalNotes,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      await fromAny('agent_applications').update({
+        preferred_business_model: updatedModel,
+        status: newStatus,
+        programme_transition_action: action,
+        internal_notes: internalNotes,
+        updated_at: new Date().toISOString(),
+      }).eq('id', applicationId);
+    } catch (e) {
+      console.warn('DB update failed for transitionLegacyApplication, saving to local cache:', e);
+    }
+
+    const updatedList = currentApps.map(a => (a.id === applicationId ? updatedApp : a));
+    saveLocalApplications(updatedList);
+
+    return { success: true, application: updatedApp };
   },
 
   /**
@@ -1039,10 +1174,17 @@ export const agentService = {
     notes?: string
   ): Promise<{ success: boolean; order?: AgentReplenishmentOrder; error?: string }> {
     const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
-    if (totalQty < agentProfile.minimum_order_quantity) {
+    const isCountryDistributor = agentProfile.business_model === 'Country Distributor';
+    const effectiveMoq = isCountryDistributor
+      ? Math.max(agentProfile.minimum_order_quantity || 1000, 1000)
+      : agentProfile.minimum_order_quantity;
+
+    if (totalQty < effectiveMoq) {
       return {
         success: false,
-        error: `Order quantity (${totalQty}) is below the minimum order quantity of ${agentProfile.minimum_order_quantity} units.`,
+        error: isCountryDistributor
+          ? `Order quantity (${totalQty}) is below the Country Distributor minimum opening order of ${effectiveMoq} pieces.`
+          : `Order quantity (${totalQty}) is below the minimum order quantity of ${effectiveMoq} units.`,
       };
     }
 

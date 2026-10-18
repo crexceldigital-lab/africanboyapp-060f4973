@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, CheckCircle2, ChevronRight, ChevronLeft, Building, User, FileText,
-  Briefcase, Globe, ShieldCheck, Sparkles, Send, AlertCircle, Copy, Check
+  Briefcase, Globe, ShieldCheck, Sparkles, Send, AlertCircle, Copy, Check,
+  Truck, DollarSign, Layers, Building2
 } from 'lucide-react';
 import { INTERNATIONAL_COUNTRIES, getCountryByCode } from '@/data/internationalCountries';
 import { agentService } from '@/services/agentService';
@@ -17,42 +18,32 @@ interface AgentApplicationModalProps {
 }
 
 const PRODUCT_CATEGORY_OPTIONS = [
-  { id: 'T-Shirt', label: 'T-Shirts (Heavyweight & Graphic Tees)', description: 'Iconic heritage and oversized silhouettes' },
-  { id: 'Caps', label: 'Caps & Headwear', description: 'Distressed dad caps, trucker hats & beanies' },
-  { id: 'Socks', label: 'Socks', description: 'Ribbed streetwear & crew socks' },
-  { id: 'Boxer', label: 'Boxers & Underwear', description: 'Signature waistband premium underwear' },
-  { id: 'Footwear', label: 'Shoes & Footwear', description: 'Slides, streetwear sneakers & footwear' },
-  { id: 'Shirts', label: 'Cuban Shirts & Tops', description: 'Tailored luxury button-downs & resort shirts' },
-  { id: 'Jackets', label: 'Jackets & Leather Outerwear', description: 'Leather jackets, coats & windbreakers' },
-  { id: 'Tracksuit', label: 'Tracksuits & Pants', description: 'Cargo sets, utility shorts & tracksuits' },
-  { id: 'Accessories', label: 'Accessories', description: 'Bags, chains & lifestyle accessories' },
-  { id: 'Mixed Catalog', label: 'Mixed Catalog (Full Collection)', description: 'Access to request multiple or all apparel lines' },
+  { id: 'T-Shirt', label: 'T-Shirts (Heavyweight & Graphic Tees)', description: '500–999 pcs @ TZS 35k; 1,000+ pcs @ TZS 30k' },
+  { id: 'Caps', label: 'Caps & Headwear', description: '300+ pcs @ TZS 18,000' },
+  { id: 'Tracksuit', label: 'Tracksuits & Outerwear (Phase 2)', description: 'Cargo sets, utility shorts & tracksuits' },
+  { id: 'Shirts', label: 'Cuban Shirts & Tops (Phase 2)', description: 'Tailored luxury button-downs & resort shirts' },
+  { id: 'Footwear', label: 'Shoes & Footwear (Phase 2)', description: 'Slides, streetwear sneakers & footwear' },
+  { id: 'Socks', label: 'Socks & Accessories (Phase 2)', description: 'Ribbed streetwear socks & accessories' },
+  { id: 'Boxer', label: 'Boxers & Underwear (Phase 2)', description: 'Signature waistband premium underwear' },
+  { id: 'Mixed Catalog', label: 'Mixed Catalog (Full Allocation)', description: 'Request multi-line distribution allocation' },
 ];
 
 const BUSINESS_TYPE_OPTIONS = [
-  'Individual Entrepreneur',
-  'Online Seller / E-commerce',
-  'Retail Store / Boutique',
-  'Existing Fashion Business',
-  'Country Distributor / Wholesaler',
-  'Other',
+  'Retail Store / Boutique Group',
+  'Commercial Wholesaler / Distributor',
+  'Existing Multi-Brand Fashion Retailer',
+  'Streetwear & Luxury Concept Store',
+  'E-commerce & Distribution Enterprise',
+  'Individual Commercial Entrepreneur',
 ];
 
-const BUSINESS_MODEL_OPTIONS: { id: AgentBusinessModel; title: string; description: string }[] = [
-  {
-    id: 'Wholesale Reseller',
-    title: 'Wholesale Reseller',
-    description: 'Purchase stock at wholesale prices, manage local stock inventory, and set retail prices within regional brand guidelines.',
-  },
-  {
-    id: 'Commission-Based Agent',
-    title: 'Commission-Based Agent',
-    description: 'Generate verified sales in your market without holding heavy local inventory, earning approved commission per order.',
-  },
+const BUSINESS_MODEL_OPTIONS: { id: AgentBusinessModel; title: string; description: string; moq: string; term: string }[] = [
   {
     id: 'Country Distributor',
     title: 'Country Distributor',
-    description: 'Lead national distribution across an entire country or large territory, supplying retailers and managing regional supply.',
+    description: 'Manage exclusive or primary national distribution across your market. Hold local stock, supply verified retailers, and grow regional brand equity under official brand authorization.',
+    moq: '1,000 Pcs Opening Order',
+    term: '12-Month Commercial Agreement',
   },
 ];
 
@@ -75,28 +66,37 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
     city: '',
     preferredLanguage: 'en',
 
-    // Step 2: Business info
+    // Step 2: Business & Capability info
     businessName: '',
-    businessType: 'Individual Entrepreneur',
+    businessType: 'Retail Store / Boutique Group',
     websiteOrSocial: '',
     businessAddress: '',
     businessRegNumber: '',
-    yearsOfExperience: '1-3 years',
+    yearsOfExperience: '3-5 years',
     experienceDetails: '',
+    marketEntryPlan: '',
+    firstYearSalesForecast: '1,000 - 3,000 units / year',
+    operatingBudgetPlan: '',
+    financialCapacityStatement: '',
+    teamAndInfrastructure: '',
+    supportingDocumentsUrl: '',
 
-    // Step 3: Agent preferences
+    // Step 3: Distributor preferences & territory
     requestedCategories: ['T-Shirt', 'Caps'],
-    businessModel: 'Wholesale Reseller' as AgentBusinessModel,
+    businessModel: 'Country Distributor' as AgentBusinessModel,
     territoryDetails: '',
-    expectedMonthlySales: '50 - 150 units',
-    estimatedInvestment: '$2,000 - $5,000 USD',
-    salesChannels: ['Retail Storefront', 'Instagram / WhatsApp Shop'],
+    expectedMonthlySales: '150 - 300 units',
+    estimatedInvestment: '$25,000 - $50,000 USD',
+    salesChannels: ['Retail Storefront', 'Wholesale to Sub-Resellers', 'E-commerce & Digital'],
     marketingActivities: '',
     motivation: '',
+    acknowledgesMoq1000: false,
+    acknowledgesContract12Months: false,
 
     // Step 4: Terms
     termsAccepted: false,
     privacyAccepted: false,
+    shippingPolicyAccepted: false,
   });
 
   if (!isOpen) return null;
@@ -116,7 +116,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
   const toggleCategory = (catId: string) => {
     if (catId === 'Mixed Catalog') {
       if (formData.requestedCategories.includes('Mixed Catalog')) {
-        setFormData(prev => ({ ...prev, requestedCategories: ['T-Shirt'] }));
+        setFormData(prev => ({ ...prev, requestedCategories: ['T-Shirt', 'Caps'] }));
       } else {
         setFormData(prev => ({
           ...prev,
@@ -160,7 +160,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
       return false;
     }
     if (!formData.city.trim()) {
-      toast.error('Please enter your city.');
+      toast.error('Please enter your operating city.');
       return false;
     }
     return true;
@@ -171,6 +171,18 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
       toast.error('Please select your business structure.');
       return false;
     }
+    if (!formData.marketEntryPlan.trim()) {
+      toast.error('Please provide a summary of your 1-year market-entry and business plan.');
+      return false;
+    }
+    if (!formData.financialCapacityStatement.trim()) {
+      toast.error('Please provide a statement on your working capital and financial capacity.');
+      return false;
+    }
+    if (!formData.teamAndInfrastructure.trim()) {
+      toast.error('Please describe your team, retail storefront, or warehousing infrastructure.');
+      return false;
+    }
     return true;
   };
 
@@ -179,8 +191,16 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
       toast.error('Please select at least one product category.');
       return false;
     }
-    if (!formData.businessModel) {
-      toast.error('Please select your preferred business model.');
+    if (!formData.territoryDetails.trim()) {
+      toast.error('Please specify your proposed distribution territory.');
+      return false;
+    }
+    if (!formData.acknowledgesMoq1000) {
+      toast.error('Please acknowledge the 1,000-piece minimum opening order requirement.');
+      return false;
+    }
+    if (!formData.acknowledgesContract12Months) {
+      toast.error('Please acknowledge the 12-month commercial distribution agreement commitment.');
       return false;
     }
     return true;
@@ -194,8 +214,8 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
   };
 
   const handleSubmit = async () => {
-    if (!formData.termsAccepted || !formData.privacyAccepted) {
-      toast.error('Please review and accept both the Agent Program Terms and Privacy Notice.');
+    if (!formData.termsAccepted || !formData.privacyAccepted || !formData.shippingPolicyAccepted) {
+      toast.error('Please review and accept all required terms, including the separate shipping policy.');
       return;
     }
 
@@ -221,14 +241,22 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
         business_registration_number: formData.businessRegNumber.trim() || null,
         years_of_experience: formData.yearsOfExperience,
         previous_experience_details: formData.experienceDetails.trim() || null,
+        market_entry_plan: formData.marketEntryPlan.trim() || null,
+        first_year_sales_forecast: formData.firstYearSalesForecast.trim() || null,
+        operating_budget_plan: formData.operatingBudgetPlan.trim() || null,
+        financial_capacity_statement: formData.financialCapacityStatement.trim() || null,
+        team_and_infrastructure: formData.teamAndInfrastructure.trim() || null,
+        supporting_documents_url: formData.supportingDocumentsUrl.trim() || null,
         requested_categories: formData.requestedCategories,
-        preferred_business_model: formData.businessModel,
+        preferred_business_model: 'Country Distributor',
         proposed_territory_details: formData.territoryDetails.trim() || `${formData.city}, ${formData.countryName}`,
         expected_monthly_sales: formData.expectedMonthlySales,
         estimated_initial_investment: formData.estimatedInvestment,
         preferred_sales_channels: formData.salesChannels,
         marketing_activities: formData.marketingActivities.trim() || null,
         motivation: formData.motivation.trim() || null,
+        contract_term_months: 12,
+        opening_order_pieces: 1000,
         terms_accepted: formData.termsAccepted,
         privacy_accepted: formData.privacyAccepted,
       });
@@ -272,10 +300,10 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-                Official Program
+                Official Programme · 2026
               </span>
               <h2 className="text-base sm:text-lg font-black italic uppercase tracking-tight text-foreground">
-                Apply to Become an Authorized Agent
+                Apply for Country Distributor Appointment
               </h2>
             </div>
           </div>
@@ -291,10 +319,10 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
         {!submittedRef && (
           <div className="bg-background/40 px-6 py-3 border-b border-foreground/5 flex items-center justify-between gap-2">
             {[
-              { num: 1, label: 'Applicant Info' },
-              { num: 2, label: 'Business Profile' },
-              { num: 3, label: 'Preferences & Territory' },
-              { num: 4, label: 'Review & Submit' },
+              { num: 1, label: 'Applicant Details' },
+              { num: 2, label: 'Capability & Plan' },
+              { num: 3, label: 'Territory & Order' },
+              { num: 4, label: 'Review & Terms' },
             ].map(s => {
               const isActive = step === s.num;
               const isDone = step > s.num;
@@ -337,11 +365,11 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                   APPLICATION RECEIVED
                 </span>
                 <h3 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tight">
-                  Welcome to the African Boy Movement
+                  Country Distributor Application Submitted
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Your application has been logged securely into the African Boy Global Partner Registry.
-                  Our administrative committee reviews international credentials and responds within 48–72 hours.
+                  Your distributor application and 1-year business capability credentials have been submitted for executive review.
+                  Our administrative committee conducts due diligence and responds within 48–72 hours.
                 </p>
               </div>
 
@@ -363,7 +391,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                   </button>
                 </div>
                 <p className="text-[11px] text-muted-foreground pt-1">
-                  Save this reference number to quote during verification or when contacting our agent liaison desk.
+                  Save this reference number to quote during verification or when accessing the Agent Portal.
                 </p>
               </div>
 
@@ -383,10 +411,10 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                 <div className="space-y-4">
                   <div className="border-b border-foreground/10 pb-3">
                     <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-                      <User size={18} className="text-primary" /> Step 1: Applicant Contact & Identity
+                      <User size={18} className="text-primary" /> Step 1: Principal Applicant Information
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Provide verified legal and contact details. This will be used for official agreement onboarding.
+                      Enter the primary contact person authorized to represent the business and sign the 12-month commercial agreement.
                     </p>
                   </div>
 
@@ -421,7 +449,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        Country of Residence *
+                        Target Country / Territory *
                       </label>
                       <select
                         value={formData.countryCode}
@@ -438,7 +466,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
 
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        City / Municipality *
+                        Primary Operating City *
                       </label>
                       <input
                         type="text"
@@ -489,28 +517,28 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                 </div>
               )}
 
-              {/* STEP 2: Business Information */}
+              {/* STEP 2: Business Capability & Financial Capacity */}
               {step === 2 && (
                 <div className="space-y-4">
                   <div className="border-b border-foreground/10 pb-3">
                     <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-                      <Building size={18} className="text-primary" /> Step 2: Commercial & Business Experience
+                      <Building2 size={18} className="text-primary" /> Step 2: Business Capability & Financial Capacity
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Tell us about your business structure, retail presence, or experience in apparel distribution.
+                      Country Distributors must demonstrate working capital, infrastructure, and a 1-year market-entry plan.
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        Business / Trading Name (Optional)
+                        Business / Trading Name *
                       </label>
                       <input
                         type="text"
                         value={formData.businessName}
                         onChange={e => setFormData({ ...formData, businessName: e.target.value })}
-                        placeholder="e.g. Savannah Luxury Boutique"
+                        placeholder="e.g. Savannah Streetwear Ltd"
                         className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
                       />
                     </div>
@@ -531,121 +559,155 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                     </div>
                   </div>
 
+                  {/* Team & Infrastructure */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                      Team & Retail/Warehouse Infrastructure *
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.teamAndInfrastructure}
+                      onChange={e => setFormData({ ...formData, teamAndInfrastructure: e.target.value })}
+                      placeholder="Detail your sales staff, physical retail storefronts, warehousing capacity, and local logistics network..."
+                      className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
+                    />
+                  </div>
+
+                  {/* 1-Year Market-Entry & Business Plan */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                      1-Year Market-Entry Strategy & Business Plan *
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.marketEntryPlan}
+                      onChange={e => setFormData({ ...formData, marketEntryPlan: e.target.value })}
+                      placeholder="Outline your launch strategy, wholesale pricing markup plan, and marketing activities in your territory..."
+                      className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
+                    />
+                  </div>
+
+                  {/* Financial Capacity & Working Capital */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        Website or Social Media Link
+                        Working Capital & Financial Capacity Statement *
                       </label>
-                      <input
-                        type="text"
-                        value={formData.websiteOrSocial}
-                        onChange={e => setFormData({ ...formData, websiteOrSocial: e.target.value })}
-                        placeholder="e.g. instagram.com/yourbrand or website"
+                      <textarea
+                        rows={2}
+                        value={formData.financialCapacityStatement}
+                        onChange={e => setFormData({ ...formData, financialCapacityStatement: e.target.value })}
+                        placeholder="State your available working capital to fund opening stock and operations..."
                         className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        Years of Business Experience
+                        1-Year Sales Forecast & Operating Budget
                       </label>
-                      <select
-                        value={formData.yearsOfExperience}
-                        onChange={e => setFormData({ ...formData, yearsOfExperience: e.target.value })}
+                      <textarea
+                        rows={2}
+                        value={formData.operatingBudgetPlan}
+                        onChange={e => setFormData({ ...formData, operatingBudgetPlan: e.target.value })}
+                        placeholder="Annual unit sales target and operating expenditure allocation..."
                         className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
-                      >
-                        <option value="New Entrepreneur (< 1 year)">New Entrepreneur (&lt; 1 year)</option>
-                        <option value="1-3 years">1–3 years</option>
-                        <option value="3-5 years">3–5 years</option>
-                        <option value="5+ years">5+ years established</option>
-                      </select>
+                      />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                      Physical Storefront or Business Address
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.businessAddress}
-                      onChange={e => setFormData({ ...formData, businessAddress: e.target.value })}
-                      placeholder="e.g. Shop 12, Westlands Commercial Centre, Nairobi"
-                      className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        Website, Social Media, or Portfolio Link
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.websiteOrSocial}
+                        onChange={e => setFormData({ ...formData, websiteOrSocial: e.target.value })}
+                        placeholder="e.g. instagram.com/yourbusiness or website"
+                        className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                      Previous Fashion, Sales or Distribution Experience
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.experienceDetails}
-                      onChange={e => setFormData({ ...formData, experienceDetails: e.target.value })}
-                      placeholder="Briefly describe what products or brands you currently sell or your distribution track record..."
-                      className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
-                    />
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        Supporting Documents URL (Pitch Deck, Financials, etc.)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.supportingDocumentsUrl}
+                        onChange={e => setFormData({ ...formData, supportingDocumentsUrl: e.target.value })}
+                        placeholder="Drive / Dropbox link to company credentials"
+                        className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* STEP 3: Preferences & Territory */}
+              {/* STEP 3: Programme Terms & Order Commitment */}
               {step === 3 && (
                 <div className="space-y-5">
                   <div className="border-b border-foreground/10 pb-3">
                     <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-                      <Briefcase size={18} className="text-primary" /> Step 3: Product Lines & Operating Model
+                      <Briefcase size={18} className="text-primary" /> Step 3: Programme Terms & Opening Order Commitment
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Select which real African Boy catalogue categories you want to represent and your preferred commercial structure.
+                      Country Distributors must commit to the authoritative 1,000-piece opening order and 12-month contract.
                     </p>
                   </div>
 
-                  {/* Business Model Select */}
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                      Select Preferred Business Model *
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {BUSINESS_MODEL_OPTIONS.map(m => {
-                        const isSelected = formData.businessModel === m.id;
-                        return (
-                          <div
-                            key={m.id}
-                            onClick={() => setFormData({ ...formData, businessModel: m.id })}
-                            className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                              isSelected
-                                ? 'bg-primary/10 border-primary shadow-md'
-                                : 'bg-background border-foreground/10 hover:border-foreground/20'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs font-black uppercase tracking-tight text-foreground">
-                                {m.title}
-                              </span>
-                              <div
-                                className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                                  isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
-                                }`}
-                              >
-                                {isSelected && <div className="w-1.5 h-1.5 bg-black rounded-full" />}
-                              </div>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">
-                              {m.description}
-                            </p>
-                          </div>
-                        );
-                      })}
+                  {/* Active Model Confirmation Box */}
+                  <div className="p-4 rounded-2xl bg-primary/10 border-2 border-primary/40 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-primary text-black font-black text-[9px] uppercase tracking-wider">
+                          EXCLUSIVE PROGRAMME
+                        </span>
+                        <h4 className="text-sm font-black uppercase text-foreground">
+                          Country Distributor Programme
+                        </h4>
+                      </div>
+                      <span className="text-xs font-bold text-primary">12-Month Agreement</span>
                     </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Authorised distributors receive factory wholesale pricing in Tanzanian Shillings (T-Shirts: 35k/30k, Caps: 18k), priority production slots, and verified territory alignment.
+                    </p>
+                  </div>
+
+                  {/* Mandatory Commitments Checkboxes */}
+                  <div className="p-4 bg-background border border-foreground/15 rounded-2xl space-y-3">
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.acknowledgesMoq1000}
+                        onChange={e => setFormData({ ...formData, acknowledgesMoq1000: e.target.checked })}
+                        className="mt-1 w-4 h-4 rounded border-foreground/30 accent-primary cursor-pointer"
+                      />
+                      <span className="text-xs text-foreground/90 leading-relaxed font-medium">
+                        <strong>Minimum Opening Order Commitment:</strong> I acknowledge and agree to the <strong>1,000-piece total opening order</strong> across available catalogue lines upon appointment.
+                      </span>
+                    </label>
+
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.acknowledgesContract12Months}
+                        onChange={e => setFormData({ ...formData, acknowledgesContract12Months: e.target.checked })}
+                        className="mt-1 w-4 h-4 rounded border-foreground/30 accent-primary cursor-pointer"
+                      />
+                      <span className="text-xs text-foreground/90 leading-relaxed font-medium">
+                        <strong>12-Month Distribution Agreement:</strong> I commit to a formal <strong>1-year commercial distribution agreement</strong> defining territory obligations, performance reviews, and non-automatic exclusivity (granted strictly in writing).
+                      </span>
+                    </label>
                   </div>
 
                   {/* Categories Select */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        Requested Product Categories * (Multi-Select)
+                        Requested Product Catalogue Lines * (Multi-Select)
                       </label>
                       <span className="text-[10px] text-primary font-bold">
                         {formData.requestedCategories.length} selected
@@ -688,46 +750,32 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        Proposed Territory / Region *
+                        Proposed Distribution Territory / Country *
                       </label>
                       <input
                         type="text"
                         value={formData.territoryDetails}
                         onChange={e => setFormData({ ...formData, territoryDetails: e.target.value })}
-                        placeholder="e.g. Nairobi Metropolis, Coast Region, or Nationwide"
+                        placeholder="e.g. Kenya Nationwide or Nairobi & Central Region"
                         className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                        Expected Monthly Unit Sales
+                        Initial Capital Allocated (USD)
                       </label>
                       <select
-                        value={formData.expectedMonthlySales}
-                        onChange={e => setFormData({ ...formData, expectedMonthlySales: e.target.value })}
+                        value={formData.estimatedInvestment}
+                        onChange={e => setFormData({ ...formData, estimatedInvestment: e.target.value })}
                         className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
                       >
-                        <option value="20 - 50 units">20 – 50 units / month</option>
-                        <option value="50 - 150 units">50 – 150 units / month</option>
-                        <option value="150 - 300 units">150 – 300 units / month</option>
-                        <option value="300+ units">300+ units / month (High Volume)</option>
+                        <option value="$15,000 - $25,000 USD">$15,000 – $25,000 USD</option>
+                        <option value="$25,000 - $50,000 USD">$25,000 – $50,000 USD</option>
+                        <option value="$50,000 - $100,000 USD">$50,000 – $100,000 USD</option>
+                        <option value="$100,000+ USD">$100,000+ USD (Multi-City Distribution)</option>
                       </select>
                     </div>
-                  </div>
-
-                  {/* Motivation */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                      Why do you want to represent African Boy in your market?
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.motivation}
-                      onChange={e => setFormData({ ...formData, motivation: e.target.value })}
-                      placeholder="Share your passion for African Boy and how you plan to represent the brand..."
-                      className="w-full px-4 py-3 bg-background border border-foreground/15 rounded-xl text-sm font-medium focus:border-primary outline-none transition-colors"
-                    />
                   </div>
                 </div>
               )}
@@ -737,10 +785,10 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                 <div className="space-y-5">
                   <div className="border-b border-foreground/10 pb-3">
                     <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-                      <FileText size={18} className="text-primary" /> Step 4: Confirmation & Commercial Terms
+                      <FileText size={18} className="text-primary" /> Step 4: Final Confirmation & Commercial Terms
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Review all submitted details. Once submitted, our team will review your application before commercial authorization.
+                      Review all submitted application details. Official appointment requires executive vetting and signing of the 12-month agreement.
                     </p>
                   </div>
 
@@ -752,16 +800,16 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                         <span className="font-bold text-foreground">{formData.fullName}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Country / City</span>
-                        <span className="font-bold text-foreground">{formData.city}, {formData.countryName}</span>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Territory</span>
+                        <span className="font-bold text-foreground">{formData.territoryDetails || `${formData.city}, ${formData.countryName}`}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Model</span>
-                        <span className="font-bold text-primary">{formData.businessModel}</span>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Programme</span>
+                        <span className="font-bold text-primary">Country Distributor</span>
                       </div>
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Phone</span>
-                        <span className="font-bold text-foreground">{formData.phoneCode} {formData.phoneNumber}</span>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Term & Opening MOQ</span>
+                        <span className="font-bold text-foreground">12 Months · 1,000 Pcs</span>
                       </div>
                     </div>
 
@@ -780,15 +828,6 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                         ))}
                       </div>
                     </div>
-
-                    <div className="border-t border-foreground/10 pt-2 text-xs">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                        Assigned Territory Focus:
-                      </span>
-                      <p className="font-medium text-foreground text-xs mt-0.5">
-                        {formData.territoryDetails || `${formData.city}, ${formData.countryName}`}
-                      </p>
-                    </div>
                   </div>
 
                   {/* Required Acceptances */}
@@ -801,7 +840,19 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                         className="mt-1 w-4 h-4 rounded border-foreground/30 accent-primary cursor-pointer"
                       />
                       <span className="text-xs text-foreground/90 leading-relaxed">
-                        I agree to the <strong>African Boy Global Agent Program Terms</strong>. I understand that submitting this application does not automatically grant agent privileges or territory exclusivity, and all agreements are subject to official administrative review and signing.
+                        I agree to the <strong>African Boy Country Distributor Programme Terms</strong>. I understand that submitting this application does not automatically grant distributor rights or territory exclusivity, and all agreements require executive review, 1,000 pcs opening order commitment, and formal 12-month contract signing.
+                      </span>
+                    </label>
+
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.shippingPolicyAccepted}
+                        onChange={e => setFormData({ ...formData, shippingPolicyAccepted: e.target.checked })}
+                        className="mt-1 w-4 h-4 rounded border-foreground/30 accent-primary cursor-pointer"
+                      />
+                      <span className="text-xs text-foreground/90 leading-relaxed">
+                        <strong>Separate Product Sales & Shipping Policy:</strong> I understand that merchandise invoices cover product sales only. Shipping arrangements are quoted and approved separately from Tanzania or China prior to dispatch.
                       </span>
                     </label>
 
@@ -813,7 +864,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
                         className="mt-1 w-4 h-4 rounded border-foreground/30 accent-primary cursor-pointer"
                       />
                       <span className="text-xs text-foreground/90 leading-relaxed">
-                        I consent to African Boy processing my provided business information for partner verification, background checks, and official correspondence. No sensitive payment card details are collected through this form.
+                        I consent to African Boy processing my provided business credentials for partner verification, working capital assessment, and official commercial correspondence.
                       </span>
                     </label>
                   </div>
@@ -850,7 +901,7 @@ export default function AgentApplicationModal({ isOpen, onClose, onSuccess }: Ag
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={isSubmitting || !formData.termsAccepted || !formData.privacyAccepted}
+                disabled={isSubmitting || !formData.termsAccepted || !formData.privacyAccepted || !formData.shippingPolicyAccepted}
                 className="px-8 py-3.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
               >
                 {isSubmitting ? (

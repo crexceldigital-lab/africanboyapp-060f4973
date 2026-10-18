@@ -20,127 +20,102 @@ const STORAGE_KEY_COMMERCIAL_OFFERS = 'ab_agent_commercial_offers_cache';
 
 export const DEFAULT_PARTNERSHIP_LEVELS: WholesalePartnershipLevelConfig[] = [
   {
+    id: 'country_distributor',
+    name: 'Country Distributor',
+    tagline: 'Become an authorised African Boy Country Distributor and develop the brand in your market through a structured wholesale and distribution partnership.',
+    defaultMoq: 1000,
+    minimumOpeningOrder: 1000,
+    contractTermMonths: 12,
+    defaultWholesaleDiscountPercent: 38,
+    supportedCurrencies: ['TZS', 'USD', 'KES', 'NGN', 'GBP', 'EUR', 'ZAR'],
+    defaultCurrency: 'TZS',
+    eligibilityRules: [
+      'Demonstrated business capability to operate the distribution business for a full 12-month agreement',
+      'Minimum qualifying opening order volume of 1,000 pieces across available collections',
+      'Evidence of financial capacity to fund opening stock and sustain market operations',
+      'Practical market-entry strategy, sales forecast, operating budget, and retail/reseller channels',
+      'Signed 12-month distribution agreement defining territory, commercial terms, and performance targets',
+    ],
+    benefits: [
+      'Official Country Distributor wholesale pricing schedule (TZS 35,000 / 30,000 Tees, TZS 18,000 Caps)',
+      '12-Month distribution mandate with agreed territory and performance milestones',
+      'High-resolution Master Brand Asset Cloud, lookbooks, and official partner marketing kit',
+      'Dedicated African Boy commercial account liaison and factory supply coordination',
+      'Separate logistics coordination with verified freight comparisons from Tanzania or China',
+    ],
+    exclusivityAllowed: true,
+    defaultExclusivityTerms: 'Territory exclusivity is not automatic and must be expressly agreed in writing in the signed distribution agreement.',
+    isLegacy: false,
+  },
+  {
     id: 'wholesale_reseller',
     name: 'Wholesale Reseller',
-    tagline: 'Ideal for independent fashion boutiques, concept stores, and vetted streetwear retailers.',
+    tagline: 'Historical tier (Legacy) — Independent fashion boutique and concept store partner.',
     defaultMoq: 30,
+    minimumOpeningOrder: 30,
+    contractTermMonths: 6,
     defaultWholesaleDiscountPercent: 25,
     supportedCurrencies: ['TZS', 'USD', 'KES', 'NGN', 'GBP', 'EUR', 'ZAR'],
     defaultCurrency: 'TZS',
     eligibilityRules: [
       'Operating physical boutique or registered online fashion store',
       'Minimum opening order volume of 30 units across approved categories',
-      'Commitment to African Boy minimum retail price (MAP) integrity',
-      'Quarterly stock replenishment cadence',
     ],
     benefits: [
-      'Official wholesale tier pricing (Tier 1)',
-      'High-resolution digital lookbook & official logo assets',
+      'Official wholesale tier pricing',
       'Brand guideline kit & product authenticity verification assets',
-      'Access to standard factory replenishment cycles',
     ],
     exclusivityAllowed: false,
+    isLegacy: true,
   },
   {
     id: 'premium_market_agent',
     name: 'Premium Market Agent',
-    tagline: 'For established multi-door retailers, regional brand operators, and high-volume commercial partners.',
+    tagline: 'Historical tier (Legacy) — Multi-door retailer and regional brand operator.',
     defaultMoq: 50,
+    minimumOpeningOrder: 50,
+    contractTermMonths: 12,
     defaultWholesaleDiscountPercent: 32,
     supportedCurrencies: ['TZS', 'USD', 'KES', 'NGN', 'GBP', 'EUR', 'ZAR'],
     defaultCurrency: 'TZS',
     eligibilityRules: [
       'Minimum 2 years verified retail/wholesale distribution experience',
       'Minimum opening order of 50 units',
-      'Dedicated African Boy visual merchandising space or prominent display',
-      'Active local social media presence with engaged fashion following',
     ],
     benefits: [
-      'Advantageous tier pricing (Tier 2 volume discount)',
-      'Priority allocation on high-demand capsule releases & drops',
-      'Official African Boy website and social channels stockist listing',
-      'Co-branded digital launch campaign assets and story templates',
-      'In-store visual display guides and window decal artwork package',
+      'Volume discount tier pricing',
+      'Priority allocation on capsule releases',
     ],
     exclusivityAllowed: true,
-    defaultExclusivityTerms: 'City-wide or metropolitan zone exclusivity subject to maintaining minimum 75 units/quarter replenishment.',
-  },
-  {
-    id: 'country_distributor',
-    name: 'Country Distributor',
-    tagline: 'Nationwide exclusivity and master wholesale supply for leading national distributors.',
-    defaultMoq: 100,
-    defaultWholesaleDiscountPercent: 38,
-    supportedCurrencies: ['TZS', 'USD', 'KES', 'NGN', 'GBP', 'EUR', 'ZAR'],
-    defaultCurrency: 'TZS',
-    eligibilityRules: [
-      'Registered corporate distribution or import/export entity in target country',
-      'Bonded warehouse / verified logistics & regional sub-retailer network',
-      'Minimum opening order commitment of 100+ units',
-      'Capability to manage nationwide logistics and retail accounts',
-    ],
-    benefits: [
-      'Maximum wholesale tier pricing (Tier 3)',
-      'Territory exclusivity across the entire designated country or province',
-      'Dedicated African Boy commercial account executive & direct HQ liaison',
-      'National official launch announcement & press support',
-      'Brand activation sponsorship support for regional pop-up events',
-      'Eligibility to submit requests for artist-led digital promotional engagements',
-    ],
-    exclusivityAllowed: true,
-    defaultExclusivityTerms: 'National exclusivity granted with semi-annual review based on meeting mutually agreed replenishment volume milestones.',
+    isLegacy: true,
   },
 ];
 
 export const DEFAULT_PRICING_TIERS: Record<string, WholesalePricingTier[]> = {
   'T-Shirt': [
     {
-      id: 'tshirt-tier-1',
+      id: 'tshirt-tier-distro-1',
       category: 'T-Shirt',
-      label: '30–49 Units Tier',
-      minQuantity: 30,
-      maxQuantity: 49,
+      label: '500–999 Units Tier',
+      minQuantity: 500,
+      maxQuantity: 999,
       unitPriceTZS: 35000,
     },
     {
-      id: 'tshirt-tier-2',
+      id: 'tshirt-tier-distro-2',
       category: 'T-Shirt',
-      label: '50–99 Units Tier',
-      minQuantity: 50,
-      maxQuantity: 99,
-      unitPriceTZS: 32000,
-    },
-    {
-      id: 'tshirt-tier-3',
-      category: 'T-Shirt',
-      label: '100+ Units Tier',
-      minQuantity: 100,
+      label: '1,000+ Units Tier',
+      minQuantity: 1000,
       maxQuantity: null,
       unitPriceTZS: 30000,
     },
   ],
   Caps: [
     {
-      id: 'cap-tier-1',
+      id: 'cap-tier-distro-1',
       category: 'Caps',
-      label: '30–49 Units Tier',
-      minQuantity: 30,
-      maxQuantity: 49,
-      unitPriceTZS: 22000,
-    },
-    {
-      id: 'cap-tier-2',
-      category: 'Caps',
-      label: '50–99 Units Tier',
-      minQuantity: 50,
-      maxQuantity: 99,
-      unitPriceTZS: 20000,
-    },
-    {
-      id: 'cap-tier-3',
-      category: 'Caps',
-      label: '100+ Units Tier',
-      minQuantity: 100,
+      label: '300+ Units Tier',
+      minQuantity: 300,
       maxQuantity: null,
       unitPriceTZS: 18000,
     },
@@ -369,15 +344,18 @@ export const wholesaleProgramService = {
         unitPriceTZS: matchedTier.unitPriceTZS,
         tierLabel: matchedTier.label,
         tierFound: true,
+        requiresReview: false,
       };
     }
 
-    // If quantity is below the minimum tier MOQ, return first tier price with a warning note
+    // If quantity is below the minimum tier MOQ (e.g., Caps < 300, T-shirts < 500),
+    // do not invent an unlisted tier; flag for authorised review.
     const lowestTier = sorted[0];
     return {
       unitPriceTZS: lowestTier.unitPriceTZS,
-      tierLabel: `Below MOQ (<${lowestTier.minQuantity} units)`,
+      tierLabel: `Requires Authorised Review (<${lowestTier.minQuantity} units)`,
       tierFound: false,
+      requiresReview: true,
     };
   },
 
@@ -434,6 +412,9 @@ export const wholesaleProgramService = {
     isShippingExcluded: boolean;
     shippingDisclaimer: string;
     tierQualificationMode: 'combined' | 'per_category';
+    meetsMinimumOpeningOrder: boolean;
+    requiresAuthorisedReview: boolean;
+    validationMessage?: string;
   } {
     const settings = options?.settings || getLocalSettings();
     const currency = options?.targetCurrency || 'TZS';
@@ -443,6 +424,7 @@ export const wholesaleProgramService = {
         : settings.combineMixedQuantitiesForTiers;
 
     const totalUnits = items.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+    let hasItemRequiringReview = false;
 
     const proposalItems: CommercialProposalItem[] = items.map(item => {
       const normCat = this.normalizeCategory(item.category);
@@ -450,6 +432,10 @@ export const wholesaleProgramService = {
       // otherwise, strictly this item/category's quantity determines the tier.
       const qualificationQty = combineMixed ? totalUnits : item.quantity;
       const tierResult = this.getTierForCategory(normCat, qualificationQty, settings);
+
+      if (tierResult.requiresReview) {
+        hasItemRequiringReview = true;
+      }
 
       const unitPriceTZS = item.customUnitPrice !== undefined ? item.customUnitPrice : tierResult.unitPriceTZS;
       const lineTotalTZS = unitPriceTZS * (Number(item.quantity) || 0);
@@ -474,7 +460,7 @@ export const wholesaleProgramService = {
     });
 
     const merchandiseSubtotalConverted = proposalItems.reduce((sum, item) => sum + item.lineTotal, 0);
-    const merchandiseSubtotalTZS = items.reduce((sum, item, idx) => {
+    const merchandiseSubtotalTZS = items.reduce((sum, item) => {
       const normCat = this.normalizeCategory(item.category);
       const qualificationQty = combineMixed ? totalUnits : item.quantity;
       const tierResult = this.getTierForCategory(normCat, qualificationQty, settings);
@@ -490,6 +476,15 @@ export const wholesaleProgramService = {
     const confirmedShippingRate = hasConfirmedShipping ? options!.confirmedShippingRate! : null;
     const grandTotalConverted = merchandiseSubtotalConverted + (confirmedShippingRate || 0);
 
+    const meetsMinimumOpeningOrder = totalUnits >= 1000;
+    const requiresAuthorisedReview = hasItemRequiringReview || !meetsMinimumOpeningOrder;
+    let validationMessage: string | undefined;
+    if (!meetsMinimumOpeningOrder) {
+      validationMessage = `Country Distributor minimum opening order is 1,000 pieces. Current total is ${totalUnits} pieces.`;
+    } else if (hasItemRequiringReview) {
+      validationMessage = 'One or more items are below standard category tier volume and require authorised commercial review.';
+    }
+
     return {
       proposalItems,
       totalUnits,
@@ -501,6 +496,9 @@ export const wholesaleProgramService = {
       isShippingExcluded: !hasConfirmedShipping,
       shippingDisclaimer: SHIPPING_TAXES_DISCLAIMER,
       tierQualificationMode: combineMixed ? 'combined' : 'per_category',
+      meetsMinimumOpeningOrder,
+      requiresAuthorisedReview,
+      validationMessage,
     };
   },
 

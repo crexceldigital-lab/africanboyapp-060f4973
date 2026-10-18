@@ -487,6 +487,16 @@ export interface AgentApplication {
   preferred_sales_channels: string[];
   marketing_activities?: string | null;
   motivation?: string | null;
+  market_entry_plan?: string | null;
+  first_year_sales_forecast?: string | null;
+  operating_budget_plan?: string | null;
+  financial_capacity_statement?: string | null;
+  team_and_infrastructure?: string | null;
+  supporting_documents_url?: string | null;
+  programme_transition_action?: 'assessed_for_distributor' | 'more_info_requested' | 'legacy_retained' | null;
+  is_legacy_application?: boolean;
+  contract_term_months?: number;
+  opening_order_pieces?: number;
   status: AgentApplicationStatus;
   internal_notes?: string | null;
   admin_feedback_to_applicant?: string | null;
@@ -666,6 +676,9 @@ export interface WholesalePartnershipLevelConfig {
   benefits: string[];
   exclusivityAllowed: boolean;
   defaultExclusivityTerms?: string;
+  contractTermMonths?: number;
+  minimumOpeningOrder?: number;
+  isLegacy?: boolean;
 }
 
 export interface WholesalePricingTier {
@@ -675,6 +688,7 @@ export interface WholesalePricingTier {
   minQuantity: number;
   maxQuantity: number | null;
   unitPriceTZS: number;
+  requiresReview?: boolean;
 }
 
 export interface WholesaleProgramSettings {
