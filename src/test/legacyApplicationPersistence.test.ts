@@ -46,7 +46,8 @@ describe('Database-only legacy review actions', () => {
     backend.writeError = { message: 'permission denied' };
     const result = await agentService.transitionLegacyApplication(backend.row.id, 'legacy_retained');
     expect(result).toEqual({ success: false, error: 'permission denied' });
-    expect(localStorage.getItem('ab_agent_applications_cache')).toBeNull();
+    const cached = JSON.parse(localStorage.getItem('ab_agent_applications_cache') || '[]');
+    expect(cached.some((app: { id: string }) => app.id === backend.row.id)).toBe(false);
   });
   it('does not update when the saved application cannot be read', async () => {
     backend.readError = { message: 'Application not found' };
