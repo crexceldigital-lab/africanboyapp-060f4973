@@ -899,11 +899,11 @@ export const wholesaleProgramService = {
         version: newOffer.version,
         updated_at: new Date().toISOString(),
       }).select('*').single();
-      if (!error && data) {
-        Object.assign(newOffer, this.mapDbOfferToType(data));
-      }
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error('The proposal was not saved. Please try again.');
+      Object.assign(newOffer, this.mapDbOfferToType(data));
     } catch (e) {
-      console.warn('Could not write offer to Supabase, caching locally:', e);
+      throw e instanceof Error ? e : new Error('Could not save the proposal. Please try again.');
     }
 
     if (existingIndex > -1) {

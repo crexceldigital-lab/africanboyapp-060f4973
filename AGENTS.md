@@ -1,5 +1,8 @@
 # Architecture Decisions
 
+- Fit Me resolves catalogue image paths against the current site origin before invoking the provider; image services require explicit URL schemes.
+- Legacy application reviews read and confirm writes in the database before updating the browser cache; cached IDs must never determine whether a saved applicant exists.
+
 - Wholesale proposals reuse the existing jsPDF/AutoTable generator with embedded Unicode fonts and measured page blocks; this keeps downloads consistent and prevents clipped international text.
 - Proposal downloads persist and read back `agent_commercial_offers` before exporting; arithmetic is centralized and cached drafts are never treated as confirmed database writes.
 - Offer-specific optional commercial fields live in `commercial_terms` JSON on the existing offer record; this preserves partner terms without parallel tables.

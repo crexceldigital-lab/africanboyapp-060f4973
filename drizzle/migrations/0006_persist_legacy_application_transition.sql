@@ -1,0 +1,2 @@
+ALTER TABLE public.agent_applications ADD COLUMN IF NOT EXISTS programme_transition_action text;
+COMMENT ON COLUMN public.agent_applications.programme_transition_action IS 'Administrator legacy review action; existing application RLS governs writes.';

@@ -465,6 +465,7 @@ export default function AgentManager() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
   // Save Collection Order Tracking Record
   const handleSaveCollectionRecord = async () => {
     if (!editingCollectionRecord) return;
