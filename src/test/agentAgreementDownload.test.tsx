@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const mocks = vi.hoisted(() => ({ download: vi.fn(), error: vi.fn() }));
-vi.mock('@/context/CountryContext', () => ({ useCountry: () => ({ user: { id: 'test-agent', email: 'agent@example.org' } }) }));
+const mocks = vi.hoisted(() => ({ download: vi.fn(), error: vi.fn(), user: { id: 'test-agent', email: 'agent@example.org' } }));
+vi.mock('@/context/CountryContext', () => ({ useCountry: () => ({ user: mocks.user }) }));
 vi.mock('sonner', () => ({ toast: { error: mocks.error } }));
 vi.mock('@/services/agentService', () => ({ agentService: {
   getAgentProfile: async () => ({ id: 'agent', full_name: 'Partner', business_name: 'Partner Shop', agent_code: 'AB-TEST', status: 'active', business_model: 'Wholesale Reseller', approved_categories: [], agreement_reference: null }),
@@ -10,6 +10,7 @@ vi.mock('@/services/agentService', () => ({ agentService: {
 } }));
 vi.mock('@/services/wholesaleProgramService', () => ({ SHIPPING_TAXES_DISCLAIMER: '', wholesaleProgramService: {
   getSettings: async () => ({ enabledCategories: [] }), downloadAgentAgreementPdf: mocks.download,
+  calculateQuotation: () => ({ totalUnits: 0, merchandiseSubtotalConverted: 0 }),
 } }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: () => ({ select: () => ({ order: async () => ({ data: [] }) }) }) } }));
 import AgentDashboard from '@/pages/AgentDashboard';
