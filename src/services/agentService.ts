@@ -654,9 +654,15 @@ export const agentService = {
     notes?: string
   ): Promise<{ success: boolean; application?: AgentApplication; error?: string }> {
     const currentApps = getLocalApplications();
-    const target = currentApps.find(a => a.id === applicationId);
-    if (!target) {
-      return { success: false, error: 'Application not found' };
+    let target: AgentApplication;
+    try {
+      const { data, error } = await fromAny('agent_applications')
+        .select('*').eq('id', applicationId).single();
+      if (error) return { success: false, error: error.message };
+      if (!data) return { success: false, error: 'Application not found' };
+      target = data as AgentApplication;
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Could not load application. Please try again.' };
     }
 
     let updatedModel = target.preferred_business_model;
@@ -683,18 +689,21 @@ export const agentService = {
     };
 
     try {
-      await fromAny('agent_applications').update({
+      const { data, error } = await fromAny('agent_applications').update({
         preferred_business_model: updatedModel,
         status: newStatus,
         programme_transition_action: action,
         internal_notes: internalNotes,
-        updated_at: new Date().toISOString(),
-      }).eq('id', applicationId);
+        updated_at: updatedApp.updated_at,
+      }).eq('id', applicationId).select('*').single();
+      if (error) return { success: false, error: error.message };
+      if (!data) return { success: false, error: 'The application update was not saved. Please try again.' };
+      Object.assign(updatedApp, data);
     } catch (e) {
-      console.warn('DB update failed for transitionLegacyApplication, saving to local cache:', e);
+      return { success: false, error: e instanceof Error ? e.message : 'Could not save application. Please try again.' };
     }
 
-    const updatedList = currentApps.map(a => (a.id === applicationId ? updatedApp : a));
+    const updatedList = [updatedApp, ...currentApps.filter(a => a.id !== applicationId && a.application_reference !== updatedApp.application_reference)];
     saveLocalApplications(updatedList);
 
     return { success: true, application: updatedApp };

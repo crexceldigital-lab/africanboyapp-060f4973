@@ -31,6 +31,7 @@ export default function AgentDashboard() {
   const [agentProfile, setAgentProfile] = useState<AgentProfile | null>(null);
   const [wholesaleSettings, setWholesaleSettings] = useState<WholesaleProgramSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingAgreement, setDownloadingAgreement] = useState(false);
   const [orders, setOrders] = useState<AgentReplenishmentOrder[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [catalogueSearch, setCatalogueSearch] = useState('');
@@ -486,6 +487,18 @@ export default function AgentDashboard() {
     setTerritoryRequestText('');
   };
 
+  const handleDownloadAgreement = async () => {
+    if (!agentProfile || downloadingAgreement) return;
+    setDownloadingAgreement(true);
+    try {
+      await wholesaleProgramService.downloadAgentAgreementPdf(agentProfile);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not download your agreement. Please try again.');
+    } finally {
+      setDownloadingAgreement(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white selection:bg-primary selection:text-black pt-20 pb-28 px-4 sm:px-6 max-w-7xl mx-auto space-y-8">
       {/* Agent Header Banner */}
@@ -523,7 +536,8 @@ export default function AgentDashboard() {
         {/* Header CTAs */}
         <div className="flex flex-wrap items-center gap-3 relative z-10 w-full md:w-auto">
           <button
-            onClick={() => wholesaleProgramService.downloadAgentAgreementPdf(agentProfile)}
+            onClick={handleDownloadAgreement}
+            disabled={downloadingAgreement}
             className="flex-1 md:flex-none px-4 py-3.5 bg-zinc-900 border border-white/20 hover:border-primary/50 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center justify-center gap-2"
             title="Download Official Agreement & Commercial Offer (PDF)"
           >
@@ -770,7 +784,8 @@ export default function AgentDashboard() {
                 <Sparkles size={14} className="text-primary" /> Marketing Assets
               </button>
               <button
-                onClick={() => wholesaleProgramService.downloadAgentAgreementPdf(agentProfile)}
+                onClick={handleDownloadAgreement}
+                disabled={downloadingAgreement}
                 className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 transition-transform flex items-center justify-center gap-1.5"
               >
                 <Download size={14} /> Download PDF
@@ -1415,7 +1430,8 @@ export default function AgentDashboard() {
               </div>
 
               <button
-                onClick={() => wholesaleProgramService.downloadAgentAgreementPdf(agentProfile)}
+                onClick={handleDownloadAgreement}
+                disabled={downloadingAgreement}
                 className="w-full sm:w-auto px-5 py-3 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-lg"
               >
                 <Download size={15} /> Download Agreement (PDF)

@@ -43,6 +43,13 @@
       "when": 1792340000000,
       "tag": "0005_country_distributor_collection_commitment",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792392809890,
+      "tag": "0006_persist_legacy_application_transition",
+      "breakpoints": true
     }
   ]
 }

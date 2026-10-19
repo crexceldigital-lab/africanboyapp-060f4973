@@ -70,29 +70,39 @@ export type Database = {
           business_registration_number: string | null
           business_type: string | null
           city: string
+          contract_term_months: number | null
           country_code: string
           country_name: string
           created_at: string
           email: string
           estimated_initial_investment: string | null
           expected_monthly_sales: string | null
+          financial_capacity_statement: string | null
+          first_year_sales_forecast: string | null
           full_name: string
           id: string
           internal_notes: string | null
+          is_legacy_application: boolean | null
           last_activity_at: string
+          market_entry_plan: string | null
           marketing_activities: string | null
           motivation: string | null
+          opening_order_pieces: number | null
+          operating_budget_plan: string | null
           phone_number: string
           preferred_business_model: string | null
           preferred_language: string | null
           preferred_sales_channels: Json | null
           previous_experience_details: string | null
           privacy_accepted: boolean
+          programme_transition_action: string | null
           proposed_territory_details: string | null
           requested_categories: Json | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
+          supporting_documents_url: string | null
+          team_and_infrastructure: string | null
           terms_accepted: boolean
           updated_at: string
           user_id: string | null
@@ -107,29 +117,39 @@ export type Database = {
           business_registration_number?: string | null
           business_type?: string | null
           city: string
+          contract_term_months?: number | null
           country_code: string
           country_name: string
           created_at?: string
           email: string
           estimated_initial_investment?: string | null
           expected_monthly_sales?: string | null
+          financial_capacity_statement?: string | null
+          first_year_sales_forecast?: string | null
           full_name: string
           id?: string
           internal_notes?: string | null
+          is_legacy_application?: boolean | null
           last_activity_at?: string
+          market_entry_plan?: string | null
           marketing_activities?: string | null
           motivation?: string | null
+          opening_order_pieces?: number | null
+          operating_budget_plan?: string | null
           phone_number: string
           preferred_business_model?: string | null
           preferred_language?: string | null
           preferred_sales_channels?: Json | null
           previous_experience_details?: string | null
           privacy_accepted?: boolean
+          programme_transition_action?: string | null
           proposed_territory_details?: string | null
           requested_categories?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          supporting_documents_url?: string | null
+          team_and_infrastructure?: string | null
           terms_accepted?: boolean
           updated_at?: string
           user_id?: string | null
@@ -144,29 +164,39 @@ export type Database = {
           business_registration_number?: string | null
           business_type?: string | null
           city?: string
+          contract_term_months?: number | null
           country_code?: string
           country_name?: string
           created_at?: string
           email?: string
           estimated_initial_investment?: string | null
           expected_monthly_sales?: string | null
+          financial_capacity_statement?: string | null
+          first_year_sales_forecast?: string | null
           full_name?: string
           id?: string
           internal_notes?: string | null
+          is_legacy_application?: boolean | null
           last_activity_at?: string
+          market_entry_plan?: string | null
           marketing_activities?: string | null
           motivation?: string | null
+          opening_order_pieces?: number | null
+          operating_budget_plan?: string | null
           phone_number?: string
           preferred_business_model?: string | null
           preferred_language?: string | null
           preferred_sales_channels?: Json | null
           previous_experience_details?: string | null
           privacy_accepted?: boolean
+          programme_transition_action?: string | null
           proposed_territory_details?: string | null
           requested_categories?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          supporting_documents_url?: string | null
+          team_and_infrastructure?: string | null
           terms_accepted?: boolean
           updated_at?: string
           user_id?: string | null
@@ -181,6 +211,7 @@ export type Database = {
           accepted_at: string | null
           accepted_by_signature: string | null
           agent_id: string | null
+          annual_collection_commitment: Json | null
           applicant_name: string
           application_id: string | null
           artist_disclaimer: string
@@ -194,27 +225,33 @@ export type Database = {
           destination_country: string
           exclusivity_terms: string | null
           expiry_date: string
+          flagged_for_review: boolean | null
           id: string
           internal_notes: string | null
           is_exclusive: boolean
+          is_historical_baseline: boolean | null
           marketing_benefits: string[]
           merchandise_subtotal: number
           offer_reference: string
+          parent_offer_reference: string | null
           partnership_level: string
           payment_terms: string
           proposed_items: Json
+          review_required_reason: string | null
           shipping_disclaimer: string
           shipping_terms: string
           status: string
           territory: string | null
           total_units: number
           updated_at: string
+          version: number | null
         }
         Insert: {
           acceptance_notes?: string | null
           accepted_at?: string | null
           accepted_by_signature?: string | null
           agent_id?: string | null
+          annual_collection_commitment?: Json | null
           applicant_name: string
           application_id?: string | null
           artist_disclaimer?: string
@@ -228,27 +265,33 @@ export type Database = {
           destination_country: string
           exclusivity_terms?: string | null
           expiry_date: string
+          flagged_for_review?: boolean | null
           id?: string
           internal_notes?: string | null
           is_exclusive?: boolean
+          is_historical_baseline?: boolean | null
           marketing_benefits?: string[]
           merchandise_subtotal?: number
           offer_reference: string
+          parent_offer_reference?: string | null
           partnership_level: string
           payment_terms?: string
           proposed_items?: Json
+          review_required_reason?: string | null
           shipping_disclaimer?: string
           shipping_terms?: string
           status?: string
           territory?: string | null
           total_units?: number
           updated_at?: string
+          version?: number | null
         }
         Update: {
           acceptance_notes?: string | null
           accepted_at?: string | null
           accepted_by_signature?: string | null
           agent_id?: string | null
+          annual_collection_commitment?: Json | null
           applicant_name?: string
           application_id?: string | null
           artist_disclaimer?: string
@@ -262,21 +305,26 @@ export type Database = {
           destination_country?: string
           exclusivity_terms?: string | null
           expiry_date?: string
+          flagged_for_review?: boolean | null
           id?: string
           internal_notes?: string | null
           is_exclusive?: boolean
+          is_historical_baseline?: boolean | null
           marketing_benefits?: string[]
           merchandise_subtotal?: number
           offer_reference?: string
+          parent_offer_reference?: string | null
           partnership_level?: string
           payment_terms?: string
           proposed_items?: Json
+          review_required_reason?: string | null
           shipping_disclaimer?: string
           shipping_terms?: string
           status?: string
           territory?: string | null
           total_units?: number
           updated_at?: string
+          version?: number | null
         }
         Relationships: [
           {
@@ -336,6 +384,66 @@ export type Database = {
           id?: number
           is_active?: boolean
           name?: string
+        }
+        Relationships: []
+      }
+      distributor_collection_orders: {
+        Row: {
+          agent_id: string | null
+          application_id: string | null
+          collection_id: string
+          collection_name: string
+          collection_number: number
+          created_at: string | null
+          id: string
+          is_opening_order: boolean | null
+          minimum_commitment: number | null
+          notes: string | null
+          order_date: string | null
+          order_reference: string | null
+          quantity_fulfilled: number | null
+          quantity_ordered: number | null
+          quantity_paid: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          application_id?: string | null
+          collection_id: string
+          collection_name: string
+          collection_number: number
+          created_at?: string | null
+          id?: string
+          is_opening_order?: boolean | null
+          minimum_commitment?: number | null
+          notes?: string | null
+          order_date?: string | null
+          order_reference?: string | null
+          quantity_fulfilled?: number | null
+          quantity_ordered?: number | null
+          quantity_paid?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          application_id?: string | null
+          collection_id?: string
+          collection_name?: string
+          collection_number?: number
+          created_at?: string | null
+          id?: string
+          is_opening_order?: boolean | null
+          minimum_commitment?: number | null
+          notes?: string | null
+          order_date?: string | null
+          order_reference?: string | null
+          quantity_fulfilled?: number | null
+          quantity_ordered?: number | null
+          quantity_paid?: number | null
+          status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

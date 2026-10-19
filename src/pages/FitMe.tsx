@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import FitMeCreditsModal from '../components/FitMeCreditsModal';
 import { fetchWallet, FitMeWallet, verifyPaymentStatus } from '@/lib/fitmeCredits';
 import { trackFitMe, trackFitMeProductSelected } from '../lib/analytics';
+import { fitmeImageUrl } from '@/lib/fitmeImageUrl';
 
 export default function FitMe() {
   const [userImage, setUserImage] = useState<string | null>(null);
@@ -144,7 +145,7 @@ export default function FitMe() {
     try {
       const productsPayload = selectedProducts.map(p => ({
         id: p.id,
-        imageUrl: p.image_url,
+        imageUrl: fitmeImageUrl(p.image_url, window.location.origin),
         name: p.name,
         color: selectedColors[p.id] || undefined,
       }));
