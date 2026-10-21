@@ -1268,7 +1268,7 @@ export default function AgentManager() {
                       </td>
                       <td className="py-3.5 px-3 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border ${
-                          col.status === 'Completed' || col.status === 'Fulfilled'
+                          col.status === 'Fulfilled'
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                             : col.status === 'Order Placed'
                             ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
@@ -2537,7 +2537,6 @@ export default function AgentManager() {
                     <option value="In Production">In Production</option>
                     <option value="Dispatched">Dispatched</option>
                     <option value="Fulfilled">Fulfilled</option>
-                    <option value="Completed">Completed</option>
                   </select>
                 </div>
               </div>

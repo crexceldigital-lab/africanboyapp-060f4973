@@ -1,4 +1,5 @@
 # Monitoring findings
+- [ ] Fix remaining preview errors and confirm the site opens.
 - [ ] Verify and fix relative product images in Fit Me.
 - [x] Verify proposals table exists (already repaired; two saved offers).
 - [ ] Fix database-backed legacy review actions and save failures.

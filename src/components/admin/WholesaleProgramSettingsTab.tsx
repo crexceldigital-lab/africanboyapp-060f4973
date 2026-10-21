@@ -327,8 +327,8 @@ export default function WholesaleProgramSettingsTab({ onSettingsUpdated }: Whole
                       <label className="text-[10px] font-bold uppercase text-muted-foreground">Collection Name</label>
                       <input
                         type="text"
-                        value={drop.collectionName}
-                        onChange={e => handleUpdateCollectionSchedule(idx, 'collectionName', e.target.value)}
+                        value={drop.name}
+                        onChange={e => handleUpdateCollectionSchedule(idx, 'name', e.target.value)}
                         className="w-full px-3 py-2 bg-card border border-foreground/15 rounded-xl font-bold text-xs focus:border-primary outline-none"
                       />
                     </div>
@@ -337,8 +337,8 @@ export default function WholesaleProgramSettingsTab({ onSettingsUpdated }: Whole
                       <label className="text-[10px] font-bold uppercase text-muted-foreground">Target Launch Date</label>
                       <input
                         type="date"
-                        value={drop.targetLaunchDate}
-                        onChange={e => handleUpdateCollectionSchedule(idx, 'targetLaunchDate', e.target.value)}
+                        value={drop.launchDate}
+                        onChange={e => handleUpdateCollectionSchedule(idx, 'launchDate', e.target.value)}
                         className="w-full px-3 py-2 bg-card border border-foreground/15 rounded-xl font-bold text-xs focus:border-primary outline-none"
                       />
                     </div>
