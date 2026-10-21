@@ -65,9 +65,7 @@ export default function WholesaleQuotationBuilder({
   const [territory, setTerritory] = useState(
     application.proposed_territory_details || `${application.city}, ${application.country_name}`
   );
-  const [isExclusive, setIsExclusive] = useState(
-    application.preferred_business_model === 'Country Distributor' || true
-  );
+  const [isExclusive, setIsExclusive] = useState<boolean>(true);
   const [exclusivityTerms, setExclusivityTerms] = useState(
     application.preferred_business_model === 'Country Distributor'
       ? 'National territory exclusivity subject to maintaining minimum 100 units/quarter replenishment.'

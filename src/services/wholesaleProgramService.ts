@@ -8,6 +8,8 @@ import type {
   CommercialProposalItem,
   AgentCommercialOffer,
   CommercialOfferStatus,
+  DistributorCollectionScheduleItem,
+  DistributorCollectionOrderRecord,
   Product,
 } from '@/types';
 
@@ -570,7 +572,7 @@ export const wholesaleProgramService = {
     category: string,
     quantity: number,
     settings: WholesaleProgramSettings
-  ): { unitPriceTZS: number; tierLabel: string; tierFound: boolean } {
+  ): { unitPriceTZS: number; tierLabel: string; tierFound: boolean; requiresReview?: boolean } {
     const normCategory = this.normalizeCategory(category);
     const tiers = settings.pricingTiers[normCategory] || DEFAULT_PRICING_TIERS[normCategory];
 

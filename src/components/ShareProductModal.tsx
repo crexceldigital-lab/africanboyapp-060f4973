@@ -57,6 +57,15 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timeout = setTimeout(() => {
+      setToastMessage(null);
+      setCopied(false);
+    }, 2500);
+    return () => clearTimeout(timeout);
+  }, [toastMessage]);
+
   if (!isOpen || !product) return null;
 
   const effectivePrice = product.on_sale
@@ -70,9 +79,6 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage((prev) => (prev === msg ? null : prev));
-    }, 2500);
   };
 
   const handleCopyLink = async () => {
@@ -80,7 +86,6 @@ export default function ShareProductModal({ product, isOpen, onClose }: SharePro
     if (success) {
       setCopied(true);
       showToast('✓ Product link copied');
-      setTimeout(() => setCopied(false), 2500);
     }
   };
 
