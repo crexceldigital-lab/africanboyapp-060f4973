@@ -25,7 +25,7 @@ export const DEFAULT_PARTNERSHIP_LEVELS: WholesalePartnershipLevelConfig[] = [
     id: 'country_distributor',
     name: 'Country Distributor',
     tagline: 'Become an authorised African Boy Country Distributor and develop the brand in your market through a structured wholesale and distribution partnership.',
-    defaultMoq: 1000,
+    defaultMoq: 100,
     minimumOpeningOrder: 1000,
     collectionsPerYear: 4,
     minimumOrderPerCollection: 1000,
@@ -102,28 +102,52 @@ export const DEFAULT_PARTNERSHIP_LEVELS: WholesalePartnershipLevelConfig[] = [
 export const DEFAULT_PRICING_TIERS: Record<string, WholesalePricingTier[]> = {
   'T-Shirt': [
     {
-      id: 'tshirt-tier-distro-1',
+      id: 'tshirt-tier-1',
       category: 'T-Shirt',
-      label: '500–999 Units Tier',
-      minQuantity: 500,
-      maxQuantity: 999,
+      label: '30–49 Units Tier',
+      minQuantity: 30,
+      maxQuantity: 49,
       unitPriceTZS: 35000,
     },
     {
-      id: 'tshirt-tier-distro-2',
+      id: 'tshirt-tier-2',
       category: 'T-Shirt',
-      label: '1,000+ Units Tier',
-      minQuantity: 1000,
+      label: '50–99 Units Tier',
+      minQuantity: 50,
+      maxQuantity: 99,
+      unitPriceTZS: 32000,
+    },
+    {
+      id: 'tshirt-tier-3',
+      category: 'T-Shirt',
+      label: '100+ Units Tier',
+      minQuantity: 100,
       maxQuantity: null,
       unitPriceTZS: 30000,
     },
   ],
   Caps: [
     {
-      id: 'cap-tier-distro-1',
+      id: 'cap-tier-1',
       category: 'Caps',
-      label: '300+ Units Tier',
-      minQuantity: 300,
+      label: '30–49 Units Tier',
+      minQuantity: 30,
+      maxQuantity: 49,
+      unitPriceTZS: 22000,
+    },
+    {
+      id: 'cap-tier-2',
+      category: 'Caps',
+      label: '50–99 Units Tier',
+      minQuantity: 50,
+      maxQuantity: 99,
+      unitPriceTZS: 20000,
+    },
+    {
+      id: 'cap-tier-3',
+      category: 'Caps',
+      label: '100+ Units Tier',
+      minQuantity: 100,
       maxQuantity: null,
       unitPriceTZS: 18000,
     },
@@ -337,7 +361,7 @@ export const INITIAL_COLLECTION_ORDERS: DistributorCollectionOrderRecord[] = [
     quantityPaid: 0,
     quantityFulfilled: 0,
     outstandingCommitment: 1000,
-    status: 'Pending Order',
+    status: 'Pending Commitment',
     notes: 'Subsequent collection commitment: minimum 1,000 pieces.',
     updatedAt: '2026-10-14T14:30:00Z',
   },
@@ -356,7 +380,7 @@ export const INITIAL_COLLECTION_ORDERS: DistributorCollectionOrderRecord[] = [
     quantityPaid: 0,
     quantityFulfilled: 0,
     outstandingCommitment: 1000,
-    status: 'Pending Order',
+    status: 'Pending Commitment',
     notes: 'Subsequent collection commitment: minimum 1,000 pieces.',
     updatedAt: '2026-10-14T14:30:00Z',
   },
@@ -375,7 +399,7 @@ export const INITIAL_COLLECTION_ORDERS: DistributorCollectionOrderRecord[] = [
     quantityPaid: 0,
     quantityFulfilled: 0,
     outstandingCommitment: 1000,
-    status: 'Pending Order',
+    status: 'Pending Commitment',
     notes: 'Subsequent collection commitment: minimum 1,000 pieces.',
     updatedAt: '2026-10-14T14:30:00Z',
   },
@@ -862,11 +886,21 @@ export const wholesaleProgramService = {
 
     // Persist before returning a downloadable offer
     try {
+      const isUuid = (val?: string | null) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+      const rowId = isUuid(newOffer.id) ? newOffer.id : crypto.randomUUID();
+      newOffer.id = rowId;
+
+      const commercialTermsWithIds = {
+        ...(newOffer.commercialTerms || {}),
+        ...(newOffer.applicationId && !isUuid(newOffer.applicationId) ? { applicationId: newOffer.applicationId } : {}),
+        ...(newOffer.agentId && !isUuid(newOffer.agentId) ? { agentId: newOffer.agentId } : {}),
+      };
+
       const { data, error } = await fromAny('agent_commercial_offers').upsert({
-        id: newOffer.id,
+        id: rowId,
         offer_reference: newOffer.offerReference,
-        application_id: newOffer.applicationId,
-        agent_id: newOffer.agentId,
+        application_id: isUuid(newOffer.applicationId) ? newOffer.applicationId : null,
+        agent_id: isUuid(newOffer.agentId) ? newOffer.agentId : null,
         applicant_name: newOffer.applicantName,
         business_name: newOffer.businessName,
         partnership_level: newOffer.partnershipLevel,
@@ -892,7 +926,7 @@ export const wholesaleProgramService = {
         accepted_by_signature: newOffer.acceptedBySignature,
         acceptance_notes: newOffer.acceptanceNotes,
         created_at: newOffer.createdAt,
-        commercial_terms: newOffer.commercialTerms,
+        commercial_terms: commercialTermsWithIds,
         annual_collection_commitment: newOffer.annualCollectionCommitment,
         flagged_for_review: newOffer.flaggedForReview,
         review_required_reason: newOffer.reviewRequiredReason,
@@ -903,7 +937,14 @@ export const wholesaleProgramService = {
       }).select('*').single();
       if (error) throw new Error(error.message);
       if (!data) throw new Error('The proposal was not saved. Please try again.');
-      Object.assign(newOffer, this.mapDbOfferToType(data));
+      const mapped = this.mapDbOfferToType(data);
+      if (!mapped.applicationId && newOffer.applicationId) {
+        mapped.applicationId = newOffer.applicationId;
+      }
+      if (!mapped.agentId && newOffer.agentId) {
+        mapped.agentId = newOffer.agentId;
+      }
+      Object.assign(newOffer, mapped);
     } catch (e) {
       throw e instanceof Error ? e : new Error('Could not save the proposal. Please try again.');
     }
@@ -963,16 +1004,30 @@ export const wholesaleProgramService = {
    * Get commercial offer by application ID.
    */
   async getOfferByApplicationId(applicationId: string): Promise<AgentCommercialOffer | null> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applicationId);
     try {
-      const { data, error } = await fromAny('agent_commercial_offers')
-        .select('*')
-        .eq('application_id', applicationId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (isUuid) {
+        const { data, error } = await fromAny('agent_commercial_offers')
+          .select('*')
+          .eq('application_id', applicationId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (!error && data) {
-        return this.mapDbOfferToType(data);
+        if (!error && data) {
+          return this.mapDbOfferToType(data);
+        }
+      } else {
+        const { data, error } = await fromAny('agent_commercial_offers')
+          .select('*')
+          .eq('commercial_terms->>applicationId', applicationId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data) {
+          return this.mapDbOfferToType(data);
+        }
       }
     } catch (e) {
       console.warn('Supabase offer query failed, looking up cache:', e);
@@ -986,16 +1041,30 @@ export const wholesaleProgramService = {
    * Get commercial offer for an active agent.
    */
   async getOfferByAgentId(agentId: string): Promise<AgentCommercialOffer | null> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(agentId);
     try {
-      const { data, error } = await fromAny('agent_commercial_offers')
-        .select('*')
-        .eq('agent_id', agentId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (isUuid) {
+        const { data, error } = await fromAny('agent_commercial_offers')
+          .select('*')
+          .eq('agent_id', agentId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (!error && data) {
-        return this.mapDbOfferToType(data);
+        if (!error && data) {
+          return this.mapDbOfferToType(data);
+        }
+      } else {
+        const { data, error } = await fromAny('agent_commercial_offers')
+          .select('*')
+          .eq('commercial_terms->>agentId', agentId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data) {
+          return this.mapDbOfferToType(data);
+        }
       }
     } catch (e) {
       console.warn('Supabase agent offer query failed:', e);
@@ -1054,7 +1123,7 @@ export const wholesaleProgramService = {
         options?.newNotes ||
         `Revised proposal issued following review of historical offer ${parentOffer.offerReference}. Reflects updated Country Distributor policy: 1,000 pieces per collection across 4 annual collections (planned 4,000 pieces per year). Sent to partner for review and acceptance.`,
       expiryDate: new Date(Date.now() + 86400000 * 60).toISOString().split('T')[0],
-      status: 'Sent', // Sent to partner for review and acceptance; not assumed accepted
+      status: 'Draft', // Draft status awaiting review and acceptance
       acceptedAt: null,
       acceptedBySignature: null,
       acceptanceNotes: null,
@@ -1078,7 +1147,7 @@ export const wholesaleProgramService = {
       },
       commercialTerms: {
         ...parentOffer.commercialTerms,
-        minimumReplenishmentOrder: '1,000 pieces per collection across 4 annual collections (4,000 pcs/year)',
+        minimumReplenishmentOrder: '1,000 pieces from each of the 4 annual collections (planned 4,000 pieces per year)',
         contractTermMonths: 12,
         annualCollections: 4,
         minimumOrderPerCollection: 1000,
@@ -1132,7 +1201,7 @@ export const wholesaleProgramService = {
           quantityPaid: Number(d.quantity_paid) || 0,
           quantityFulfilled: Number(d.quantity_fulfilled) || 0,
           outstandingCommitment: Math.max(0, (Number(d.minimum_commitment) || 1000) - (Number(d.quantity_ordered) || 0)),
-          status: d.status || 'Pending Order',
+          status: d.status || 'Pending Commitment',
           orderReference: d.order_reference,
           orderDate: d.order_date,
           notes: d.notes,
@@ -1167,7 +1236,7 @@ export const wholesaleProgramService = {
       quantityPaid: 0,
       quantityFulfilled: 0,
       outstandingCommitment: item.isOpeningOrder ? 0 : (item.minimumOrderPieces || 1000),
-      status: item.isOpeningOrder ? 'Order Placed' : 'Pending Order',
+      status: item.isOpeningOrder ? 'Order Placed' : 'Pending Commitment',
       notes: item.notes,
       updatedAt: new Date().toISOString(),
     }));
@@ -1260,8 +1329,8 @@ export const wholesaleProgramService = {
     return {
       id: data.id,
       offerReference: data.offer_reference,
-      applicationId: data.application_id,
-      agentId: data.agent_id,
+      applicationId: data.application_id || data.commercial_terms?.applicationId || '',
+      agentId: data.agent_id || data.commercial_terms?.agentId || null,
       applicantName: data.applicant_name,
       businessName: data.business_name,
       partnershipLevel: data.partnership_level,
@@ -1315,10 +1384,49 @@ export const wholesaleProgramService = {
     if (!offer) throw new Error('No saved wholesale proposal exists for this partner. Ask the commercial team to prepare an offer.');
 
     // Re-read the exact saved row; never export a stale local agreement.
-    const { data, error } = await fromAny('agent_commercial_offers').select('*').eq('id', offer.id).single();
-    if (error || !data) throw new Error('The saved proposal could not be loaded. Please try again.');
-    const { data: application } = await fromAny('agent_applications').select('*').eq('id', data.application_id).maybeSingle();
-    const { data: business } = await fromAny('invoice_settings').select('business_name,business_address,city,country,email,phone,website,contact_person').eq('store_id', 1).maybeSingle();
-    downloadCommercialProposalPdf(this.mapDbOfferToType(data), application, business || {});
+    let offerData = offer;
+    try {
+      const { data, error } = await fromAny('agent_commercial_offers').select('*').eq('id', offer.id).maybeSingle();
+      if (!error && data) {
+        offerData = this.mapDbOfferToType(data);
+      }
+    } catch (err) {
+      console.warn('Could not re-fetch commercial offer from DB, using confirmed offer:', err);
+    }
+
+    let application: any = null;
+    const appId = offerData.applicationId || agentProfile.application_id;
+    if (appId) {
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId);
+        if (isUuid) {
+          const { data: appData } = await fromAny('agent_applications').select('*').eq('id', appId).maybeSingle();
+          if (appData) application = appData;
+        }
+      } catch (err) {
+        console.warn('Could not fetch application from DB for agreement PDF:', err);
+      }
+      if (!application) {
+        try {
+          const { agentService } = await import('./agentService');
+          application = await agentService.getApplicationById(appId);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    let business: any = {};
+    try {
+      const { data: businessData } = await fromAny('invoice_settings')
+        .select('business_name,business_address,city,country,email,phone,website,contact_person')
+        .eq('store_id', 1)
+        .maybeSingle();
+      if (businessData) business = businessData;
+    } catch (bErr) {
+      console.warn('Could not fetch business settings for proposal PDF:', bErr);
+    }
+
+    downloadCommercialProposalPdf(offerData, application, business || {});
   },
 };

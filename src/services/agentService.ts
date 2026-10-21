@@ -336,7 +336,31 @@ function getLocalShippingQuotes(): AgentShippingQuote[] {
   } catch (e) {
     console.error('Failed to parse cached shipping quotes:', e);
   }
-  return [];
+  if (!isTestEnv) {
+    return [];
+  }
+  return [
+    {
+      id: 'quote-sample-demo-1',
+      order_id: 'ord-demo-1',
+      order_number: 'ARO-2026-0041',
+      agent_id: 'agent-profile-demo-1',
+      user_id: 'user-demo-agent-tz',
+      shipping_origin: 'Tanzania',
+      courier_name: 'DHL Express International',
+      shipping_amount: 30000,
+      currency: 'TZS',
+      customs_and_handling_fee: 0,
+      total_shipping_cost: 30000,
+      estimated_delivery_time: '3-5 business days',
+      status: 'accepted',
+      quote_date: '2026-01-16T10:00:00Z',
+      expiry_date: '2026-02-16T10:00:00Z',
+      accepted_at: '2026-01-16T12:00:00Z',
+      created_at: '2026-01-16T10:00:00Z',
+      updated_at: '2026-01-16T12:00:00Z',
+    },
+  ];
 }
 
 function saveLocalShippingQuotes(quotes: AgentShippingQuote[]) {
@@ -390,7 +414,7 @@ export const agentService = {
       id: '',
       application_reference: reference,
       access_token: accessToken,
-      preferred_business_model: 'Country Distributor', // Country Distributor is the only active programme
+      preferred_business_model: data.preferred_business_model || 'Country Distributor',
       contract_term_months: 12,
       opening_order_pieces: data.opening_order_pieces || 1000,
       is_legacy_application: false,
@@ -571,6 +595,23 @@ export const agentService = {
     }
 
     return applications;
+  },
+
+  /**
+   * Fetch a single application by ID with database and cache fallback.
+   */
+  async getApplicationById(id: string): Promise<AgentApplication | null> {
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      if (isUuid) {
+        const { data, error } = await fromAny('agent_applications').select('*').eq('id', id).maybeSingle();
+        if (!error && data) return data as AgentApplication;
+      }
+    } catch (e) {
+      console.warn('DB error fetching application by id:', e);
+    }
+    const apps = await this.getApplications();
+    return apps.find(a => a.id === id) || null;
   },
 
   /**

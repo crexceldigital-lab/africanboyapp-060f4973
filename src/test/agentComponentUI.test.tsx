@@ -9,6 +9,7 @@ import { CartProvider } from '../context/CartContext';
 import Home from '../pages/Home';
 import AgentManager from '../components/admin/AgentManager';
 import { agentService } from '../services/agentService';
+import { wholesaleProgramService } from '../services/wholesaleProgramService';
 
 const renderWithProviders = (ui: React.ReactNode) => {
   return render(
@@ -29,34 +30,34 @@ describe('AFRICAN BOY GLOBAL AGENT PROGRAM - UI & Component Tests', () => {
       renderWithProviders(<BecomeAnAgent />);
 
       // Required headline
-      expect(screen.getByRole('heading', { name: /REPRESENT AFRICAN BOY IN YOUR COUNTRY/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /COUNTRY DISTRIBUTOR PROGRAMME/i })).toBeInTheDocument();
 
       // Required supporting copy
       expect(
-        screen.getByText(/Join the African Boy global network. Represent the brand, sell our collections, and grow your business in your market/i)
+        screen.getAllByText(/Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections/i)[0]
       ).toBeInTheDocument();
 
       // Primary and secondary CTAs
-      expect(screen.getByRole('button', { name: /BECOME AN AGENT/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /EXPLORE THE OPPORTUNITY/i })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /APPLY AS COUNTRY DISTRIBUTOR/i })[0]).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /PROGRAMME REQUIREMENTS/i })).toBeInTheDocument();
     });
 
-    it('renders all 3 operating business models with descriptions', () => {
+    it('renders authoritative programme pillars and commitments', () => {
       renderWithProviders(<BecomeAnAgent />);
 
-      expect(screen.getByRole('heading', { name: /Wholesale Reseller/i })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: /Commission-Based Agent/i })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: /Country Distributor/i })).toBeInTheDocument();
+      expect(screen.getAllByText(/12-Month Contract/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/4 Annual Collections/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/4,000 Pcs Annual Minimum/i)[0]).toBeInTheDocument();
     });
 
     it('renders FAQ section and expands items on click', () => {
       renderWithProviders(<BecomeAnAgent />);
 
-      const faqQuestion = screen.getByText(/Who can apply to become an authorized African Boy Agent or Distributor\?/i);
+      const faqQuestion = screen.getByText(/What is the annual collection commitment and order policy\?/i);
       expect(faqQuestion).toBeInTheDocument();
 
       fireEvent.click(faqQuestion);
-      expect(screen.getByText(/We welcome established boutique owners, experienced fashion retailers/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/The 1,000-piece requirement applies to EACH new collection/i)[0]).toBeInTheDocument();
     });
   });
 
@@ -66,7 +67,7 @@ describe('AFRICAN BOY GLOBAL AGENT PROGRAM - UI & Component Tests', () => {
         <AgentApplicationModal isOpen={true} onClose={vi.fn()} />
       );
 
-      expect(screen.getByText(/Step 1: Applicant Contact & Identity/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 1: Principal Applicant Information/i)).toBeInTheDocument();
       expect(screen.getByPlaceholderText(/e\.g\. David Mwangi/i)).toBeInTheDocument();
       expect(screen.getByPlaceholderText(/partner@example\.com/i)).toBeInTheDocument();
     });
@@ -87,19 +88,25 @@ describe('AFRICAN BOY GLOBAL AGENT PROGRAM - UI & Component Tests', () => {
 
       // Step 2
       await waitFor(() => {
-        expect(screen.getByText(/Step 2: Commercial & Business Experience/i)).toBeInTheDocument();
+        expect(screen.getByText(/Step 2: Business Capability & Financial Capacity/i)).toBeInTheDocument();
       });
+
+      // Fill Step 2 required fields
+      fireEvent.change(screen.getByPlaceholderText(/Savannah Streetwear Ltd/i), { target: { value: 'Kilimanjaro Apparel Ltd' } });
+      fireEvent.change(screen.getByPlaceholderText(/Detail your sales staff/i), { target: { value: '3 storefront locations and 200 sqm warehouse in Arusha' } });
+      fireEvent.change(screen.getByPlaceholderText(/Explain how you will fund and sell at least 1,000 pieces per collection/i), { target: { value: 'Comprehensive 1-year retail expansion strategy across northern Tanzania' } });
+      fireEvent.change(screen.getByPlaceholderText(/stating your available liquid capital/i), { target: { value: '$100,000 USD secured facility' } });
 
       // Advance to Step 3
       fireEvent.click(screen.getByRole('button', { name: /Next Step/i }));
 
       // Step 3 Preferences
       await waitFor(() => {
-        expect(screen.getByText(/Step 3: Product Lines & Operating Model/i)).toBeInTheDocument();
+        expect(screen.getByText(/Step 3: Programme Terms & 4-Collection Commitment/i)).toBeInTheDocument();
         expect(screen.getByText(/T-Shirts \(Heavyweight & Graphic Tees\)/i)).toBeInTheDocument();
         expect(screen.getByText(/Caps & Headwear/i)).toBeInTheDocument();
-        expect(screen.getByText(/Shoes & Footwear/i)).toBeInTheDocument();
-        expect(screen.getByText(/Mixed Catalog \(Full Collection\)/i)).toBeInTheDocument();
+        expect(screen.getByText(/Shoes & Footwear \(Phase 2\)/i)).toBeInTheDocument();
+        expect(screen.getByText(/Mixed Catalog \(Full Allocation\)/i)).toBeInTheDocument();
       });
     });
   });
@@ -211,6 +218,9 @@ describe('AFRICAN BOY GLOBAL AGENT PROGRAM - UI & Component Tests', () => {
       vi.spyOn(agentService, 'getApplications').mockResolvedValue([mockApp]);
       vi.spyOn(agentService, 'getAllAgentProfiles').mockResolvedValue([]);
       vi.spyOn(agentService, 'getAllReplenishmentOrders').mockResolvedValue([]);
+      vi.spyOn(agentService, 'getAllShippingQuotes').mockResolvedValue([]);
+      vi.spyOn(wholesaleProgramService, 'getAllOffers').mockResolvedValue([]);
+      vi.spyOn(wholesaleProgramService, 'getCollectionTrackingForDistributor').mockResolvedValue([]);
       vi.spyOn(agentService, 'getReportsSummary').mockResolvedValue({
         totalApplications: 1,
         applicationsByStatus: { Draft: 0, Submitted: 1, 'Under Review': 0, 'More Information Required': 0, Approved: 0, Rejected: 0, Withdrawn: 0 },

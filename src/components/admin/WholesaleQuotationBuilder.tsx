@@ -103,6 +103,7 @@ export default function WholesaleQuotationBuilder({
 
   // Load settings & products
   useEffect(() => {
+    let isMounted = true;
     const initData = async () => {
       setLoading(true);
       try {
@@ -111,6 +112,7 @@ export default function WholesaleQuotationBuilder({
           supabase.from('products').select('*').order('created_at', { ascending: false }),
         ]);
 
+        if (!isMounted) return;
         setSettings(loadedSettings);
 
         let parsedProducts: Product[] = [];
@@ -123,12 +125,15 @@ export default function WholesaleQuotationBuilder({
           }));
         }
 
+        if (!isMounted) return;
         setAllProducts(parsedProducts);
         const { data: savedBusiness } = await supabase.from('invoice_settings').select('business_name,business_address,city,country,email,phone,website,contact_person').eq('store_id', 1).maybeSingle();
+        if (!isMounted) return;
         if (savedBusiness) setBusinessDetails(savedBusiness as ProposalBusinessDetails);
 
         // Check if an offer already exists for this application
         const existingOffer = await wholesaleProgramService.getOfferByApplicationId(application.id);
+        if (!isMounted) return;
         if (existingOffer) {
           setOfferId(existingOffer.id);
           setSavedCreatedAt(existingOffer.createdAt);
@@ -200,17 +205,20 @@ export default function WholesaleQuotationBuilder({
               targetCurrency: 'TZS',
               settings: loadedSettings,
             });
-            setProposalItems(quotation.proposalItems);
+            if (isMounted) setProposalItems(quotation.proposalItems);
           }
         }
       } catch (e) {
-        console.error('Error initializing quotation builder:', e);
+        if (isMounted) console.error('Error initializing quotation builder:', e);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     initData();
+    return () => {
+      isMounted = false;
+    };
   }, [application]);
 
   // Recalculate quotation prices when quantity, currency, or tiers change

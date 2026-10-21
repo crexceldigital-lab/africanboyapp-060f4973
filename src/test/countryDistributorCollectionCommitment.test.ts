@@ -1,4 +1,27 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('@/integrations/supabase/client', () => {
+  let savedRow: any;
+  const chain: any = {
+    upsert: vi.fn((row: any) => { savedRow = row; return chain; }),
+    single: vi.fn(async () => ({ data: savedRow, error: null })),
+    insert: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+  return {
+    supabase: {
+      from: vi.fn(() => chain),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'not available in tests' } }),
+    },
+  };
+});
+
 import {
   wholesaleProgramService,
   DEFAULT_COLLECTION_SCHEDULE,
