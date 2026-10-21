@@ -1,10 +1,10 @@
 # Monitoring findings
-- [ ] Fix remaining preview errors and confirm the site opens.
+- [x] Fix remaining preview errors and confirm the site opens (build OK; no browser errors; 35 targeted checks passed).
 - [ ] Verify and fix relative product images in Fit Me.
 - [x] Verify proposals table exists (already repaired; two saved offers).
 - [ ] Fix database-backed legacy review actions and save failures.
 - [ ] Handle all agreement download failures visibly.
-- [ ] Run regression tests and verify affected flows.
+- [ ] Complete original monitoring verification (35 targeted tests pass; full suite has outdated programme expectations; signed-in admin and real-photo try-on verification remain pending).
 
 # Wholesale proposal improvements
 - [x] Improve existing PDF layout, goods-only totals, notices and signature fields.
