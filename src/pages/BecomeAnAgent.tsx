@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import {
   Globe, ShieldCheck, TrendingUp, Award, CheckCircle2, ChevronDown,
   ArrowRight, Sparkles, Package, Users, Store, HelpCircle, Layers, Check,
-  FileText, DollarSign, Truck, AlertCircle, Building2
+  FileText, DollarSign, Truck, AlertCircle, Building2, Lock
 } from 'lucide-react';
 import AgentApplicationModal from '../components/agent/AgentApplicationModal';
+import WholesalePricingEnquiryModal from '../components/agent/WholesalePricingEnquiryModal';
+import { wholesaleProgramService } from '@/services/wholesaleProgramService';
 import spotlight1 from '@/assets/spotlight-1.png';
 import spotlight2 from '@/assets/spotlight-2.png';
 import spotlight7 from '@/assets/spotlight-7.png';
@@ -14,11 +16,16 @@ import heroBg from '@/assets/hero-group.jpg.asset.json';
 
 interface BecomeAnAgentProps {
   onNavigateHome?: () => void;
+  onNavigateToPricing?: (token?: string) => void;
 }
 
-export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
+export default function BecomeAnAgent({ onNavigateHome, onNavigateToPricing }: BecomeAnAgentProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [activePricingToken, setActivePricingToken] = useState<string | null>(() =>
+    wholesaleProgramService.getActivePricingToken()
+  );
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -27,6 +34,15 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleViewPricing = (token?: string) => {
+    const t = token || activePricingToken;
+    if (onNavigateToPricing) {
+      onNavigateToPricing(t || undefined);
+    } else {
+      window.location.href = t ? `/wholesale-pricing?token=${encodeURIComponent(t)}` : '/wholesale-pricing';
+    }
   };
 
   const FAQS = [
@@ -47,8 +63,8 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
       a: 'Applicants must demonstrate the financial and operational capacity to support all four annual collections. The business-capability assessment asks applicants to explain how they will fund and sell at least 1,000 pieces per collection, how they plan to sustain the business across the full 12-month contract, and to provide evidence of working capital, operating budget allocation, and retail/warehousing infrastructure.',
     },
     {
-      q: 'What are the authoritative wholesale pricing tiers?',
-      a: 'Wholesale prices are based on the current approved wholesale pricing configuration in Tanzanian Shillings (TZS): African Boy T-Shirts are priced at TZS 35,000 (500–999 units) and TZS 30,000 (1,000+ units). African Boy Caps are priced at TZS 18,000 (300+ units). Unit prices are never changed or invented arbitrarily.',
+      q: 'How do I access the authoritative wholesale pricing tiers?',
+      a: 'Wholesale prices are structured on volume-based tiers for authorised distributors and qualified commercial partners. To view our full official wholesale price schedule in Tanzanian Shillings (TZS), submit a quick enquiry through the "Request Wholesale Pricing" button. Qualified prospects receive immediate access to our complete price list.',
     },
     {
       q: 'Why are product sales and shipping costs handled separately?',
@@ -108,15 +124,23 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
           >
             <button
               onClick={() => setIsModalOpen(true)}
-              className="w-full sm:w-auto px-9 py-4 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_0_35px_rgba(234,179,8,0.35)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2.5 group"
+              className="w-full sm:w-auto px-8 py-4 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_0_35px_rgba(234,179,8,0.35)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2.5 group"
             >
-              <span>APPLY AS COUNTRY DISTRIBUTOR</span>
+              <span>BECOME AN AGENT · APPLY AS COUNTRY DISTRIBUTOR</span>
               <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
             </button>
 
             <button
+              onClick={() => setIsEnquiryModalOpen(true)}
+              className="w-full sm:w-auto px-8 py-4 bg-primary/20 hover:bg-primary/30 text-primary border border-primary font-black text-xs uppercase tracking-widest rounded-2xl backdrop-blur-md transition-all flex items-center justify-center gap-2"
+            >
+              <Lock size={15} />
+              <span>REQUEST WHOLESALE PRICING</span>
+            </button>
+
+            <button
               onClick={() => scrollToSection('programme-pillars')}
-              className="w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-widest rounded-2xl border border-white/15 backdrop-blur-md hover:border-white/30 transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-7 py-4 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-widest rounded-2xl border border-white/15 backdrop-blur-md hover:border-white/30 transition-all flex items-center justify-center gap-2"
             >
               PROGRAMME REQUIREMENTS
             </button>
@@ -312,7 +336,7 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
             <div className="space-y-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary">PILLAR 4</span>
               <h3 className="text-xl font-black uppercase tracking-tight text-white">
-                Separate Product Sales & Shipping Quotes
+                Dual Fulfillment Channels & Separate Shipping
               </h3>
               <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
                 Product sales and freight logistics are cleanly separated to prevent arbitrary markups and deliver maximum transparency.
@@ -325,7 +349,7 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
               </li>
               <li className="flex items-start gap-2.5 text-xs text-white/80">
                 <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
-                <span><strong>Flexible Shipping Origins:</strong> Option A (Dar es Salaam stock) or Option B (Factory-direct China freight).</span>
+                <span><strong>Dual Fulfillment Channels:</strong> Option A (Dar es Salaam stock) or Option B (Factory-direct China freight).</span>
               </li>
               <li className="flex items-start gap-2.5 text-xs text-white/80">
                 <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
@@ -336,23 +360,24 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
         </div>
       </section>
 
-      {/* 4. Official Catalogue & Authoritative Wholesale Pricing */}
-      <section className="py-20 px-6 max-w-7xl mx-auto border-b border-white/10">
+      {/* 4. Protected Wholesale Pricing & Lead Qualification */}
+      <section id="wholesale-pricing" className="py-20 px-6 max-w-7xl mx-auto border-b border-white/10">
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-14">
           <span className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">
-            AUTHORITATIVE PRICING
+            PROTECTED COMMERCIAL SCHEDULE
           </span>
           <h2 className="text-3xl sm:text-5xl font-black italic uppercase tracking-tight text-white">
-            Wholesale Price Schedule
+            Commercial Wholesale Price Overview
           </h2>
-          <p className="text-sm text-white/60">
-            Authoritative wholesale pricing schedule for initial catalogue lines in Tanzanian Shillings (TZS).
+          <p className="text-sm text-white/60 max-w-2xl mx-auto">
+            Detailed unit pricing, volume discount tiers, and distributor margin schedules are restricted to qualified commercial partners and registered prospects.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {/* T-Shirts Pricing Card */}
-          <div className="p-8 rounded-3xl bg-zinc-950 border-2 border-primary/40 space-y-6 shadow-2xl relative">
+        {/* Opportunity Highlights Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-10">
+          {/* T-Shirts Overview Card */}
+          <div className="p-8 rounded-3xl bg-zinc-950 border border-white/10 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary px-3 py-1 rounded-full bg-primary/10 border border-primary/20 inline-block">
@@ -377,37 +402,37 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
                   <p className="text-xs font-black uppercase text-white">Tier 1: 500 – 999 Pieces</p>
                   <p className="text-[11px] text-white/50">Mid-tier volume replenishment</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-black text-primary">TZS 35,000</p>
-                  <p className="text-[10px] text-white/40 uppercase">per unit</p>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                  <Lock size={14} />
+                  <span>Enquiry Required</span>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-primary/10 border border-primary/40 flex items-center justify-between">
+              <div className="p-4 rounded-2xl bg-black border border-white/10 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1.5">
                     <p className="text-xs font-black uppercase text-white">Tier 2: 1,000+ Pieces</p>
-                    <span className="px-2 py-0.5 rounded-full bg-primary text-black font-black text-[9px] uppercase">
+                    <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary font-black text-[9px] uppercase">
                       Distributor MOQ
                     </span>
                   </div>
-                  <p className="text-[11px] text-white/70">Full distributor opening order</p>
+                  <p className="text-[11px] text-white/50">Full distributor opening order</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-black text-primary">TZS 30,000</p>
-                  <p className="text-[10px] text-white/60 uppercase">per unit</p>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                  <Lock size={14} />
+                  <span>Enquiry Required</span>
                 </div>
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-white/60 flex items-center gap-2">
               <AlertCircle size={14} className="text-primary flex-shrink-0" />
-              <span>Orders below 500 units require authorised administrative review.</span>
+              <span>Volume discounts automatically calculate on qualified distributor opening orders.</span>
             </div>
           </div>
 
-          {/* Caps Pricing Card */}
-          <div className="p-8 rounded-3xl bg-zinc-950 border-2 border-primary/40 space-y-6 shadow-2xl relative">
+          {/* Caps Overview Card */}
+          <div className="p-8 rounded-3xl bg-zinc-950 border border-white/10 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary px-3 py-1 rounded-full bg-primary/10 border border-primary/20 inline-block">
@@ -427,38 +452,83 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
             </p>
 
             <div className="space-y-3 pt-2">
-              <div className="p-4 rounded-2xl bg-primary/10 border border-primary/40 flex items-center justify-between">
+              <div className="p-4 rounded-2xl bg-black border border-white/10 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1.5">
                     <p className="text-xs font-black uppercase text-white">Wholesale Tier: 300+ Pieces</p>
-                    <span className="px-2 py-0.5 rounded-full bg-primary text-black font-black text-[9px] uppercase">
+                    <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary font-black text-[9px] uppercase">
                       Category Tier
                     </span>
                   </div>
-                  <p className="text-[11px] text-white/70">Signature headwear allocation</p>
+                  <p className="text-[11px] text-white/50">Signature headwear allocation</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-black text-primary">TZS 18,000</p>
-                  <p className="text-[10px] text-white/60 uppercase">per unit</p>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                  <Lock size={14} />
+                  <span>Enquiry Required</span>
                 </div>
               </div>
 
               <div className="p-4 rounded-2xl bg-black border border-white/10 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase text-white">Under 300 Pieces</p>
-                  <p className="text-[11px] text-white/50">Non-standard volume</p>
+                  <p className="text-xs font-black uppercase text-white">Mixed Catalogue Allocation</p>
+                  <p className="text-[11px] text-white/50">Counts toward opening order</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-black text-amber-400">Authorised Review</p>
-                  <p className="text-[10px] text-white/40 uppercase">Subject to HQ approval</p>
+                  <span className="text-xs font-bold text-green-400">Eligible</span>
                 </div>
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-white/60 flex items-center gap-2">
-              <AlertCircle size={14} className="text-primary flex-shrink-0" />
+              <CheckCircle2 size={14} className="text-primary flex-shrink-0" />
               <span>Caps count toward the 1,000-piece total distributor opening order.</span>
             </div>
+          </div>
+        </div>
+
+        {/* Lead Qualification Box (Required by Spec) */}
+        <div className="max-w-4xl mx-auto p-8 sm:p-10 rounded-3xl bg-zinc-950 border-2 border-primary/40 text-center space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/30 mx-auto flex items-center justify-center text-primary shadow-[0_0_20px_rgba(234,179,8,0.2)]">
+            <Lock size={26} />
+          </div>
+
+          <div className="space-y-2 max-w-xl mx-auto">
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary px-3 py-1 rounded-full bg-primary/10 border border-primary/20 inline-block">
+              QUALIFIED PROSPECTS ONLY
+            </span>
+            <h3 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tight text-white">
+              Unlock African Boy Wholesale Pricing
+            </h3>
+            <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+              Submit your business details to access our wholesale pricing schedule and explore distribution opportunities.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            <button
+              onClick={() => setIsEnquiryModalOpen(true)}
+              className="w-full sm:w-auto px-8 py-4 bg-primary text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.35)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <span>REQUEST WHOLESALE PRICING</span>
+              <ArrowRight size={16} />
+            </button>
+
+            {activePricingToken && (
+              <button
+                onClick={() => handleViewPricing(activePricingToken)}
+                className="w-full sm:w-auto px-7 py-4 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-widest rounded-2xl border border-white/15 transition-all flex items-center justify-center gap-2"
+              >
+                <span>VIEW ACTIVE PRICING SCHEDULE</span>
+                <ChevronRight size={16} />
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-full sm:w-auto px-7 py-4 bg-transparent hover:bg-white/5 text-white/70 hover:text-white font-bold text-xs uppercase tracking-widest rounded-2xl border border-white/10 transition-all"
+            >
+              APPLY AS AGENT DIRECTLY
+            </button>
           </div>
         </div>
 
@@ -654,6 +724,22 @@ export default function BecomeAnAgent({ onNavigateHome }: BecomeAnAgentProps) {
       <AgentApplicationModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+      />
+
+      {/* Wholesale Pricing Enquiry Modal */}
+      <WholesalePricingEnquiryModal
+        isOpen={isEnquiryModalOpen}
+        onClose={() => setIsEnquiryModalOpen(false)}
+        onSuccess={(result) => {
+          setActivePricingToken(result.access_token);
+        }}
+        onViewPricing={(token) => {
+          handleViewPricing(token);
+        }}
+        onOpenApplication={() => {
+          setIsEnquiryModalOpen(false);
+          setIsModalOpen(true);
+        }}
       />
     </div>
   );

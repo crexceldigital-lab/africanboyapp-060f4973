@@ -21,6 +21,7 @@ import SplashScreen from './components/SplashScreen';
 import TrackOrder from './pages/TrackOrder';
 import InternationalOrder from './pages/InternationalOrder';
 import BecomeAnAgent from './pages/BecomeAnAgent';
+import WholesalePricingPage from './pages/WholesalePricingPage';
 import AgentDashboard from './pages/AgentDashboard';
 
 function AppContent() {
@@ -28,6 +29,7 @@ function AppContent() {
   const getInitialTab = (): NavTab => {
     const path = window.location.pathname;
     if (path === '/become-an-agent') return 'become-an-agent';
+    if (path === '/wholesale-pricing') return 'wholesale-pricing';
     if (path.startsWith('/agent')) return 'agent-dashboard';
     if (path === '/shop') return 'shop';
     if (path === '/media' || path === '/video') return 'video';
@@ -54,6 +56,8 @@ function AppContent() {
     setActiveTab(tab);
     if (tab === 'become-an-agent') {
       window.history.pushState({}, '', '/become-an-agent');
+    } else if (tab === 'wholesale-pricing') {
+      window.history.pushState({}, '', '/wholesale-pricing');
     } else if (tab === 'agent-dashboard') {
       window.history.pushState({}, '', '/agent/dashboard');
     } else if (tab === 'home') {
@@ -94,7 +98,25 @@ function AppContent() {
       case 'vip': return <VIP />;
       case 'fitme': return <FitMe />;
       case 'profile': return <Profile />;
-      case 'become-an-agent': return <BecomeAnAgent onNavigateHome={() => handleNavigate('home')} />;
+      case 'become-an-agent':
+        return (
+          <BecomeAnAgent
+            onNavigateHome={() => handleNavigate('home')}
+            onNavigateToPricing={(token) => {
+              if (token) {
+                window.history.pushState({}, '', `/wholesale-pricing?token=${encodeURIComponent(token)}`);
+              }
+              handleNavigate('wholesale-pricing');
+            }}
+          />
+        );
+      case 'wholesale-pricing':
+        return (
+          <WholesalePricingPage
+            onNavigateHome={() => handleNavigate('home')}
+            onApplyAsAgent={() => handleNavigate('become-an-agent')}
+          />
+        );
       case 'agent-dashboard': return <AgentDashboard />;
       case 'admin':
         return (

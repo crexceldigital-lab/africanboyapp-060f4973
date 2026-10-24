@@ -1,6 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 
-export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin' | 'become-an-agent' | 'agent-dashboard';
+export type NavTab = 'home' | 'shop' | 'video' | 'vip' | 'fitme' | 'profile' | 'admin' | 'become-an-agent' | 'agent-dashboard' | 'wholesale-pricing';
 
 export type AdminTab = 'dashboard' | 'pos' | 'products' | 'orders' | 'international' | 'customers' | 'invoices' | 'attributes' | 'gallery' | 'reports' | 'staff' | 'fitme' | 'agents';
 
@@ -820,6 +820,98 @@ export interface AgentCommercialOffer {
   supersededByOfferRef?: string | null;
   parentOfferReference?: string | null;
   version?: number;
+}
+
+export type WholesaleEnquiryStatus =
+  | 'New Enquiry'
+  | 'Pricing Access Granted'
+  | 'Under Review'
+  | 'Contacted'
+  | 'Converted'
+  | 'Rejected'
+  | 'Closed';
+
+export type WholesaleBusinessType =
+  | 'Retailer'
+  | 'Wholesaler'
+  | 'Distributor'
+  | 'Online Store'
+  | 'Other';
+
+export interface WholesalePricingEnquiry {
+  id: string;
+  enquiryReference: string;
+  fullName: string;
+  businessEmail: string;
+  phoneNumber: string;
+  country: string;
+  businessName: string;
+  businessType: WholesaleBusinessType;
+  estimatedOrderQuantity: string;
+  websiteOrSocial?: string | null;
+  preferredCategories?: string[];
+  additionalNotes?: string | null;
+  consentAcknowledged: boolean;
+  accessToken: string;
+  accessTokenExpiresAt: string;
+  pricingAccessedAt?: string | null;
+  pricingAccessCount: number;
+  status: WholesaleEnquiryStatus;
+  userId?: string | null;
+  linkedApplicationId?: string | null;
+  internalNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubmitWholesaleEnquiryInput {
+  fullName: string;
+  businessEmail: string;
+  phoneNumber: string;
+  country: string;
+  businessName: string;
+  businessType: WholesaleBusinessType;
+  estimatedOrderQuantity: string;
+  websiteOrSocial?: string;
+  preferredCategories?: string[];
+  additionalNotes?: string;
+  consentAcknowledged: boolean;
+}
+
+export interface WholesaleEnquirySubmissionResult {
+  success: boolean;
+  enquiryReference: string;
+  enquiry_reference?: string;
+  accessToken: string;
+  access_token?: string;
+  accessTokenExpiresAt: string;
+  access_token_expires_at?: string;
+  status: WholesaleEnquiryStatus;
+  isDuplicate?: boolean;
+}
+
+export interface WholesalePricingScheduleResponse {
+  valid: boolean;
+  error?: string;
+  isAdmin?: boolean;
+  isAgent?: boolean;
+  enquiryReference?: string;
+  businessName?: string;
+  applicantName?: string;
+  expiresAt?: string;
+  currency: string;
+  pricingTiers: Record<string, WholesalePricingTier[]>;
+  rules: {
+    tshirt_tier_1: string;
+    tshirt_tier_2: string;
+    tshirt_under_min: string;
+    caps_wholesale_tier: string;
+    caps_under_min: string;
+    caps_opening_order_credit: string;
+    mixed_order_policy: string;
+    distributor_policy: string;
+    separate_shipping: string;
+  };
 }
 
 

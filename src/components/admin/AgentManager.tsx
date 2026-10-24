@@ -22,19 +22,33 @@ import type {
   ShippingQuoteStatus,
   ShippingPaymentStatus,
   DistributorCollectionOrderRecord,
-  AgentCommercialOffer
+  AgentCommercialOffer,
+  WholesalePricingEnquiry,
+  WholesaleEnquiryStatus
 } from '@/types';
 import { wholesaleProgramService } from '@/services/wholesaleProgramService';
 import WholesaleProgramSettingsTab from './WholesaleProgramSettingsTab';
 import WholesaleQuotationBuilder from './WholesaleQuotationBuilder';
 
 export default function AgentManager() {
-  const [activeSubTab, setActiveSubTab] = useState<'applications' | 'agents' | 'orders' | 'shipping' | 'collections' | 'wholesale' | 'reports'>('applications');
+  const [activeSubTab, setActiveSubTab] = useState<'applications' | 'enquiries' | 'agents' | 'orders' | 'shipping' | 'collections' | 'wholesale' | 'reports'>('applications');
   const [loading, setLoading] = useState(true);
   const [collectionRecords, setCollectionRecords] = useState<DistributorCollectionOrderRecord[]>([]);
   const [flaggedOffers, setFlaggedOffers] = useState<AgentCommercialOffer[]>([]);
   const [editingCollectionRecord, setEditingCollectionRecord] = useState<DistributorCollectionOrderRecord | null>(null);
   const [isSavingCollection, setIsSavingCollection] = useState(false);
+
+  // Wholesale Enquiries State
+  const [wholesaleEnquiries, setWholesaleEnquiries] = useState<WholesalePricingEnquiry[]>([]);
+  const [enquiryStatusFilter, setEnquiryStatusFilter] = useState<string>('All');
+  const [enquiryCountryFilter, setEnquiryCountryFilter] = useState<string>('All');
+  const [enquiryOrderQtyFilter, setEnquiryOrderQtyFilter] = useState<string>('All');
+  const [enquirySearchQuery, setEnquirySearchQuery] = useState('');
+  const [selectedEnquiry, setSelectedEnquiry] = useState<WholesalePricingEnquiry | null>(null);
+  const [enquiryNotesText, setEnquiryNotesText] = useState('');
+  const [enquiryStatusText, setEnquiryStatusText] = useState<WholesaleEnquiryStatus>('New Enquiry');
+  const [isUpdatingEnquiry, setIsUpdatingEnquiry] = useState(false);
+  const [linkingApplicationId, setLinkingApplicationId] = useState('');
 
   // Applications State
   const [applications, setApplications] = useState<AgentApplication[]>([]);
@@ -121,7 +135,7 @@ export default function AgentManager() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [apps, agts, ords, rep, quotes, allOffers, distroCols] = await Promise.all([
+      const [apps, agts, ords, rep, quotes, allOffers, distroCols, enqs] = await Promise.all([
         agentService.getApplications(),
         agentService.getAllAgentProfiles(),
         agentService.getAllReplenishmentOrders(),
@@ -129,6 +143,7 @@ export default function AgentManager() {
         agentService.getAllShippingQuotes(),
         wholesaleProgramService.getAllOffers(),
         wholesaleProgramService.getCollectionTrackingForDistributor('app-sample-1'),
+        wholesaleProgramService.getWholesaleEnquiries().catch(() => []),
       ]);
       setApplications(apps);
       setAgents(agts);
@@ -137,6 +152,7 @@ export default function AgentManager() {
       setShippingQuotes(quotes);
       setFlaggedOffers(allOffers.filter(o => o.flaggedForReview));
       setCollectionRecords(distroCols);
+      setWholesaleEnquiries(enqs);
     } catch (err) {
       console.error('Error loading Agent Manager data:', err);
     } finally {
@@ -147,6 +163,63 @@ export default function AgentManager() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Filtered Wholesale Enquiries
+  const filteredEnquiries = wholesaleEnquiries.filter(enq => {
+    const q = enquirySearchQuery.toLowerCase();
+    const matchesSearch =
+      !q ||
+      enq.fullName.toLowerCase().includes(q) ||
+      enq.businessEmail.toLowerCase().includes(q) ||
+      enq.enquiryReference.toLowerCase().includes(q) ||
+      enq.businessName.toLowerCase().includes(q) ||
+      enq.country.toLowerCase().includes(q) ||
+      enq.phoneNumber.toLowerCase().includes(q);
+
+    const matchesStatus = enquiryStatusFilter === 'All' || enq.status === enquiryStatusFilter;
+    const matchesCountry = enquiryCountryFilter === 'All' || enq.country === enquiryCountryFilter;
+    const matchesOrderQty = enquiryOrderQtyFilter === 'All' || enq.estimatedOrderQuantity === enquiryOrderQtyFilter;
+
+    return matchesSearch && matchesStatus && matchesCountry && matchesOrderQty;
+  });
+
+  // Open Enquiry Details
+  const handleOpenEnquiryDetails = (enquiry: WholesalePricingEnquiry) => {
+    setSelectedEnquiry(enquiry);
+    setEnquiryNotesText(enquiry.internalNotes || '');
+    setEnquiryStatusText(enquiry.status);
+    setLinkingApplicationId(enquiry.linkedApplicationId || '');
+  };
+
+  // Save Enquiry Updates
+  const handleSaveEnquiry = async () => {
+    if (!selectedEnquiry) return;
+    setIsUpdatingEnquiry(true);
+    try {
+      if (linkingApplicationId && linkingApplicationId !== selectedEnquiry.linkedApplicationId) {
+        await wholesaleProgramService.linkEnquiryToApplication(selectedEnquiry.id, linkingApplicationId);
+      }
+      const updated = await wholesaleProgramService.updateEnquiryStatus(
+        selectedEnquiry.id,
+        enquiryStatusText,
+        enquiryNotesText
+      );
+      if (updated) {
+        toast.success(`Enquiry ${selectedEnquiry.enquiryReference} updated successfully.`);
+        const enqs = await wholesaleProgramService.getWholesaleEnquiries();
+        setWholesaleEnquiries(enqs);
+        const refreshed = enqs.find(e => e.id === selectedEnquiry.id);
+        if (refreshed) setSelectedEnquiry(refreshed);
+      } else {
+        toast.error('Failed to update enquiry.');
+      }
+    } catch (e) {
+      console.error('Error saving enquiry:', e);
+      toast.error('Error saving enquiry.');
+    } finally {
+      setIsUpdatingEnquiry(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -520,6 +593,7 @@ export default function AgentManager() {
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {[
           { id: 'applications', label: `Applications (${applications.length})` },
+          { id: 'enquiries', label: `Wholesale Enquiries (${wholesaleEnquiries.length})` },
           { id: 'agents', label: `Active Agents (${agents.length})` },
           { id: 'orders', label: `Replenishment Orders (${orders.length})` },
           { id: 'shipping', label: `Shipping Quotes (${shippingQuotes.length})` },
@@ -692,6 +766,182 @@ export default function AgentManager() {
                             className="px-3.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary font-black text-xs uppercase tracking-wider transition-all inline-flex items-center gap-1.5"
                           >
                             <Eye size={14} /> Review
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUBTAB: WHOLESALE ENQUIRIES */}
+      {activeSubTab === 'enquiries' && (
+        <div className="space-y-6">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            {[
+              { label: 'Total Enquiries', count: wholesaleEnquiries.length, color: 'text-foreground' },
+              { label: 'New', count: wholesaleEnquiries.filter(e => e.status === 'New Enquiry').length, color: 'text-blue-400' },
+              { label: 'Pricing Unlocked', count: wholesaleEnquiries.filter(e => (e.pricingAccessCount || 0) > 0 || e.status === 'Pricing Access Granted').length, color: 'text-primary' },
+              { label: 'Under Review', count: wholesaleEnquiries.filter(e => e.status === 'Under Review').length, color: 'text-yellow-400' },
+              { label: 'Contacted', count: wholesaleEnquiries.filter(e => e.status === 'Contacted').length, color: 'text-purple-400' },
+              { label: 'Converted', count: wholesaleEnquiries.filter(e => e.status === 'Converted').length, color: 'text-green-400' },
+            ].map((st, i) => (
+              <div key={i} className="p-4 rounded-2xl bg-card border border-foreground/10 text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">{st.label}</span>
+                <p className={`text-xl font-black ${st.color}`}>{st.count}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Search & Filters */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={enquirySearchQuery}
+                onChange={e => setEnquirySearchQuery(e.target.value)}
+                placeholder="Search enquiries by name, email, company, reference, phone..."
+                className="w-full pl-11 pr-4 py-2.5 bg-card border border-foreground/10 rounded-xl text-xs font-bold focus:border-primary outline-none"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={enquiryStatusFilter}
+                onChange={e => setEnquiryStatusFilter(e.target.value)}
+                className="px-3 py-2.5 bg-card border border-foreground/10 rounded-xl text-xs font-bold outline-none"
+              >
+                <option value="All">All Statuses</option>
+                <option value="New Enquiry">New Enquiry</option>
+                <option value="Pricing Access Granted">Pricing Access Granted</option>
+                <option value="Under Review">Under Review</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Converted">Converted</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Closed">Closed</option>
+              </select>
+
+              <select
+                value={enquiryCountryFilter}
+                onChange={e => setEnquiryCountryFilter(e.target.value)}
+                className="px-3 py-2.5 bg-card border border-foreground/10 rounded-xl text-xs font-bold outline-none"
+              >
+                <option value="All">All Countries</option>
+                {INTERNATIONAL_COUNTRIES.map(c => (
+                  <option key={c.code} value={c.name}>{c.flagEmoji} {c.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={enquiryOrderQtyFilter}
+                onChange={e => setEnquiryOrderQtyFilter(e.target.value)}
+                className="px-3 py-2.5 bg-card border border-foreground/10 rounded-xl text-xs font-bold outline-none"
+              >
+                <option value="All">All Order Volumes</option>
+                <option value="300 - 499 pieces">300 - 499 pieces</option>
+                <option value="500 - 999 pieces (Tier 1 Volume)">500 - 999 pieces (Tier 1 Volume)</option>
+                <option value="1,000 - 2,499 pieces (Distributor Opening MOQ)">1,000 - 2,499 pieces (Distributor Opening MOQ)</option>
+                <option value="2,500 - 4,000 pieces (Annual Programme Tier)">2,500 - 4,000 pieces (Annual Programme Tier)</option>
+                <option value="4,000+ pieces (National Distribution)">4,000+ pieces (National Distribution)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Enquiries Table */}
+          <div className="bg-card border border-foreground/10 rounded-2xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-foreground/5 text-muted-foreground font-black uppercase tracking-wider text-[10px] border-b border-foreground/10">
+                  <tr>
+                    <th className="px-5 py-3.5">Reference</th>
+                    <th className="px-5 py-3.5">Prospect & Company</th>
+                    <th className="px-5 py-3.5">Country</th>
+                    <th className="px-5 py-3.5">Type & Order Qty</th>
+                    <th className="px-5 py-3.5">Pricing Access</th>
+                    <th className="px-5 py-3.5">Status</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-foreground/5">
+                  {filteredEnquiries.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                        No wholesale pricing enquiries found matching the selected filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredEnquiries.map(enquiry => (
+                      <tr key={enquiry.id} className="hover:bg-foreground/5 transition-colors">
+                        <td className="px-5 py-4 font-mono font-bold text-primary">
+                          {enquiry.enquiryReference}
+                          <span className="block text-[10px] text-muted-foreground font-normal">
+                            {new Date(enquiry.createdAt).toLocaleDateString()}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="font-bold text-foreground">{enquiry.fullName}</p>
+                          <p className="text-[11px] text-muted-foreground">{enquiry.businessName || 'Independent'}</p>
+                          <p className="text-[10px] text-muted-foreground">{enquiry.businessEmail} · {enquiry.phoneNumber}</p>
+                        </td>
+                        <td className="px-5 py-4 font-medium">
+                          {enquiry.country}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="px-2 py-0.5 rounded-full bg-foreground/10 text-[10px] font-bold text-foreground block w-fit mb-1">
+                            {enquiry.businessType}
+                          </span>
+                          <span className="text-[11px] font-bold text-primary">
+                            {enquiry.estimatedOrderQuantity}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          {enquiry.pricingAccessCount > 0 ? (
+                            <div className="space-y-0.5">
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+                                <Check size={12} /> Viewed ({enquiry.pricingAccessCount}x)
+                              </span>
+                              {enquiry.pricingAccessedAt && (
+                                <span className="block text-[9px] text-muted-foreground">
+                                  Last: {new Date(enquiry.pricingAccessedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-foreground/5 text-muted-foreground border border-foreground/10 text-[10px] font-medium">
+                              Not Viewed Yet
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            enquiry.status === 'New Enquiry' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
+                            enquiry.status === 'Pricing Access Granted' ? 'bg-primary/15 text-primary border border-primary/30' :
+                            enquiry.status === 'Under Review' ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30' :
+                            enquiry.status === 'Contacted' ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' :
+                            enquiry.status === 'Converted' ? 'bg-green-500/15 text-green-400 border border-green-500/30' :
+                            enquiry.status === 'Rejected' ? 'bg-red-500/15 text-red-400 border border-red-500/30' :
+                            'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30'
+                          }`}>
+                            {enquiry.status}
+                          </span>
+                          {enquiry.linkedApplicationId && (
+                            <span className="block text-[9px] text-green-400 font-mono mt-1">
+                              Linked to Agent App
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            onClick={() => handleOpenEnquiryDetails(enquiry)}
+                            className="px-3.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary font-black text-xs uppercase tracking-wider transition-all inline-flex items-center gap-1.5"
+                          >
+                            <Eye size={14} /> Review Enquiry
                           </button>
                         </td>
                       </tr>
@@ -2593,6 +2843,217 @@ export default function AgentManager() {
                 className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md"
               >
                 Save Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WHOLESALE ENQUIRY REVIEW MODAL */}
+      {selectedEnquiry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-card border border-foreground/15 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl my-8">
+            <div className="flex items-center justify-between border-b border-foreground/10 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  Wholesale Enquiry Management
+                </span>
+                <h3 className="text-xl font-black italic uppercase tracking-tight text-foreground flex items-center gap-2">
+                  <span>{selectedEnquiry.enquiryReference}</span>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                    {selectedEnquiry.status}
+                  </span>
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedEnquiry(null)}
+                className="p-2 rounded-full hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Prospect Information Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Prospect Full Name</span>
+                <p className="font-bold text-foreground text-sm">{selectedEnquiry.fullName}</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Business / Company</span>
+                <p className="font-bold text-foreground text-sm">{selectedEnquiry.businessName || 'Independent / Sole Proprietor'}</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Business Email</span>
+                <a href={`mailto:${selectedEnquiry.businessEmail}`} className="font-bold text-primary hover:underline block break-all">
+                  {selectedEnquiry.businessEmail}
+                </a>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Phone Number</span>
+                <a href={`tel:${selectedEnquiry.phoneNumber}`} className="font-bold text-foreground hover:text-primary transition-colors block">
+                  {selectedEnquiry.phoneNumber}
+                </a>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Country</span>
+                <p className="font-bold text-foreground">{selectedEnquiry.country}</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Business Type</span>
+                <p className="font-bold text-foreground">{selectedEnquiry.businessType}</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Estimated Opening Order</span>
+                <p className="font-black text-primary">{selectedEnquiry.estimatedOrderQuantity}</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Website / Social</span>
+                {selectedEnquiry.websiteOrSocial ? (
+                  <a
+                    href={selectedEnquiry.websiteOrSocial.startsWith('http') ? selectedEnquiry.websiteOrSocial : `https://${selectedEnquiry.websiteOrSocial}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-primary hover:underline break-all block"
+                  >
+                    {selectedEnquiry.websiteOrSocial}
+                  </a>
+                ) : (
+                  <p className="text-muted-foreground italic">None provided</p>
+                )}
+              </div>
+            </div>
+
+            {/* Preferred Categories & Notes */}
+            {selectedEnquiry.preferredCategories && selectedEnquiry.preferredCategories.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Preferred Product Lines</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedEnquiry.preferredCategories.map(cat => (
+                    <span key={cat} className="px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-bold">
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedEnquiry.additionalNotes && (
+              <div className="p-4 rounded-2xl bg-foreground/5 space-y-1 text-xs">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Additional Notes from Prospect</span>
+                <p className="text-foreground/90 whitespace-pre-wrap leading-relaxed italic">
+                  "{selectedEnquiry.additionalNotes}"
+                </p>
+              </div>
+            )}
+
+            {/* Pricing Access Details */}
+            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-2 text-xs">
+              <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+                Wholesale Price Schedule Access Audit
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div>
+                  <span className="text-[10px] text-muted-foreground block">View Count</span>
+                  <span className="font-bold text-foreground">{selectedEnquiry.pricingAccessCount || 0} times</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground block">Last Accessed</span>
+                  <span className="font-bold text-foreground">
+                    {selectedEnquiry.pricingAccessedAt ? new Date(selectedEnquiry.pricingAccessedAt).toLocaleString() : 'Never'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground block">Token Expiry</span>
+                  <span className="font-bold text-foreground">
+                    {selectedEnquiry.accessTokenExpiresAt ? new Date(selectedEnquiry.accessTokenExpiresAt).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Link to Existing Agent Application */}
+            <div className="space-y-2">
+              <label htmlFor="linkAgentApplicationSelect" className="text-[11px] font-bold uppercase text-muted-foreground block">
+                Link to Agent Application (Optional)
+              </label>
+              <select
+                id="linkAgentApplicationSelect"
+                aria-label="Link to Agent Application"
+                value={linkingApplicationId}
+                onChange={e => setLinkingApplicationId(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl text-xs font-bold focus:border-primary outline-none"
+              >
+                <option value="">-- No Linked Application --</option>
+                {applications.map(app => (
+                  <option key={app.id} value={app.id}>
+                    {app.application_reference} — {app.full_name} ({app.country_name}) [{app.status}]
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-muted-foreground">
+                Linking an enquiry to an application establishes the relationship and marks enquiry as "Converted".
+              </p>
+            </div>
+
+            {/* Update Status & Internal Notes */}
+            <div className="space-y-4 pt-2 border-t border-foreground/10">
+              <div className="space-y-1">
+                <label htmlFor="enquiryStatusSelect" className="text-[11px] font-bold uppercase text-muted-foreground block">
+                  Enquiry Status
+                </label>
+                <select
+                  id="enquiryStatusSelect"
+                  aria-label="Enquiry Status"
+                  value={enquiryStatusText}
+                  onChange={e => setEnquiryStatusText(e.target.value as WholesaleEnquiryStatus)}
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl text-xs font-bold focus:border-primary outline-none"
+                >
+                  <option value="New Enquiry">New Enquiry</option>
+                  <option value="Pricing Access Granted">Pricing Access Granted</option>
+                  <option value="Under Review">Under Review</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Converted">Converted</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-muted-foreground block">
+                  Internal Administrative Notes
+                </label>
+                <textarea
+                  rows={3}
+                  value={enquiryNotesText}
+                  onChange={e => setEnquiryNotesText(e.target.value)}
+                  placeholder="Record call notes, distributor qualifications, correspondence history..."
+                  className="w-full px-3 py-2 bg-background border border-foreground/15 rounded-xl text-xs focus:border-primary outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 justify-end pt-4 border-t border-foreground/10">
+              <button
+                onClick={() => setSelectedEnquiry(null)}
+                className="px-4 py-2 rounded-xl border border-foreground/15 text-xs font-bold hover:bg-foreground/5"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleSaveEnquiry}
+                disabled={isUpdatingEnquiry}
+                className="px-6 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md hover:scale-105 active:scale-95 disabled:opacity-50"
+              >
+                {isUpdatingEnquiry ? 'Saving...' : 'Save Enquiry Updates'}
               </button>
             </div>
           </div>

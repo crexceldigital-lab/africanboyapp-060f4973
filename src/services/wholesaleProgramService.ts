@@ -11,10 +11,17 @@ import type {
   DistributorCollectionScheduleItem,
   DistributorCollectionOrderRecord,
   Product,
+  WholesalePricingEnquiry,
+  SubmitWholesaleEnquiryInput,
+  WholesaleEnquirySubmissionResult,
+  WholesalePricingScheduleResponse,
+  WholesaleEnquiryStatus,
 } from '@/types';
 
 const STORAGE_KEY_WHOLESALE_SETTINGS = 'ab_wholesale_program_settings_cache';
 const STORAGE_KEY_COMMERCIAL_OFFERS = 'ab_agent_commercial_offers_cache';
+const STORAGE_KEY_WHOLESALE_ENQUIRIES = 'ab_wholesale_pricing_enquiries_cache';
+const STORAGE_KEY_ACTIVE_PRICING_TOKEN = 'africanboy_wholesale_token';
 
 // ==============================================================================
 // DEFAULT CONFIGURATION (Editable from Admin Dashboard)
@@ -498,6 +505,18 @@ function saveLocalCollectionOrders(records: DistributorCollectionOrderRecord[]) 
   }
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms = 350): Promise<T> {
+  let timer: any;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Operation timed out')), ms);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ==============================================================================
 // SERVICE IMPLEMENTATION
 // ==============================================================================
@@ -508,10 +527,13 @@ export const wholesaleProgramService = {
    */
   async getSettings(): Promise<WholesaleProgramSettings> {
     try {
-      const { data, error } = await fromAny('wholesale_program_settings')
-        .select('*')
-        .eq('id', 'default')
-        .maybeSingle();
+      const { data, error } = await withTimeout(
+        fromAny('wholesale_program_settings')
+          .select('*')
+          .eq('id', 'default')
+          .maybeSingle(),
+        250
+      );
 
       if (!error && data) {
         return {
@@ -1429,4 +1451,486 @@ export const wholesaleProgramService = {
 
     downloadCommercialProposalPdf(offerData, application, business || {});
   },
+
+  // ==============================================================================
+  // WHOLESALE PRICING ACCESS CONTROL & LEAD ENQUIRY METHODS
+  // ==============================================================================
+
+  mapDbEnquiryToType(data: any): WholesalePricingEnquiry {
+    return {
+      id: data.id,
+      enquiryReference: data.enquiry_reference,
+      fullName: data.full_name,
+      businessEmail: data.business_email,
+      phoneNumber: data.phone_number,
+      country: data.country,
+      businessName: data.business_name,
+      businessType: data.business_type,
+      estimatedOrderQuantity: data.estimated_order_quantity,
+      websiteOrSocial: data.website_or_social || null,
+      preferredCategories: data.preferred_categories || [],
+      additionalNotes: data.additional_notes || null,
+      consentAcknowledged: !!data.consent_acknowledged,
+      accessToken: data.access_token,
+      accessTokenExpiresAt: data.access_token_expires_at,
+      pricingAccessedAt: data.pricing_accessed_at || null,
+      pricingAccessCount: Number(data.pricing_access_count) || 0,
+      status: data.status || 'New Enquiry',
+      userId: data.user_id || null,
+      linkedApplicationId: data.linked_application_id || null,
+      internalNotes: data.internal_notes || null,
+      createdAt: data.created_at || new Date().toISOString(),
+      updatedAt: data.updated_at || new Date().toISOString(),
+    };
+  },
+
+  getAuthoritativePricingRules() {
+    return {
+      tshirt_tier_1: 'TZS 35,000 per unit (500–999 pieces)',
+      tshirt_tier_2: 'TZS 30,000 per unit (1,000+ pieces - Distributor MOQ)',
+      tshirt_under_min: 'Orders below 500 units require authorised administrative review.',
+      caps_wholesale_tier: 'TZS 18,000 per unit (300+ pieces)',
+      caps_under_min: 'Orders below 300 pieces require authorised review.',
+      caps_opening_order_credit: 'Caps count toward the 1,000-piece distributor opening-order requirement.',
+      mixed_order_policy: 'The 1,000-piece distributor opening order does not require 1,000 T-shirts exclusively. Eligible product categories (T-Shirts and Caps) can be combined.',
+      distributor_policy: 'Country Distributors are required to purchase a minimum of 1,000 pieces from each of African Boy’s four annual collections, representing a planned minimum commitment of 4,000 pieces per year.',
+      separate_shipping: 'Merchandise sales invoices cover product goods only. Freight shipping is quoted and approved separately for each shipment from Dar es Salaam or China factory-direct.',
+      tshirts: {
+        tier1: { minQuantity: 500, maxQuantity: 999, unitPriceTZS: 35000 },
+        tier2: { minQuantity: 1000, unitPriceTZS: 30000 },
+        subMinPolicy: 'Orders below 500 units requires authorised administrative review, according to the existing policy.',
+      },
+      caps: {
+        tier1: { minQuantity: 300, unitPriceTZS: 18000 },
+        countsTowardDistributorMoq: true,
+        subMinPolicy: 'Orders below 300 pieces requires authorised review, according to the existing policy.',
+      },
+      distributorCommitment: {
+        collectionsPerYear: 4,
+        minimumPerCollection: 1000,
+        annualTotalPieces: 4000,
+      },
+      mixedOrderPolicy: 'The 1,000-piece distributor opening order does not require 1,000 T-shirts exclusively. Eligible product categories (T-Shirts and Caps) can be combined.',
+      shippingPolicy: 'Merchandise sales invoices cover product goods only. Freight shipping is quoted and approved separately for each shipment from Dar es Salaam or China factory-direct.',
+    };
+  },
+
+  getLocalEnquiries(): WholesalePricingEnquiry[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_WHOLESALE_ENQUIRIES);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  cacheLocalEnquiry(enquiry: WholesalePricingEnquiry): void {
+    try {
+      const list = this.getLocalEnquiries();
+      const idx = list.findIndex(e => e.id === enquiry.id || e.enquiryReference === enquiry.enquiryReference);
+      if (idx >= 0) {
+        list[idx] = enquiry;
+      } else {
+        list.unshift(enquiry);
+      }
+      localStorage.setItem(STORAGE_KEY_WHOLESALE_ENQUIRIES, JSON.stringify(list));
+    } catch (e) {
+      console.warn('Failed to cache enquiry locally:', e);
+    }
+  },
+
+  getActivePricingToken(): string | null {
+    try {
+      return sessionStorage.getItem(STORAGE_KEY_ACTIVE_PRICING_TOKEN) || localStorage.getItem(STORAGE_KEY_ACTIVE_PRICING_TOKEN);
+    } catch {
+      return null;
+    }
+  },
+
+  setActivePricingToken(token: string): void {
+    try {
+      sessionStorage.setItem(STORAGE_KEY_ACTIVE_PRICING_TOKEN, token);
+      localStorage.setItem(STORAGE_KEY_ACTIVE_PRICING_TOKEN, token);
+    } catch (e) {
+      console.warn('Failed to save active pricing token:', e);
+    }
+  },
+
+  clearActivePricingToken(): void {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY_ACTIVE_PRICING_TOKEN);
+      localStorage.removeItem(STORAGE_KEY_ACTIVE_PRICING_TOKEN);
+    } catch {
+      // ignore
+    }
+  },
+
+  async submitPricingEnquiry(input: SubmitWholesaleEnquiryInput): Promise<WholesaleEnquirySubmissionResult> {
+    // 1. Validations
+    if (!input.fullName || input.fullName.trim().length < 2) {
+      throw new Error('Please enter your full legal name.');
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!input.businessEmail || !emailRegex.test(input.businessEmail.trim())) {
+      throw new Error('Please enter a valid business email address.');
+    }
+    if (!input.phoneNumber || input.phoneNumber.trim().length < 6) {
+      throw new Error('Please enter a valid phone number with country code.');
+    }
+    if (!input.country || input.country.trim().length < 2) {
+      throw new Error('Please specify your business country.');
+    }
+    if (!input.businessName || input.businessName.trim().length < 2) {
+      throw new Error('Please enter your company or business name.');
+    }
+    if (!input.businessType) {
+      throw new Error('Please select your business structure.');
+    }
+    if (!input.estimatedOrderQuantity || input.estimatedOrderQuantity.trim().length < 1) {
+      throw new Error('Please indicate your estimated opening order quantity.');
+    }
+    if (!input.consentAcknowledged) {
+      throw new Error('Please acknowledge consent for African Boy to process your wholesale enquiry.');
+    }
+
+    // 2. Try Supabase RPC
+    try {
+      const { data, error } = await withTimeout(
+        supabase.rpc('submit_wholesale_pricing_enquiry', {
+          p_full_name: input.fullName.trim(),
+          p_business_email: input.businessEmail.trim().toLowerCase(),
+          p_phone_number: input.phoneNumber.trim(),
+          p_country: input.country.trim(),
+          p_business_name: input.businessName.trim(),
+          p_business_type: input.businessType,
+          p_estimated_order_quantity: input.estimatedOrderQuantity.trim(),
+          p_website_or_social: input.websiteOrSocial?.trim() || null,
+          p_preferred_categories: input.preferredCategories || [],
+          p_additional_notes: input.additionalNotes?.trim() || null,
+          p_consent_acknowledged: true,
+        }),
+        350
+      );
+
+      if (!error && data) {
+        const token = data.access_token;
+        this.setActivePricingToken(token);
+        this.cacheLocalEnquiry({
+          id: token,
+          enquiryReference: data.enquiry_reference,
+          fullName: input.fullName.trim(),
+          businessEmail: input.businessEmail.trim().toLowerCase(),
+          phoneNumber: input.phoneNumber.trim(),
+          country: input.country.trim(),
+          businessName: input.businessName.trim(),
+          businessType: input.businessType,
+          estimatedOrderQuantity: input.estimatedOrderQuantity.trim(),
+          websiteOrSocial: input.websiteOrSocial?.trim() || null,
+          preferredCategories: input.preferredCategories || [],
+          additionalNotes: input.additionalNotes?.trim() || null,
+          consentAcknowledged: true,
+          accessToken: token,
+          accessTokenExpiresAt: data.access_token_expires_at,
+          pricingAccessCount: 0,
+          status: data.status || 'New Enquiry',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        return {
+          success: true,
+          enquiryReference: data.enquiry_reference,
+          enquiry_reference: data.enquiry_reference,
+          accessToken: token,
+          access_token: token,
+          accessTokenExpiresAt: data.access_token_expires_at,
+          access_token_expires_at: data.access_token_expires_at,
+          status: data.status || 'New Enquiry',
+          isDuplicate: !!data.is_duplicate,
+        };
+      }
+    } catch (rpcErr) {
+      console.warn('RPC submit_wholesale_pricing_enquiry failed, trying direct table:', rpcErr);
+    }
+
+    // 3. Fallback: Direct table insert
+    try {
+      const token = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'tok-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+      const ref = 'WPE-2026-' + Math.floor(10000 + Math.random() * 90000);
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data: insertData, error: insertError } = await withTimeout(
+        fromAny('wholesale_pricing_enquiries')
+          .insert({
+            enquiry_reference: ref,
+            full_name: input.fullName.trim(),
+            business_email: input.businessEmail.trim().toLowerCase(),
+            phone_number: input.phoneNumber.trim(),
+            country: input.country.trim(),
+            business_name: input.businessName.trim(),
+            business_type: input.businessType,
+            estimated_order_quantity: input.estimatedOrderQuantity.trim(),
+            website_or_social: input.websiteOrSocial?.trim() || null,
+            preferred_categories: input.preferredCategories || [],
+            additional_notes: input.additionalNotes?.trim() || null,
+            consent_acknowledged: true,
+            access_token: token,
+            access_token_expires_at: expiresAt,
+            status: 'New Enquiry',
+          })
+          .select('*')
+          .maybeSingle(),
+        350
+      );
+
+      if (!insertError && insertData) {
+        this.setActivePricingToken(token);
+        this.cacheLocalEnquiry(this.mapDbEnquiryToType(insertData));
+        return {
+          success: true,
+          enquiryReference: insertData.enquiry_reference,
+          enquiry_reference: insertData.enquiry_reference,
+          accessToken: token,
+          access_token: token,
+          accessTokenExpiresAt: expiresAt,
+          access_token_expires_at: expiresAt,
+          status: 'New Enquiry',
+        };
+      }
+    } catch (tableErr) {
+      console.warn('Direct table insert failed, falling back to local storage:', tableErr);
+    }
+
+    // 4. Fallback: Local offline store
+    const localToken = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'tok-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+    const localRef = 'WPE-2026-' + Math.floor(10000 + Math.random() * 90000);
+    const localExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const localEnquiry: WholesalePricingEnquiry = {
+      id: localToken,
+      enquiryReference: localRef,
+      fullName: input.fullName.trim(),
+      businessEmail: input.businessEmail.trim().toLowerCase(),
+      phoneNumber: input.phoneNumber.trim(),
+      country: input.country.trim(),
+      businessName: input.businessName.trim(),
+      businessType: input.businessType,
+      estimatedOrderQuantity: input.estimatedOrderQuantity.trim(),
+      websiteOrSocial: input.websiteOrSocial?.trim() || null,
+      preferredCategories: input.preferredCategories || [],
+      additionalNotes: input.additionalNotes?.trim() || null,
+      consentAcknowledged: true,
+      accessToken: localToken,
+      accessTokenExpiresAt: localExpires,
+      pricingAccessCount: 0,
+      status: 'New Enquiry',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.cacheLocalEnquiry(localEnquiry);
+    this.setActivePricingToken(localToken);
+    return {
+      success: true,
+      enquiryReference: localRef,
+      enquiry_reference: localRef,
+      accessToken: localToken,
+      access_token: localToken,
+      accessTokenExpiresAt: localExpires,
+      access_token_expires_at: localExpires,
+      status: 'New Enquiry',
+    };
+  },
+
+  async verifyPricingAccessToken(tokenParam?: string | null): Promise<WholesalePricingScheduleResponse> {
+    const token = tokenParam || this.getActivePricingToken();
+
+    // Check if authenticated user is admin or active agent
+    try {
+      const { data: authData } = await withTimeout(supabase.auth.getUser(), 250);
+      if (authData?.user) {
+        const { data: agentProfile } = await withTimeout(
+          fromAny('agent_profiles')
+            .select('id, business_name, full_name, status')
+            .eq('user_id', authData.user.id)
+            .eq('status', 'active')
+            .maybeSingle(),
+          250
+        );
+
+        if (agentProfile) {
+          const settings = await this.getSettings();
+          return {
+            valid: true,
+            isAgent: true,
+            businessName: agentProfile.business_name || agentProfile.full_name,
+            applicantName: agentProfile.full_name,
+            currency: 'TZS',
+            pricingTiers: settings.pricingTiers || DEFAULT_PRICING_TIERS,
+            rules: this.getAuthoritativePricingRules(),
+          };
+        }
+      }
+    } catch {
+      // ignore auth check error
+    }
+
+    // Try Supabase RPC if token is provided
+    if (token) {
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token);
+        if (isUuid) {
+          const { data, error } = await withTimeout(
+            supabase.rpc('get_wholesale_pricing_schedule', {
+              p_token: token,
+            }),
+            350
+          );
+
+          if (!error && data && data.valid) {
+            const settings = await this.getSettings();
+            return {
+              valid: true,
+              isAdmin: !!data.is_admin,
+              isAgent: !!data.is_agent,
+              enquiryReference: data.enquiry_reference,
+              businessName: data.business_name,
+              applicantName: data.applicant_name,
+              expiresAt: data.expires_at,
+              currency: data.currency || 'TZS',
+              pricingTiers: settings.pricingTiers || DEFAULT_PRICING_TIERS,
+              rules: data.rules || this.getAuthoritativePricingRules(),
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('RPC get_wholesale_pricing_schedule failed, checking local cache:', err);
+      }
+
+      // Check local cache
+      const cached = this.getLocalEnquiries().find(e => e.accessToken === token || e.id === token);
+      if (cached) {
+        const isExpired = new Date(cached.accessTokenExpiresAt).getTime() < Date.now();
+        if (!isExpired) {
+          cached.pricingAccessedAt = new Date().toISOString();
+          cached.pricingAccessCount = (cached.pricingAccessCount || 0) + 1;
+          if (cached.status === 'New Enquiry') {
+            cached.status = 'Pricing Access Granted';
+          }
+          this.cacheLocalEnquiry(cached);
+
+          const settings = await this.getSettings();
+          return {
+            valid: true,
+            enquiryReference: cached.enquiryReference,
+            businessName: cached.businessName,
+            applicantName: cached.fullName,
+            expiresAt: cached.accessTokenExpiresAt,
+            currency: 'TZS',
+            pricingTiers: settings.pricingTiers || DEFAULT_PRICING_TIERS,
+            rules: this.getAuthoritativePricingRules(),
+          };
+        }
+      }
+    }
+
+    return {
+      valid: false,
+      error: 'Access to the African Boy Wholesale Price Schedule requires a verified enquiry access token or active distributor credentials.',
+      currency: 'TZS',
+      pricingTiers: {},
+      rules: this.getAuthoritativePricingRules(),
+    };
+  },
+
+  async getWholesaleEnquiries(): Promise<WholesalePricingEnquiry[]> {
+    try {
+      const queryPromise = (async () => {
+        const { data, error } = await fromAny('wholesale_pricing_enquiries')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const mapped = data.map((d: any) => this.mapDbEnquiryToType(d));
+          const local = this.getLocalEnquiries();
+          const existingRefs = new Set(mapped.map((m: any) => m.enquiryReference));
+          for (const loc of local) {
+            if (!existingRefs.has(loc.enquiryReference)) {
+              mapped.push(loc);
+            }
+          }
+          return mapped;
+        }
+        return null;
+      })();
+
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      if (result) return result;
+    } catch (e) {
+      console.warn('Could not fetch wholesale enquiries from DB, falling back to cache:', e);
+    }
+    return this.getLocalEnquiries();
+  },
+
+  async updateEnquiryStatus(enquiryId: string, status: WholesaleEnquiryStatus, internalNotes?: string): Promise<boolean> {
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(enquiryId);
+      if (isUuid) {
+        const updatePayload: any = { status, updated_at: new Date().toISOString() };
+        if (internalNotes !== undefined) updatePayload.internal_notes = internalNotes;
+        const { error } = await fromAny('wholesale_pricing_enquiries')
+          .update(updatePayload)
+          .eq('id', enquiryId);
+        if (!error) {
+          const local = this.getLocalEnquiries();
+          const target = local.find(e => e.id === enquiryId);
+          if (target) {
+            target.status = status;
+            if (internalNotes !== undefined) target.internalNotes = internalNotes;
+            target.updatedAt = new Date().toISOString();
+            localStorage.setItem(STORAGE_KEY_WHOLESALE_ENQUIRIES, JSON.stringify(local));
+          }
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('DB update enquiry status failed:', e);
+    }
+
+    const local = this.getLocalEnquiries();
+    const target = local.find(e => e.id === enquiryId || e.enquiryReference === enquiryId);
+    if (target) {
+      target.status = status;
+      if (internalNotes !== undefined) target.internalNotes = internalNotes;
+      target.updatedAt = new Date().toISOString();
+      localStorage.setItem(STORAGE_KEY_WHOLESALE_ENQUIRIES, JSON.stringify(local));
+      return true;
+    }
+    return false;
+  },
+
+  async linkEnquiryToApplication(enquiryId: string, applicationId: string): Promise<boolean> {
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(enquiryId);
+      const isAppUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applicationId);
+      if (isUuid && isAppUuid) {
+        await fromAny('wholesale_pricing_enquiries')
+          .update({ linked_application_id: applicationId, status: 'Converted', updated_at: new Date().toISOString() })
+          .eq('id', enquiryId);
+      }
+    } catch (e) {
+      console.warn('DB link enquiry failed:', e);
+    }
+
+    const local = this.getLocalEnquiries();
+    const target = local.find(e => e.id === enquiryId || e.enquiryReference === enquiryId);
+    if (target) {
+      target.linkedApplicationId = applicationId;
+      target.status = 'Converted';
+      target.updatedAt = new Date().toISOString();
+      localStorage.setItem(STORAGE_KEY_WHOLESALE_ENQUIRIES, JSON.stringify(local));
+      return true;
+    }
+    return true;
+  },
 };
+
