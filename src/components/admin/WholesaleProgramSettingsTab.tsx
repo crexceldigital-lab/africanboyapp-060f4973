@@ -21,7 +21,7 @@ export default function WholesaleProgramSettingsTab({ onSettingsUpdated }: Whole
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const data = await wholesaleProgramService.getSettings();
+      const data = await wholesaleProgramService.getSettings({ strict: true });
       setSettings(data);
     } catch (e) {
       console.error('Error loading wholesale settings:', e);

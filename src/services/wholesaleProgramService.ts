@@ -525,15 +525,13 @@ export const wholesaleProgramService = {
   /**
    * Get all active wholesale program settings (Admin editable).
    */
-  async getSettings(): Promise<WholesaleProgramSettings> {
+  async getSettings(options: { strict?: boolean } = {}): Promise<WholesaleProgramSettings> {
     try {
-      const { data, error } = await withTimeout(
-        fromAny('wholesale_program_settings')
-          .select('*')
-          .eq('id', 'default')
-          .maybeSingle(),
-        250
-      );
+      const { data, error } = await fromAny('wholesale_program_settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+      if (error && options.strict) throw error;
 
       if (!error && data) {
         return {
@@ -548,6 +546,8 @@ export const wholesaleProgramService = {
         };
       }
     } catch (e) {
+      // Admin editing must never load cached/default prices that could overwrite saved ones.
+      if (options.strict) throw e;
       console.warn('Supabase wholesale settings query failed, using cache:', e);
     }
     return getLocalSettings();
@@ -1595,8 +1595,7 @@ export const wholesaleProgramService = {
 
     // 2. Try Supabase RPC
     try {
-      const { data, error } = await withTimeout(
-        supabase.rpc('submit_wholesale_pricing_enquiry', {
+      const { data, error } = await supabase.rpc('submit_wholesale_pricing_enquiry', {
           p_full_name: input.fullName.trim(),
           p_business_email: input.businessEmail.trim().toLowerCase(),
           p_phone_number: input.phoneNumber.trim(),
@@ -1608,9 +1607,10 @@ export const wholesaleProgramService = {
           p_preferred_categories: input.preferredCategories || [],
           p_additional_notes: input.additionalNotes?.trim() || null,
           p_consent_acknowledged: true,
-        }),
-        350
-      );
+        });
+      if (error || !data) {
+        throw new Error(error?.message || 'We could not submit your enquiry. Please try again.');
+      }
 
       if (!error && data) {
         const token = data.access_token;
@@ -1649,95 +1649,10 @@ export const wholesaleProgramService = {
           isDuplicate: !!data.is_duplicate,
         };
       }
-    } catch (rpcErr) {
-      console.warn('RPC submit_wholesale_pricing_enquiry failed, trying direct table:', rpcErr);
+    } catch (rpcErr: any) {
+      console.error('submit_wholesale_pricing_enquiry failed:', rpcErr);
+      throw new Error('We could not submit your enquiry right now. Please check your connection and try again.');
     }
-
-    // 3. Fallback: Direct table insert
-    try {
-      const token = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'tok-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
-      const ref = 'WPE-2026-' + Math.floor(10000 + Math.random() * 90000);
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-      const { data: insertData, error: insertError } = await withTimeout(
-        fromAny('wholesale_pricing_enquiries')
-          .insert({
-            enquiry_reference: ref,
-            full_name: input.fullName.trim(),
-            business_email: input.businessEmail.trim().toLowerCase(),
-            phone_number: input.phoneNumber.trim(),
-            country: input.country.trim(),
-            business_name: input.businessName.trim(),
-            business_type: input.businessType,
-            estimated_order_quantity: input.estimatedOrderQuantity.trim(),
-            website_or_social: input.websiteOrSocial?.trim() || null,
-            preferred_categories: input.preferredCategories || [],
-            additional_notes: input.additionalNotes?.trim() || null,
-            consent_acknowledged: true,
-            access_token: token,
-            access_token_expires_at: expiresAt,
-            status: 'New Enquiry',
-          })
-          .select('*')
-          .maybeSingle(),
-        350
-      );
-
-      if (!insertError && insertData) {
-        this.setActivePricingToken(token);
-        this.cacheLocalEnquiry(this.mapDbEnquiryToType(insertData));
-        return {
-          success: true,
-          enquiryReference: insertData.enquiry_reference,
-          enquiry_reference: insertData.enquiry_reference,
-          accessToken: token,
-          access_token: token,
-          accessTokenExpiresAt: expiresAt,
-          access_token_expires_at: expiresAt,
-          status: 'New Enquiry',
-        };
-      }
-    } catch (tableErr) {
-      console.warn('Direct table insert failed, falling back to local storage:', tableErr);
-    }
-
-    // 4. Fallback: Local offline store
-    const localToken = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'tok-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
-    const localRef = 'WPE-2026-' + Math.floor(10000 + Math.random() * 90000);
-    const localExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const localEnquiry: WholesalePricingEnquiry = {
-      id: localToken,
-      enquiryReference: localRef,
-      fullName: input.fullName.trim(),
-      businessEmail: input.businessEmail.trim().toLowerCase(),
-      phoneNumber: input.phoneNumber.trim(),
-      country: input.country.trim(),
-      businessName: input.businessName.trim(),
-      businessType: input.businessType,
-      estimatedOrderQuantity: input.estimatedOrderQuantity.trim(),
-      websiteOrSocial: input.websiteOrSocial?.trim() || null,
-      preferredCategories: input.preferredCategories || [],
-      additionalNotes: input.additionalNotes?.trim() || null,
-      consentAcknowledged: true,
-      accessToken: localToken,
-      accessTokenExpiresAt: localExpires,
-      pricingAccessCount: 0,
-      status: 'New Enquiry',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.cacheLocalEnquiry(localEnquiry);
-    this.setActivePricingToken(localToken);
-    return {
-      success: true,
-      enquiryReference: localRef,
-      enquiry_reference: localRef,
-      accessToken: localToken,
-      access_token: localToken,
-      accessTokenExpiresAt: localExpires,
-      access_token_expires_at: localExpires,
-      status: 'New Enquiry',
-    };
   },
 
   async verifyPricingAccessToken(tokenParam?: string | null): Promise<WholesalePricingScheduleResponse> {
@@ -1745,16 +1660,13 @@ export const wholesaleProgramService = {
 
     // Check if authenticated user is admin or active agent
     try {
-      const { data: authData } = await withTimeout(supabase.auth.getUser(), 250);
+      const { data: authData } = await supabase.auth.getUser();
       if (authData?.user) {
-        const { data: agentProfile } = await withTimeout(
-          fromAny('agent_profiles')
-            .select('id, business_name, full_name, status')
-            .eq('user_id', authData.user.id)
-            .eq('status', 'active')
-            .maybeSingle(),
-          250
-        );
+        const { data: agentProfile } = await fromAny('agent_profiles')
+          .select('id, business_name, full_name, status')
+          .eq('user_id', authData.user.id)
+          .eq('status', 'active')
+          .maybeSingle();
 
         if (agentProfile) {
           const settings = await this.getSettings();
@@ -1778,12 +1690,9 @@ export const wholesaleProgramService = {
       try {
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token);
         if (isUuid) {
-          const { data, error } = await withTimeout(
-            supabase.rpc('get_wholesale_pricing_schedule', {
-              p_token: token,
-            }),
-            350
-          );
+          const { data, error } = await supabase.rpc('get_wholesale_pricing_schedule', {
+            p_token: token,
+          });
 
           if (!error && data && data.valid) {
             const settings = await this.getSettings();
