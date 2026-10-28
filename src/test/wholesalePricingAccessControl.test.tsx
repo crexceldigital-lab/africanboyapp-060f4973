@@ -9,6 +9,7 @@ import { agentService } from '../services/agentService';
 import { CountryProvider } from '../context/CountryContext';
 import { CartProvider } from '../context/CartContext';
 import type { WholesalePricingEnquiry } from '../types';
+import { supabase } from '../integrations/supabase/client';
 
 const renderWithProviders = (ui: React.ReactNode) => {
   return render(
@@ -23,6 +24,13 @@ describe('AFRICAN BOY — WHOLESALE PRICING ACCESS CONTROL & AGENT QUALIFICATION
     localStorage.clear();
     sessionStorage.clear();
     vi.clearAllMocks();
+    vi.spyOn(supabase.auth, 'getUser').mockResolvedValue({ data: { user: null }, error: null } as any);
+    vi.spyOn(supabase, 'rpc').mockImplementation(((fn: string) => {
+      if (fn === 'submit_wholesale_pricing_enquiry') {
+        return Promise.resolve({ data: { access_token: '11111111-1111-4111-8111-111111111111', enquiry_reference: 'WPE-2026-10001', access_token_expires_at: new Date(Date.now() + 864e5).toISOString(), status: 'New Enquiry' }, error: null });
+      }
+      return Promise.resolve({ data: { valid: false }, error: null });
+    }) as any);
   });
 
   describe('1. Public Wholesale Landing Page (/become-an-agent)', () => {
