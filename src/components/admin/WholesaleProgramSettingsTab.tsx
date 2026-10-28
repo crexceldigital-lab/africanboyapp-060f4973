@@ -25,6 +25,8 @@ export default function WholesaleProgramSettingsTab({ onSettingsUpdated }: Whole
       setSettings(data);
     } catch (e) {
       console.error('Error loading wholesale settings:', e);
+      setSettings(null);
+      toast.error('Could not load saved wholesale settings. Please refresh before editing so saved prices are not overwritten.');
     } finally {
       setLoading(false);
     }

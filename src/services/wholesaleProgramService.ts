@@ -505,18 +505,6 @@ function saveLocalCollectionOrders(records: DistributorCollectionOrderRecord[]) 
   }
 }
 
-async function withTimeout<T>(promise: Promise<T>, ms = 350): Promise<T> {
-  let timer: any;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('Operation timed out')), ms);
-  });
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 // ==============================================================================
 // SERVICE IMPLEMENTATION
 // ==============================================================================
