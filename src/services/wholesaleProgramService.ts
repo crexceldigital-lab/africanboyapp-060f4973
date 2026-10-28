@@ -1583,7 +1583,7 @@ export const wholesaleProgramService = {
 
     // 2. Try Supabase RPC
     try {
-      const { data, error } = await supabase.rpc('submit_wholesale_pricing_enquiry', {
+      const { data, error } = await (supabase.rpc as any)('submit_wholesale_pricing_enquiry', {
           p_full_name: input.fullName.trim(),
           p_business_email: input.businessEmail.trim().toLowerCase(),
           p_phone_number: input.phoneNumber.trim(),
@@ -1678,7 +1678,7 @@ export const wholesaleProgramService = {
       try {
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token);
         if (isUuid) {
-          const { data, error } = await supabase.rpc('get_wholesale_pricing_schedule', {
+          const { data, error } = await (supabase.rpc as any)('get_wholesale_pricing_schedule', {
             p_token: token,
           });
 
