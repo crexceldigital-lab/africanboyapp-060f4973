@@ -377,7 +377,7 @@ export default function WholesalePricingEnquiryModal({
                       >
                         {INTERNATIONAL_COUNTRIES.map(c => (
                           <option key={c.code} value={c.code}>
-                            {c.flag} {c.name} ({c.dialCode})
+                            {c.flagEmoji} {c.name} ({c.dialCode})
                           </option>
                         ))}
                       </select>

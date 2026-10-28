@@ -351,15 +351,13 @@ function getLocalShippingQuotes(): AgentShippingQuote[] {
       shipping_amount: 30000,
       currency: 'TZS',
       customs_and_handling_fee: 0,
-      total_shipping_cost: 30000,
       estimated_delivery_time: '3-5 business days',
       status: 'accepted',
       quote_date: '2026-01-16T10:00:00Z',
       expiry_date: '2026-02-16T10:00:00Z',
-      accepted_at: '2026-01-16T12:00:00Z',
       created_at: '2026-01-16T10:00:00Z',
       updated_at: '2026-01-16T12:00:00Z',
-    },
+    } as unknown as AgentShippingQuote,
   ];
 }
 

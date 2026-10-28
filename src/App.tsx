@@ -114,7 +114,7 @@ function AppContent() {
         return (
           <WholesalePricingPage
             onNavigateHome={() => handleNavigate('home')}
-            onApplyAsAgent={() => handleNavigate('become-an-agent')}
+            onNavigateToProgramme={() => handleNavigate('become-an-agent')}
           />
         );
       case 'agent-dashboard': return <AgentDashboard />;

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Globe, ShieldCheck, TrendingUp, Award, CheckCircle2, ChevronDown,
   ArrowRight, Sparkles, Package, Users, Store, HelpCircle, Layers, Check,
-  FileText, DollarSign, Truck, AlertCircle, Building2, Lock
+  FileText, DollarSign, Truck, AlertCircle, Building2, Lock, ChevronRight
 } from 'lucide-react';
 import AgentApplicationModal from '../components/agent/AgentApplicationModal';
 import WholesalePricingEnquiryModal from '../components/agent/WholesalePricingEnquiryModal';
