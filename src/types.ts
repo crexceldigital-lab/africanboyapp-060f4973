@@ -700,7 +700,7 @@ export interface DistributorCollectionOrderRecord {
   quantityPaid: number;
   quantityFulfilled: number;
   outstandingCommitment: number;
-  status: 'Pending Order' | 'Order Placed' | 'Partially Paid' | 'Paid' | 'In Production' | 'Dispatched' | 'Fulfilled' | 'Overdue';
+  status: 'Pending Order' | 'Pending Commitment' | 'Order Placed' | 'Partially Paid' | 'Paid' | 'In Production' | 'Dispatched' | 'Fulfilled' | 'Overdue';
   orderReference?: string;
   orderDate?: string;
   notes?: string;
