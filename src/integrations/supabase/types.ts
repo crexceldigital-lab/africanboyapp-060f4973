@@ -1915,6 +1915,7 @@ export type Database = {
         Args: { p_input_hash: string; p_product_ids: Json; p_user_id: string }
         Returns: Json
       }
+      get_business_letterhead: { Args: never; Returns: Json }
       get_international_request: {
         Args: { p_reference: string; p_token: string }
         Returns: Json

@@ -57,6 +57,13 @@
       "when": 1794849076868,
       "tag": "0007_restrict_inventory_adjust_admin_only",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794849184053,
+      "tag": "0008_secure_distributor_orders_and_invoice_settings",
+      "breakpoints": true
     }
   ]
 }
