@@ -1829,6 +1829,13 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_get_product_costs: {
+        Args: never
+        Returns: {
+          cost_price: number
+          product_id: string
+        }[]
+      }
       confirm_order_payment: {
         Args: {
           p_amount?: number
