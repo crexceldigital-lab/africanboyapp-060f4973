@@ -8,6 +8,7 @@ import OrderDetailsModal from './OrderDetailsModal';
 import ProductOfTheDayPicker from './ProductOfTheDayPicker';
 import RankedBarList, { RankedItem } from './RankedBarList';
 import RadialStatPair from './RadialStatPair';
+import { PRODUCT_PUBLIC_COLUMNS, fetchProductCostMap } from '@/lib/productColumns';
 
 interface StatMetrics {
   totalOrders: number;
@@ -111,7 +112,7 @@ export default function DashboardOverview({ onNavigateTab, staffAssignment }: Da
       // 4. Fetch real products from database for stock valuation
       const { data: productsData } = await supabase
         .from('products')
-        .select('*');
+        .select(PRODUCT_PUBLIC_COLUMNS);
 
       // 5. Fetch store availability if specific store scope selected
       let storeAvailMap: Record<string, number> = {};

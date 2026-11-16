@@ -17,6 +17,7 @@ import type {
 } from '@/types';
 import RecordOfferAcceptanceModal from './RecordOfferAcceptanceModal';
 import { PROPOSAL_ARTIST_NOTICE, PROPOSAL_SHIPPING_NOTICE, type ProposalBusinessDetails } from '@/lib/commercialProposalData';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 interface WholesaleQuotationBuilderProps {
   application: AgentApplication;
@@ -109,7 +110,7 @@ export default function WholesaleQuotationBuilder({
       try {
         const [loadedSettings, { data: dbProducts }] = await Promise.all([
           wholesaleProgramService.getSettings(),
-          supabase.from('products').select('*').order('created_at', { ascending: false }),
+          supabase.from('products').select(PRODUCT_PUBLIC_COLUMNS).order('created_at', { ascending: false }),
         ]);
 
         if (!isMounted) return;

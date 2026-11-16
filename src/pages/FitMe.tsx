@@ -8,6 +8,7 @@ import FitMeCreditsModal from '../components/FitMeCreditsModal';
 import { fetchWallet, FitMeWallet, verifyPaymentStatus } from '@/lib/fitmeCredits';
 import { trackFitMe, trackFitMeProductSelected } from '../lib/analytics';
 import { fitmeImageUrl } from '@/lib/fitmeImageUrl';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 export default function FitMe() {
   const [userImage, setUserImage] = useState<string | null>(null);
@@ -90,7 +91,7 @@ export default function FitMe() {
     const fetchProducts = async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_PUBLIC_COLUMNS)
         .order('created_at', { ascending: false });
 
       if (!error && data) {

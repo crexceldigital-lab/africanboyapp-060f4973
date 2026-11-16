@@ -20,6 +20,7 @@ import AgentManager from '../components/admin/AgentManager';
 import POSScreen from '../components/pos/POSScreen';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PRODUCT_PUBLIC_COLUMNS, fetchProductCostMap } from '@/lib/productColumns';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -67,7 +68,7 @@ export default function Admin() {
   const fetchProducts = async () => {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select(PRODUCT_PUBLIC_COLUMNS)
       .order('created_at', { ascending: false });
 
     if (!error && data) {
@@ -196,7 +197,7 @@ export default function Admin() {
         const { data: newProd, error } = await supabase
           .from('products')
           .insert({ ...productData, colors: productData.colors as any } as any)
-          .select()
+          .select(PRODUCT_PUBLIC_COLUMNS)
           .single();
 
         if (error) throw error;

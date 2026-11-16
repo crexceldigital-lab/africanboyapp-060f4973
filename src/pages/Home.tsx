@@ -19,6 +19,7 @@ import spotlight7 from '@/assets/spotlight-7.png';
 import spotlight8 from '@/assets/spotlight-8.png';
 import spotlight9 from '@/assets/spotlight-9.png';
 import spotlight10 from '@/assets/spotlight-10.png';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 const updatesImages = [spotlight1, spotlight2, spotlight3, spotlight4, spotlight5];
 const lifestyleImages = [spotlight7, spotlight8, spotlight9, spotlight10, spotlight6];
@@ -42,7 +43,7 @@ export default function Home({ onNavigate }: HomeProps) {
   useEffect(() => {
     const fetchProductOfTheDay = async () => {
       const { data: potd } = await fromAny('product_of_the_day')
-        .select('product_id, set_for_date, products(*)')
+        .select(`product_id, set_for_date, products(${PRODUCT_PUBLIC_COLUMNS})`)
         .order('set_for_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(1)
@@ -101,7 +102,7 @@ export default function Home({ onNavigate }: HomeProps) {
     const fetchFeatured = async () => {
       const { data } = await supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_PUBLIC_COLUMNS)
         .order('created_at', { ascending: false })
         .limit(4);
 

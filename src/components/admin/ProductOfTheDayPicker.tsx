@@ -5,6 +5,7 @@ import { Product } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 import { fromAny } from '@/lib/supabase-helpers';
 import { toast } from 'sonner';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 export default function ProductOfTheDayPicker() {
   const [currentPick, setCurrentPick] = useState<Product | null>(null);
@@ -17,7 +18,7 @@ export default function ProductOfTheDayPicker() {
   const fetchCurrentPick = async () => {
     setLoading(true);
     const { data, error } = await fromAny('product_of_the_day')
-      .select('id, product_id, set_for_date, products(*)')
+      .select(`id, product_id, set_for_date, products(${PRODUCT_PUBLIC_COLUMNS})`)
       .order('set_for_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(1)
@@ -39,7 +40,7 @@ export default function ProductOfTheDayPicker() {
   const fetchAllProducts = async () => {
     const { data } = await supabase
       .from('products')
-      .select('*')
+      .select(PRODUCT_PUBLIC_COLUMNS)
       .order('name', { ascending: true });
 
     if (data) {
