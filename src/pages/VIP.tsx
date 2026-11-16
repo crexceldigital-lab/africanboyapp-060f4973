@@ -5,6 +5,7 @@ import { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { useCountry } from '../context/CountryContext';
 import { supabase } from '@/integrations/supabase/client';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 export default function VIP() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -24,7 +25,7 @@ export default function VIP() {
     const fetchProducts = async () => {
       const { data } = await supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_PUBLIC_COLUMNS)
         .order('created_at', { ascending: false });
 
       if (data) {

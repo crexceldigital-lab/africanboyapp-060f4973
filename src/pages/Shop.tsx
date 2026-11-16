@@ -9,6 +9,7 @@ import { AFRICAN_BOY_FASHION_COLORS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, RotateCcw } from 'lucide-react';
 import { updateOpenGraphMeta } from '@/lib/shareUtils';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 export default function Shop() {
   const { selectedCountry } = useCountry();
@@ -31,7 +32,7 @@ export default function Shop() {
         // 1. Fetch products from database
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select(PRODUCT_PUBLIC_COLUMNS)
           .order('created_at', { ascending: false });
 
         // 2. Fetch matching store for visitor's country

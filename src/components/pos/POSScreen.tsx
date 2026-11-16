@@ -39,6 +39,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 interface POSScreenProps {
   staffAssignment: StoreStaff & { store?: Store };
@@ -115,7 +116,7 @@ export default function POSScreen({ staffAssignment }: POSScreenProps) {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_PUBLIC_COLUMNS)
         .eq('status', 'active')
         .order('name', { ascending: true });
 

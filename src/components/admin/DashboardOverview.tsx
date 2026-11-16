@@ -8,6 +8,7 @@ import OrderDetailsModal from './OrderDetailsModal';
 import ProductOfTheDayPicker from './ProductOfTheDayPicker';
 import RankedBarList, { RankedItem } from './RankedBarList';
 import RadialStatPair from './RadialStatPair';
+import { PRODUCT_PUBLIC_COLUMNS, fetchProductCostMap } from '@/lib/productColumns';
 
 interface StatMetrics {
   totalOrders: number;
@@ -111,7 +112,8 @@ export default function DashboardOverview({ onNavigateTab, staffAssignment }: Da
       // 4. Fetch real products from database for stock valuation
       const { data: productsData } = await supabase
         .from('products')
-        .select('*');
+        .select(PRODUCT_PUBLIC_COLUMNS);
+      const costMap = await fetchProductCostMap();
 
       // 5. Fetch store availability if specific store scope selected
       let storeAvailMap: Record<string, number> = {};
@@ -163,7 +165,7 @@ export default function DashboardOverview({ onNavigateTab, staffAssignment }: Da
         }
 
         // Use cost_price for inventory valuation (Do NOT use selling price as cost price if cost_price exists)
-        const costPrice = Number(p.cost_price) || 0;
+        const costPrice = costMap[p.id] ?? 0;
         const sellingPrice = p.on_sale && p.sale_price ? Number(p.sale_price) : Number(p.price) || 0;
 
         if (stockQty > 0) {

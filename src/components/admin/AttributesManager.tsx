@@ -5,6 +5,7 @@ import { Category, Subcategory, AttributeSize, AttributeColor, Product } from '.
 import StaffManager from './StaffManager';
 import { Plus, Trash2, Edit2, Tag, Layers, Maximize2, Palette, X, Save, Check, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 type AttributeSubTab = 'categories' | 'subcategories' | 'sizes' | 'colors' | 'staff';
 
@@ -31,7 +32,7 @@ export default function AttributesManager() {
     setLoading(true);
     try {
       // 1. Fetch products to compute usage counts
-      const { data: productsData } = await supabase.from('products').select('*');
+      const { data: productsData } = await supabase.from('products').select(PRODUCT_PUBLIC_COLUMNS);
       const loadedProducts = castProducts(productsData || []);
       setProducts(loadedProducts);
 

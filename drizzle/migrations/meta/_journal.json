@@ -64,6 +64,13 @@
       "when": 1794849184053,
       "tag": "0008_secure_distributor_orders_and_invoice_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794849499781,
+      "tag": "0009_hide_product_cost_price",
+      "breakpoints": true
     }
   ]
 }

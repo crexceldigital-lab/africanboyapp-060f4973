@@ -24,6 +24,7 @@ import type {
 } from '@/types';
 import { generateInvoicePdf, type InvoicePdfData } from '@/lib/invoicePdf';
 import Login from './Login';
+import { PRODUCT_PUBLIC_COLUMNS } from '@/lib/productColumns';
 
 export default function AgentDashboard() {
   const { user } = useCountry();
@@ -100,7 +101,7 @@ export default function AgentDashboard() {
         // Fetch real products from products table
         const { data: dbProducts } = await supabase
           .from('products')
-          .select('*')
+          .select(PRODUCT_PUBLIC_COLUMNS)
           .order('created_at', { ascending: false });
 
         if (dbProducts) {
