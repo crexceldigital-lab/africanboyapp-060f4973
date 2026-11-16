@@ -1428,11 +1428,8 @@ export const wholesaleProgramService = {
 
     let business: any = {};
     try {
-      const { data: businessData } = await fromAny('invoice_settings')
-        .select('business_name,business_address,city,country,email,phone,website,contact_person')
-        .eq('store_id', 1)
-        .maybeSingle();
-      if (businessData) business = businessData;
+      const { data: businessData } = await (supabase.rpc as any)('get_business_letterhead');
+      if (businessData && typeof businessData === 'object') business = businessData;
     } catch (bErr) {
       console.warn('Could not fetch business settings for proposal PDF:', bErr);
     }
