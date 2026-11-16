@@ -72,10 +72,11 @@ export default function Admin() {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
+      const costMap = await fetchProductCostMap();
       setProducts(data.map((p: any) => ({
         ...p,
         price: Number(p.price),
-        cost_price: Number(p.cost_price) || 0,
+        cost_price: costMap[p.id] ?? 0,
 
         sale_price: p.sale_price ? Number(p.sale_price) : null,
         colors: Array.isArray(p.colors) ? p.colors : JSON.parse(p.colors || '[]'),
