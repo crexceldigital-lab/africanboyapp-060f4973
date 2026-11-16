@@ -113,7 +113,7 @@ export default function InventoryTab({ storeId, storeName }: { storeId: number; 
                 <div className="text-[11px] text-muted-foreground">{r.product.sku || 'No SKU'} · {tsh(r.product.on_sale && r.product.sale_price ? r.product.sale_price : r.product.price)}</div>
               </div>
               <div className={`text-sm font-black ${r.stock_quantity <= 0 ? 'text-destructive' : r.stock_quantity <= LOW_STOCK ? 'text-primary' : 'text-foreground'}`}>{r.stock_quantity} units</div>
-              <button onClick={() => setOpen(r)} className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest">Manage Inventory</button>
+              <button onClick={() => setOpen(r)} className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest">View Stock</button>
             </div>
           ))}
           {!visible.length && <p className="text-sm text-muted-foreground">No products found.</p>}
@@ -212,30 +212,11 @@ function AdjustModal({ row, storeId, storeName, moves, me, names, onClose, onDon
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest text-muted-foreground">Current stock</label>
-              <div className="text-2xl font-black text-foreground">{current}</div>
-            </div>
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest text-muted-foreground">New stock</label>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setQty(String(Math.max(0, (Number(qty) || 0) - 1)))} className="w-9 h-9 rounded-xl bg-muted text-foreground font-black">−</button>
-                <input type="number" min={0} value={qty} onChange={e => setQty(e.target.value)} className="w-24 px-3 py-2 rounded-xl bg-background border border-foreground/10 text-foreground font-bold" />
-                <button onClick={() => setQty(String((Number(qty) || 0) + 1))} className="w-9 h-9 rounded-xl bg-muted text-foreground font-black">+</button>
-              </div>
-              <div className={`text-xs font-bold mt-1 ${diff < 0 ? 'text-destructive' : 'text-primary'}`}>{diff > 0 ? '+' : ''}{diff}</div>
-            </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-muted-foreground">Current stock</label>
+            <div className="text-2xl font-black text-foreground">{current}</div>
           </div>
-          {variant && <p className="text-[11px] text-muted-foreground">Changing a size also moves this store's total by the same amount.</p>}
-          <select value={type} onChange={e => setType(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-background border border-foreground/10 text-foreground text-sm">
-            {TYPES.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
-          </select>
-          <input value={reason} onChange={e => setReason(e.target.value)} maxLength={500} placeholder='Reason, e.g. "New stock received"' className="w-full px-3 py-2 rounded-xl bg-background border border-foreground/10 text-foreground text-sm" />
-          {err && <p role="alert" className="text-sm font-bold text-destructive">{err}</p>}
-          <button disabled={saving} onClick={save} className="w-full py-3 rounded-2xl bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save Adjustment'}
-          </button>
+          <p className="flex items-center gap-2 text-xs font-bold text-muted-foreground"><Lock size={12} className="text-primary" /> Stock editing is currently restricted to Admin.</p>
         </div>
 
         <div>
